@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DepartamentosModule } from './departamentos/departamentos.module';
 import { CargosModule } from './cargos/cargos.module';
+import { CuentasBancariasModule } from './cuentas-bancarias/cuentas-bancarias.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CargosModule } from './cargos/cargos.module';
     ScheduleModule.forRoot(),
     DepartamentosModule,
     CargosModule,
+    CuentasBancariasModule,
   ],
 
   controllers: [AppController],

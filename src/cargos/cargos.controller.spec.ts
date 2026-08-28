@@ -8,7 +8,18 @@ describe('CargosController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CargosController],
-      providers: [CargosService],
+      providers: [
+        {
+          provide: CargosService,
+          useValue: {
+            Create_Cargo: jest.fn(),
+            Traer_Cargos: jest.fn(),
+            Obtener_CargoEspecifico: jest.fn(),
+            Eliminar_cargo: jest.fn(),
+            Actualizar_Cargo: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     controller = module.get<CargosController>(CargosController);

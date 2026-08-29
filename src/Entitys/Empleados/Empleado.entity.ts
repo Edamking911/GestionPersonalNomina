@@ -8,6 +8,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { CuentaBancaria } from '../CuentasBancarias/CuentaBancaria.entity';
+import { EgresoPersonal } from '../EgresosPersonales/EgresoPersonal.entity';
 
 @Entity('empleados')
 export class Empleado {
@@ -54,4 +55,9 @@ export class Empleado {
     cascade: true,
   })
   cuentasBancarias!: CuentaBancaria[];
+
+  @OneToMany(() => EgresoPersonal, (egreso) => egreso.empleado, {
+    cascade: true,
+  })
+  egresosPersonales!: EgresoPersonal[];
 }

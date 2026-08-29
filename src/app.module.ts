@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { DepartamentosModule } from './departamentos/departamentos.module';
 import { CargosModule } from './cargos/cargos.module';
 import { CuentasBancariasModule } from './cuentas-bancarias/cuentas-bancarias.module';
+import { EgresosPersonalesModule } from './egresos-personales/egresos-personales.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { CuentasBancariasModule } from './cuentas-bancarias/cuentas-bancarias.mo
     DepartamentosModule,
     CargosModule,
     CuentasBancariasModule,
+    EgresosPersonalesModule,
   ],
 
   controllers: [AppController],

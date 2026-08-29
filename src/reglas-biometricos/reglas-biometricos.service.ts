@@ -43,6 +43,7 @@ export interface EvaluacionAsistencia {
   horasExtra: number;
   retardoLegible: string;
   salidaTempranaLegible: string;
+  tipoTurno?: 'DIURNO' | 'NOCTURNO';
 }
 
 @Injectable()
@@ -52,6 +53,8 @@ export class ReglasBiometricosService {
   private asignacionesPath = path.join(process.cwd(), 'asignaciones_turnos.json');
   private marcajesPath = path.join(process.cwd(), 'marcajes.json');
   private diasLibresPath = path.join(process.cwd(), 'dias_libres.json');
+
+  private readonly HORA_NOCTURNA = '19:00'; // 7:00 PM
 
   private reglas!: ReglasConfig;
   private asignaciones!: AsignacionTurno[];
@@ -88,6 +91,14 @@ export class ReglasBiometricosService {
             diasLaborales: [],
           },
           {
+            id: 'HORARIO_8_5_30',
+            nombre: '8:00 AM - 5:30 PM',
+            entrada: '08:00',
+            salida: '17:30',
+            toleranciaMin: 10,
+            diasLaborales: [],
+          },
+          {
             id: 'HORARIO_8_6_30',
             nombre: '8:00 AM - 6:30 PM',
             entrada: '08:00',
@@ -108,14 +119,6 @@ export class ReglasBiometricosService {
             nombre: '8:00 AM - 8:00 PM',
             entrada: '08:00',
             salida: '20:00',
-            toleranciaMin: 10,
-            diasLaborales: [],
-          },
-          {
-            id: 'HORARIO_8_5_30',
-            nombre: '8:00 AM - 17:30 PM',
-            entrada: '08:00',
-            salida: '17:30',
             toleranciaMin: 10,
             diasLaborales: [],
           },
@@ -321,7 +324,7 @@ export class ReglasBiometricosService {
     const entradaReal = marcajesDia[0];
     const salidaReal = marcajesDia.length >= 2 ? marcajesDia[marcajesDia.length - 1] : null;
 
-    // ===== LÓGICA CLAVE: solo un marcaje =====
+    // Sin salida
     if (!salidaReal) {
       const ahora = await this.biometricoService.obtenerHoraBiometrico();
       const esMismoDia = ahora.toDateString() === fecha.toDateString();
@@ -359,7 +362,7 @@ export class ReglasBiometricosService {
       }
     }
 
-    // ===== Hay salida =====
+    // Con salida
     if (!horario.diasLaborales.includes(diaSemana)) {
       return {
         employeeId,
@@ -381,6 +384,10 @@ export class ReglasBiometricosService {
     const salidaMin = this.obtenerMinutosDeFecha(new Date(salidaReal.timestamp));
     const entradaEsperada = this.horaAMinutos(horario.entrada);
     const salidaEsperada = this.horaAMinutos(horario.salida);
+
+    // Detección de turno nocturno
+    const horaNocturnaMin = this.horaAMinutos(this.HORA_NOCTURNA);
+    const tipoTurno = salidaMin >= horaNocturnaMin ? 'NOCTURNO' : 'DIURNO';
 
     const minutosRetardo = Math.max(0, entradaMin - entradaEsperada - horario.toleranciaMin);
     const minutosSalidaTemprana = Math.max(0, salidaEsperada - salidaMin);
@@ -404,6 +411,7 @@ export class ReglasBiometricosService {
       horasExtra,
       retardoLegible: this.formatearMinutos(minutosRetardo),
       salidaTempranaLegible: this.formatearMinutos(minutosSalidaTemprana),
+      tipoTurno,
     };
   }
 
@@ -434,8 +442,7 @@ export class ReglasBiometricosService {
     };
   }
 
-  // ===== NUEVO: Validación automática de salidas pendientes =====
-   async validarSalidasPendientes(fecha: Date) {
+  async validarSalidasPendientes(fecha: Date) {
     const ahora = await this.biometricoService.obtenerHoraBiometrico();
     const esFechaPasada = fecha.toDateString() !== ahora.toDateString() && fecha < ahora;
 

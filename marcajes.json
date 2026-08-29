@@ -430,5 +430,37 @@
     "horaLocal": "26/08/2026, 01:56:21 p. m.",
     "deviceName": "DS-K1A8503MF",
     "rawType": "38"
+  },
+  {
+    "employeeId": "24765865",
+    "employeeName": "LUIS ROJAS",
+    "timestamp": "2026-08-29T18:06:46.000Z",
+    "horaLocal": "29/08/2026, 02:06:46 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "24765865",
+    "employeeName": "LUIS ROJAS",
+    "timestamp": "2026-08-29T19:00:06.000Z",
+    "horaLocal": "29/08/2026, 03:00:06 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "12345",
+    "employeeName": "Admin",
+    "timestamp": "2026-08-29T19:59:44.000Z",
+    "horaLocal": "29/08/2026, 03:59:44 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "29789773",
+    "employeeName": "EMANUEL APONTE",
+    "timestamp": "2026-08-29T19:59:53.000Z",
+    "horaLocal": "29/08/2026, 03:59:53 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
   }
 ]

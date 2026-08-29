@@ -1967,4 +1967,313 @@ export class BiometricoService {
       }))
     };
   }
+
+    /**
+   * 📥 IMPORTACIÓN MASIVA DE USUARIOS DESDE EXCEL
+   * Lee un archivo Excel con columnas: Cédula, Nombre, Apellido, Cargo
+   * y crea los usuarios en el biométrico automáticamente.
+   */
+    async importUsersFromExcel(
+    excelPath: string,
+    ip: string = '172.18.0.89',
+    user: string = 'admin',
+    pass: string = 'Dtd2026*',
+  ) {
+    const workbook: any = new Workbook.Workbook();
+    
+    try {
+      await workbook.xlsx.readFile(excelPath);
+      const worksheet: any = workbook.getWorksheet(1);
+      if (!worksheet) throw new Error('No se encontró la hoja en el Excel');
+
+      this.logger.log(`📄 Leyendo usuarios desde: ${excelPath}`);
+
+      const resultados = {
+        totalFilas: 0,
+        creados: 0,
+        fallidos: 0,
+        errores: [] as string[],
+      };
+
+      for (let i = 2; i <= worksheet.rowCount; i++) {
+        const row = worksheet.getRow(i);
+        const cedula = row.getCell(1).value?.toString().trim() || '';
+        const nombre = row.getCell(2).value?.toString().trim() || '';
+        const apellido = row.getCell(3).value?.toString().trim() || '';
+        const cargo = row.getCell(4).value?.toString().trim() || 'EMPLEADO';
+
+        if (!cedula) continue;
+
+        resultados.totalFilas++;
+        const nombreCompleto = `${nombre} ${apellido}`.trim();
+        const userType = cargo.toLowerCase().includes('admin') ? 'admin' : 'normal';
+
+        //  FECHAS DINÁMICAS
+        const fechaActual = new Date();
+        const fechaFin = new Date();
+        fechaFin.setFullYear(fechaFin.getFullYear() + 10); // Válido por 10 años
+
+        const payloadObj = {
+          UserInfo: {
+            employeeNo: cedula,
+            name: nombreCompleto,
+            userType: userType,
+            employeeGroup: cargo,   // Guarda el cargo/departamento
+            valid: {
+              enable: true,
+              beginTime: fechaActual.toISOString().slice(0, 19), // ahora
+              endTime: fechaFin.toISOString().slice(0, 19),      // +10 años
+            },
+          },
+        };
+
+        const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
+        const command = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X POST -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Record?format=json`;
+
+        try {
+          const { stdout } = await execPromise(command, { timeout: 10000 });
+          if (stdout) {
+            const response = JSON.parse(stdout);
+            if (response?.statusCode === 1 || response?.statusString === 'OK') {
+              resultados.creados++;
+              this.logger.log(`✅ Usuario creado: ${cedula} - ${nombreCompleto} (${cargo})`);
+            } else {
+              resultados.fallidos++;
+              resultados.errores.push(`Error con ${cedula}: ${JSON.stringify(response)}`);
+              this.logger.warn(`⚠️ No se pudo crear ${cedula}: ${JSON.stringify(response)}`);
+            }
+          }
+        } catch (error: any) {
+          resultados.fallidos++;
+          resultados.errores.push(`Error con ${cedula}: ${error.message}`);
+          this.logger.error(`❌ Error creando ${cedula}: ${error.message}`);
+        }
+
+        await this.delay(200);
+      }
+
+      this.logger.log(`📊 Importación finalizada: ${resultados.creados} creados, ${resultados.fallidos} fallidos`);
+      return { success: true, message: 'Importación masiva completada', ...resultados };
+    } catch (error: any) {
+      this.logger.error('Error en importación masiva:', error.message);
+      return { success: false, message: 'Error al importar usuarios', error: error.message };
+    }
+  }
+
+    async listUsers(ip = '172.18.0.89', user = 'admin', pass = 'Dtd2026*') {
+      const payloadObj = {
+        UserInfoSearchCond: {
+          searchID: '1',
+          searchResultPosition: 0,
+          maxResults: 100,
+        },
+      };
+      const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
+      const command = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X POST -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Search?format=json`;
+      const { stdout } = await execPromise(command, { timeout: 10000 });
+      const data = JSON.parse(stdout);
+
+      const usuarios = data?.UserInfoSearch?.UserInfo || [];
+      const activos = usuarios.filter(u => u.Valid?.enable !== false);
+
+      return {
+        success: true,
+        totalUsuarios: activos.length,
+        usuarios: activos.map(u => ({
+          employeeNo: u.employeeNo,
+          name: u.name,
+          userType: u.userType,
+          userGroup: u.userGroup || '',
+        })),
+      };
+    }
+
+    /**
+   * Desactiva al USUARIO DEL BIOMÉTRICO
+   * Recibe la cédula (employeeNo) y elimina el usuario del dispositivo.
+   */
+      async deleteUserFromDevice(
+    employeeNo: string,
+    ip: string = '172.18.0.89',
+    user: string = 'admin',
+    pass: string = 'Dtd2026*',
+  ) {
+    try {
+      // Obtener nombre actual para no perderlo en la modificación
+      const currentUser = await this.getUserByEmployeeNo(employeeNo, ip, user, pass);
+      const nombreActual = currentUser?.name || 'DESCONOCIDO';
+      const userTypeActual = currentUser?.userType || 'normal';
+
+      const payloadObj = {
+        UserInfo: {
+          employeeNo: employeeNo,
+          name: nombreActual,
+          userType: userTypeActual,
+          Valid: {
+            enable: false,   // ❌ Desactivar
+            beginTime: '2026-01-01T00:00:00',
+            endTime: '2036-01-01T23:59:59',
+          },
+        },
+      };
+
+      const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
+      const command = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X PUT -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Modify?format=json`;
+
+      const { stdout } = await execPromise(command, { timeout: 10000 });
+
+      if (stdout) {
+        const response = JSON.parse(stdout);
+        if (response?.statusCode === 1 || response?.statusString === 'OK') {
+          this.logger.log(`✅ Usuario ${employeeNo} desactivado correctamente`);
+          return {
+            success: true,
+            message: `Usuario ${employeeNo} desactivado (no podrá marcar)`,
+          };
+        } else {
+          this.logger.warn(`⚠️ No se pudo desactivar ${employeeNo}: ${JSON.stringify(response)}`);
+          return {
+            success: false,
+            message: 'No se pudo desactivar el usuario',
+            detail: response,
+          };
+        }
+      }
+    } catch (error: any) {
+      this.logger.error(`Error desactivando ${employeeNo}: ${error.message}`);
+      return {
+        success: false,
+        message: 'Error al desactivar el usuario',
+        error: error.message,
+      };
+    }
+  }
+
+   // ============================================
+  // 🔐 PREPARAR USUARIO PARA REGISTRAR HUELLA
+  // Busca al usuario por cédula y lo deja listo
+  // para que enrolle su huella en el biométrico
+  // ============================================
+    /**
+   * 🔐 PREPARAR USUARIO PARA REGISTRAR HUELLA
+   * Activa al usuario y lo marca como pendiente
+   * La captura de huella se hace en el biométrico
+   */
+  async prepareUserForFingerprint(
+    employeeNo: string,
+    ip: string = '172.18.0.89',
+    user: string = 'admin',
+    pass: string = 'Dtd2026*',
+  ) {
+    try {
+      // 1. Buscar al usuario
+      const currentUser = await this.getUserByEmployeeNo(employeeNo, ip, user, pass);
+      if (!currentUser) {
+        return { success: false, message: 'Usuario no encontrado en el biométrico' };
+      }
+
+      // 2. Activar al usuario (sin tocar userVerifyMode)
+      const payloadObj = {
+        UserInfo: {
+          employeeNo: employeeNo,
+          name: currentUser.name || 'DESCONOCIDO',
+          userType: currentUser.userType || 'normal',
+          Valid: {
+            enable: true,
+            beginTime: '2026-01-01T00:00:00',
+            endTime: '2036-01-01T23:59:59',
+          },
+        },
+      };
+
+      const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
+      const command = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X PUT -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Modify?format=json`;
+
+      const { stdout } = await execPromise(command, { timeout: 10000 });
+      const response = JSON.parse(stdout);
+
+      if (response?.statusCode === 1 || response?.statusString === 'OK') {
+        // 3. Agregar a pendientes localmente
+        this.addToPendingFingerprintList(employeeNo);
+        return {
+          success: true,
+          message: `Usuario ${employeeNo} activado y listo para registrar huella en el biométrico`,
+        };
+      } else {
+        return {
+          success: false,
+          message: 'No se pudo activar al usuario',
+          detail: response,
+        };
+      }
+    } catch (error: any) {
+      return { success: false, message: 'Error al preparar usuario', error: error.message };
+    }
+  }
+
+  // ============================================
+  // 📝 AGREGAR A LISTA DE PENDIENTES DE HUELLA
+  // Guarda en un JSON local las cédulas pendientes
+  // ============================================
+  async listPendingFingerprint() {
+    const pendingPath = path.join(process.cwd(), 'pendientes_huella.json');
+    if (!fs.existsSync(pendingPath)) return [];
+    return JSON.parse(fs.readFileSync(pendingPath, 'utf-8'));
+  }
+
+  removeFromPendingFingerprintList(employeeNo: string) {
+    const pendingPath = path.join(process.cwd(), 'pendientes_huella.json');
+    if (!fs.existsSync(pendingPath)) return { success: true, message: 'No hay pendientes' };
+    let pendientes = JSON.parse(fs.readFileSync(pendingPath, 'utf-8'));
+    const nuevos = pendientes.filter(p => p !== employeeNo);
+    fs.writeFileSync(pendingPath, JSON.stringify(nuevos, null, 2));
+    return { success: true, message: `Usuario ${employeeNo} eliminado de pendientes` };
+  }
+
+  // ========== AUXILIAR ==========
+  private addToPendingFingerprintList(employeeNo: string) {
+    const pendingPath = path.join(process.cwd(), 'pendientes_huella.json');
+    let pendientes : string[] = [];
+    if (fs.existsSync(pendingPath)) pendientes = JSON.parse(fs.readFileSync(pendingPath, 'utf-8'));
+    if (!pendientes.includes(employeeNo)) {
+      pendientes.push(employeeNo);
+      fs.writeFileSync(pendingPath, JSON.stringify(pendientes, null, 2));
+    }
+  }
+
+  private async getUserByEmployeeNo(employeeNo: string, ip: string, user: string, pass: string) {
+    const payloadObj = {
+      UserInfoSearchCond: {
+        searchID: '1',
+        searchResultPosition: 0,
+        maxResults: 1,
+        EmployeeNoList: [{ employeeNo }],
+      },
+    };
+    const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
+    const command = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X POST -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Search?format=json`;
+    const { stdout } = await execPromise(command, { timeout: 10000 });
+    const data = JSON.parse(stdout);
+    return data?.UserInfoSearch?.UserInfo?.[0] || null;
+  }
+
+    /**
+   * Obtener hora actual del biométrico
+   */
+  async obtenerHoraBiometrico(): Promise<Date> {
+    try {
+      const command = `curl --digest -u admin:Dtd2026* http://172.18.0.89/ISAPI/System/deviceInfo`;
+      const { stdout } = await execPromise(command, { timeout: 5000 });
+      const parsed = await this.parseXml(stdout);
+      const deviceTime = parsed?.DeviceInfo?.deviceTime || parsed?.DeviceInfo?.DateTime;
+      if (deviceTime) {
+        return new Date(deviceTime);
+      }
+    } catch (error) {
+      this.logger.warn('No se pudo obtener hora del biométrico, se usará hora local');
+    }
+    return new Date();
+  }
+
+
 }

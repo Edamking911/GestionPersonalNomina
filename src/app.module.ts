@@ -6,6 +6,9 @@ import { AppService } from './app.service';
 import { BiometricoModule } from './biometrico/biometrico.module';
 import { DepartamentosModule } from './departamentos/departamentos.module';
 import { CargosModule } from './cargos/cargos.module';
+import { MonedaModule } from './moneda/moneda.module';
+import { TasaCambioModule } from './tasa_cambio/tasa_cambio.module';
+import { ReglasBiometricosModule } from './reglas-biometricos/reglas-biometricos.module';
 
 @Module({
   imports: [
@@ -20,9 +23,12 @@ import { CargosModule } from './cargos/cargos.module';
     synchronize: false
   }),
     ScheduleModule.forRoot(),
-    //BiometricoModule,
+    BiometricoModule,
     DepartamentosModule,
     CargosModule,
+    MonedaModule,
+    TasaCambioModule,
+    ReglasBiometricosModule,
   ],
   
   controllers: [AppController],

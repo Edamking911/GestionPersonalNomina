@@ -15,7 +15,7 @@ import { EgresosPersonalesModule } from './egresos-personales/egresos-personales
       host: 'localhost',
       port: 5432,
       username: 'postgres',
-      password: '123456',
+      password: 'admin',
       database: 'GestionPersonal',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: false,

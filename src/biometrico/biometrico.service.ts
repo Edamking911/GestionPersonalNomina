@@ -1991,13 +1991,16 @@ export class BiometricoService {
       const resultados = {
         totalFilas: 0,
         creados: 0,
+        actualizados: 0,
         fallidos: 0,
         errores: [] as string[],
       };
 
       for (let i = 2; i <= worksheet.rowCount; i++) {
         const row = worksheet.getRow(i);
-        const cedula = row.getCell(1).value?.toString().trim() || '';
+        // Limpiar cédula: quitar espacios y ceros a la izquierda
+        let cedula = row.getCell(1).value?.toString().trim() || '';
+        cedula = cedula.replace(/[^0-9]/g, '');
         const nombre = row.getCell(2).value?.toString().trim() || '';
         const apellido = row.getCell(3).value?.toString().trim() || '';
         const cargo = row.getCell(4).value?.toString().trim() || 'EMPLEADO';
@@ -2008,51 +2011,63 @@ export class BiometricoService {
         const nombreCompleto = `${nombre} ${apellido}`.trim();
         const userType = cargo.toLowerCase().includes('admin') ? 'admin' : 'normal';
 
-        //  FECHAS DINÁMICAS
         const fechaActual = new Date();
         const fechaFin = new Date();
-        fechaFin.setFullYear(fechaFin.getFullYear() + 10); // Válido por 10 años
+        fechaFin.setFullYear(fechaFin.getFullYear() + 10);
 
         const payloadObj = {
           UserInfo: {
             employeeNo: cedula,
             name: nombreCompleto,
             userType: userType,
-            employeeGroup: cargo,   // Guarda el cargo/departamento
-            valid: {
+            userGroup: cargo,
+            doorRight: '1',
+            Valid: {
               enable: true,
-              beginTime: fechaActual.toISOString().slice(0, 19), // ahora
-              endTime: fechaFin.toISOString().slice(0, 19),      // +10 años
+              beginTime: fechaActual.toISOString().slice(0, 19),
+              endTime: fechaFin.toISOString().slice(0, 19),
             },
           },
         };
 
         const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
-        const command = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X POST -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Record?format=json`;
 
+        // 1. Intentar crear
+        const createCommand = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X POST -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Record?format=json`;
+        
         try {
-          const { stdout } = await execPromise(command, { timeout: 10000 });
-          if (stdout) {
-            const response = JSON.parse(stdout);
-            if (response?.statusCode === 1 || response?.statusString === 'OK') {
-              resultados.creados++;
-              this.logger.log(`✅ Usuario creado: ${cedula} - ${nombreCompleto} (${cargo})`);
+          const { stdout } = await execPromise(createCommand, { timeout: 10000 });
+          const response = JSON.parse(stdout);
+          
+          if (response?.statusCode === 1 || response?.statusString === 'OK') {
+            resultados.creados++;
+            this.logger.log(`✅ Usuario creado: ${cedula} - ${nombreCompleto} (${cargo})`);
+          } else if (response?.subStatusCode === 'deviceUserAlreadyExist') {
+            // 2. Si ya existe, actualizar con PUT
+            const updateCommand = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X PUT -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Modify?format=json`;
+            const { stdout: updateStdout } = await execPromise(updateCommand, { timeout: 10000 });
+            const updateResponse = JSON.parse(updateStdout);
+            
+            if (updateResponse?.statusCode === 1 || updateResponse?.statusString === 'OK') {
+              resultados.actualizados++;
+              this.logger.log(`🔄 Usuario actualizado: ${cedula} - ${nombreCompleto}`);
             } else {
               resultados.fallidos++;
-              resultados.errores.push(`Error con ${cedula}: ${JSON.stringify(response)}`);
-              this.logger.warn(`⚠️ No se pudo crear ${cedula}: ${JSON.stringify(response)}`);
+              resultados.errores.push(`Error actualizando ${cedula}: ${JSON.stringify(updateResponse)}`);
             }
+          } else {
+            resultados.fallidos++;
+            resultados.errores.push(`Error con ${cedula}: ${JSON.stringify(response)}`);
           }
         } catch (error: any) {
           resultados.fallidos++;
           resultados.errores.push(`Error con ${cedula}: ${error.message}`);
-          this.logger.error(`❌ Error creando ${cedula}: ${error.message}`);
         }
 
         await this.delay(200);
       }
 
-      this.logger.log(`📊 Importación finalizada: ${resultados.creados} creados, ${resultados.fallidos} fallidos`);
+      this.logger.log(`📊 Importación: ${resultados.creados} creados, ${resultados.actualizados} actualizados, ${resultados.fallidos} fallidos`);
       return { success: true, message: 'Importación masiva completada', ...resultados };
     } catch (error: any) {
       this.logger.error('Error en importación masiva:', error.message);
@@ -2060,30 +2075,60 @@ export class BiometricoService {
     }
   }
 
-    async listUsers(ip = '172.18.0.89', user = 'admin', pass = 'Dtd2026*') {
-      const payloadObj = {
-        UserInfoSearchCond: {
-          searchID: '1',
-          searchResultPosition: 0,
-          maxResults: 100,
-        },
-      };
-      const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
-      const command = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X POST -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Search?format=json`;
-      const { stdout } = await execPromise(command, { timeout: 10000 });
-      const data = JSON.parse(stdout);
+      async listUsers(
+      ip = '172.18.0.89',
+      user = 'admin',
+      pass = 'Dtd2026*',
+      incluirInactivos = false,
+    ) {
+      const maxResults = 100;          // Tamaño de página
+      let searchResultPosition = 0;    // Desde el primer usuario
+      let totalMatches = 0;
+      let todosUsuarios: any[] = [];
+      let hasMore = true;
 
-      const usuarios = data?.UserInfoSearch?.UserInfo || [];
-      const activos = usuarios.filter(u => u.Valid?.enable !== false);
+      while (hasMore) {
+        const payloadObj = {
+          UserInfoSearchCond: {
+            searchID: '1',
+            searchResultPosition: searchResultPosition,
+            maxResults: maxResults,
+          },
+        };
+
+        const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
+        const command = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X POST -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Search?format=json`;
+
+        const { stdout } = await execPromise(command, { timeout: 10000 });
+        const data = JSON.parse(stdout);
+
+        const usuarios = data?.UserInfoSearch?.UserInfo || [];
+        totalMatches = data?.UserInfoSearch?.totalMatches || 0;
+
+        todosUsuarios = todosUsuarios.concat(usuarios);
+        searchResultPosition += usuarios.length;
+
+        // Si ya alcanzamos el total o no hay más resultados, salir
+        if (todosUsuarios.length >= totalMatches || usuarios.length === 0) {
+          hasMore = false;
+        }
+      }
+
+      // Filtrar inactivos si es necesario
+      let usuariosFiltrados = todosUsuarios;
+      if (!incluirInactivos) {
+        usuariosFiltrados = todosUsuarios.filter(u => u.Valid?.enable !== false);
+      }
 
       return {
         success: true,
-        totalUsuarios: activos.length,
-        usuarios: activos.map(u => ({
+        totalUsuarios: usuariosFiltrados.length,
+        usuarios: usuariosFiltrados.map(u => ({
           employeeNo: u.employeeNo,
           name: u.name,
           userType: u.userType,
           userGroup: u.userGroup || '',
+          activo: u.Valid?.enable !== false,
         })),
       };
     }
@@ -2274,6 +2319,5 @@ export class BiometricoService {
     }
     return new Date();
   }
-
 
 }

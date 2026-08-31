@@ -224,4 +224,14 @@ export class BiometricoController {
     const pendientes = await this.biometricoService.listPendingFingerprint();
     return { success: true, pendientes };
   }
+
+   @Get('list-all-users')
+  async listAllUsers() {
+    return await this.biometricoService.listUsers(
+      '172.18.0.89',
+      'admin',
+      'Dtd2026*',
+      true, // incluirInactivos = true
+    );
+  }
 }

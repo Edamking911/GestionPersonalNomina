@@ -9,10 +9,18 @@
   },
   {
     "employeeId": "12345",
-    "horarioId": "HORARIO_8_5"
+    "horarioId": "HORARIO_8_5",
+    "diasLibresFijos": [
+      "sábado",
+      "domingo"
+    ]
   },
   {
     "employeeId": "27280588",
     "horarioId": "HORARIO_8_5_30"
+  },
+  {
+    "employeeId": "22652518",
+    "horarioId": "HORARIO_8_5"
   }
 ]

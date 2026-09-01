@@ -225,6 +225,15 @@ export class BiometricoController {
     return { success: true, pendientes };
   }
 
+   /**
+   * Obtener marcajes de una fecha específica
+   * GET /biometrico/marcajes/:fecha
+   */
+  @Get('marcajes/:fecha')
+  async getMarcajesPorFecha(@Param('fecha') fecha: string) {
+    return await this.biometricoService.getMarcajesPorFecha(fecha);
+  }
+
    @Get('list-all-users')
   async listAllUsers() {
     return await this.biometricoService.listUsers(

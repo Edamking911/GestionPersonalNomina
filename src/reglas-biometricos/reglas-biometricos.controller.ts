@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { ReglasBiometricosService } from './reglas-biometricos.service';
 
 @Controller('reglas')
@@ -10,9 +10,14 @@ export class ReglasBiometricosController {
     return this.reglasService.getReglas();
   }
 
+  /**
+   * Obtener asignaciones de turnos.
+   * Query opcional: `semana` en formato YYYY-MM-DD (domingo de esa semana).
+   * Si no se envía, se usa la semana actual.
+   */
   @Get('asignaciones')
-  getAsignaciones() {
-    return this.reglasService.getAsignaciones();
+  getAsignaciones(@Query('semana') semana?: string) {
+    return this.reglasService.getAsignaciones(semana);
   }
 
   @Get('dias-libres')
@@ -21,8 +26,14 @@ export class ReglasBiometricosController {
   }
 
   @Post('asignar')
-  asignarHorario(@Body() body: { employeeId: string; horarioId: string }) {
-    return this.reglasService.asignarHorario(body.employeeId, body.horarioId);
+  asignarHorario(
+    @Body() body: { employeeId: string; horarioId: string; diasLibresFijos?: string[] },
+  ) {
+    return this.reglasService.asignarHorario(
+      body.employeeId,
+      body.horarioId,
+      body.diasLibresFijos,
+    );
   }
 
   @Post('asignar-dias-libres')

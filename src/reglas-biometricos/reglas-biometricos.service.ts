@@ -19,6 +19,7 @@ export interface ReglasConfig {
 export interface AsignacionTurno {
   employeeId: string;
   horarioId: string;
+  diasLibresFijos?: string[];
 }
 
 export interface EvaluacionAsistencia {
@@ -61,13 +62,13 @@ export class ReglasBiometricosService {
   private diasLibres: Record<string, Record<string, string[]>> = {};
 
   private readonly todosLosDias = [
+    'domingo',
     'lunes',
     'martes',
     'miércoles',
     'jueves',
     'viernes',
     'sábado',
-    'domingo',
   ];
 
   constructor(private readonly biometricoService: BiometricoService) {
@@ -162,15 +163,35 @@ export class ReglasBiometricosService {
     return this.reglas;
   }
 
-  getAsignaciones() {
-    return this.asignaciones;
+  /**
+   * Obtiene asignaciones con días libres fijos y rotativos de una semana.
+   * La semana debe ser la fecha del domingo de esa semana (YYYY-MM-DD).
+   * Si no se especifica, se usa la semana actual.
+   */
+  getAsignaciones(semana?: string) {
+    const semanaClave = semana || this.obtenerInicioSemana(new Date());
+
+    return this.asignaciones.map(a => {
+      const diasLibresRotativos = this.diasLibres[a.employeeId]?.[semanaClave] || [];
+      return {
+        ...a,
+        diasLibresRotativos,
+        diasLibresEfectivos: diasLibresRotativos.length > 0
+          ? diasLibresRotativos
+          : a.diasLibresFijos || [],
+      };
+    });
   }
 
   getDiasLibres() {
     return this.diasLibres;
   }
 
-  asignarHorario(employeeId: string, horarioId: string) {
+  asignarHorario(
+    employeeId: string,
+    horarioId: string,
+    diasLibresFijos?: string[],
+  ) {
     const horarioExiste = this.reglas.horarios.some(h => h.id === horarioId);
     if (!horarioExiste) {
       return { success: false, message: 'Horario no válido' };
@@ -179,11 +200,15 @@ export class ReglasBiometricosService {
     const existente = this.asignaciones.find(a => a.employeeId === employeeId);
     if (existente) {
       existente.horarioId = horarioId;
+      existente.diasLibresFijos = diasLibresFijos;
     } else {
-      this.asignaciones.push({ employeeId, horarioId });
+      this.asignaciones.push({ employeeId, horarioId, diasLibresFijos });
     }
     this.guardarAsignaciones();
-    return { success: true, message: `Horario ${horarioId} asignado al empleado ${employeeId}` };
+    return {
+      success: true,
+      message: `Horario ${horarioId} asignado al empleado ${employeeId}`,
+    };
   }
 
   asignarDiasLibres(employeeId: string, semana: string, diasLibres: string[]) {
@@ -197,8 +222,8 @@ export class ReglasBiometricosService {
 
   private obtenerInicioSemana(fecha: Date): string {
     const d = new Date(fecha);
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
+    const day = d.getDay(); // 0=domingo
+    const diff = day === 0 ? 0 : -day;
     d.setDate(d.getDate() + diff);
     return d.toISOString().slice(0, 10);
   }
@@ -214,7 +239,12 @@ export class ReglasBiometricosService {
       const horario = this.reglas.horarios.find(h => h.id === asignacion.horarioId);
       if (horario) {
         if (fecha) {
-          const diasLibres = this.obtenerDiasLibresSemana(employeeId, fecha);
+          let diasLibres = this.obtenerDiasLibresSemana(employeeId, fecha);
+
+          if (diasLibres.length === 0 && asignacion.diasLibresFijos?.length) {
+            diasLibres = asignacion.diasLibresFijos;
+          }
+
           const diasLaborales = this.todosLosDias.filter(d => !diasLibres.includes(d));
           return { ...horario, diasLaborales };
         }
@@ -324,7 +354,6 @@ export class ReglasBiometricosService {
     const entradaReal = marcajesDia[0];
     const salidaReal = marcajesDia.length >= 2 ? marcajesDia[marcajesDia.length - 1] : null;
 
-    // Sin salida
     if (!salidaReal) {
       const ahora = await this.biometricoService.obtenerHoraBiometrico();
       const esMismoDia = ahora.toDateString() === fecha.toDateString();
@@ -362,7 +391,6 @@ export class ReglasBiometricosService {
       }
     }
 
-    // Con salida
     if (!horario.diasLaborales.includes(diaSemana)) {
       return {
         employeeId,
@@ -385,13 +413,17 @@ export class ReglasBiometricosService {
     const entradaEsperada = this.horaAMinutos(horario.entrada);
     const salidaEsperada = this.horaAMinutos(horario.salida);
 
-    // Detección de turno nocturno
     const horaNocturnaMin = this.horaAMinutos(this.HORA_NOCTURNA);
     const tipoTurno = salidaMin >= horaNocturnaMin ? 'NOCTURNO' : 'DIURNO';
 
     const minutosRetardo = Math.max(0, entradaMin - entradaEsperada - horario.toleranciaMin);
     const minutosSalidaTemprana = Math.max(0, salidaEsperada - salidaMin);
-    const horasExtra = Math.round(Math.max(0, (salidaMin - salidaEsperada) / 60) * 100) / 100;
+
+    const duracionTurnoMin = this.horaAMinutos(horario.salida) - this.horaAMinutos(horario.entrada);
+    const tiempoTrabajadoMin = salidaMin - entradaMin;
+
+    let horasExtra = Math.max(0, (tiempoTrabajadoMin - duracionTurnoMin) / 60);
+    horasExtra = Math.round(horasExtra * 100) / 100;
 
     let estado: EvaluacionAsistencia['estado'] = 'PUNTUAL';
     if (minutosRetardo > 0 && minutosSalidaTemprana === 0) estado = 'RETARDO';

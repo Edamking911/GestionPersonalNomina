@@ -494,5 +494,21 @@
     "horaLocal": "31/08/2026, 05:33:41 p. m.",
     "deviceName": "DS-K1A8503MF",
     "rawType": "38"
+  },
+  {
+    "employeeId": "29789773",
+    "employeeName": "EMANUEL APONTE",
+    "timestamp": "2026-09-01T14:54:51.000Z",
+    "horaLocal": "01/09/2026, 10:54:51 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "22652518",
+    "employeeName": "JORWINS MARCANO",
+    "timestamp": "2026-09-01T14:55:51.000Z",
+    "horaLocal": "01/09/2026, 10:55:51 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
   }
 ]

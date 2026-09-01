@@ -61,12 +61,12 @@ const execPromise = util.promisify(exec);
 // Define la estructura de datos para un marcaje
 // ============================================
 export interface AttendanceRecord {
-  employeeId: string;      // Ej: "29789773" (cédula del empleado)
-  employeeName?: string;   // Ej: "EMANUEL APONTE" (se llena después)
-  timestamp: Date;         // Ej: 2026-08-25T14:08:12.000Z (fecha exacta)
-  horaLocal?: string;      // Ej: "25/08/2026, 10:08:12 a. m." (texto legible)
-  deviceName: string;      // Ej: "DS-K1A8503MF" (modelo del biométrico)
-  rawType: string;         // Ej: "38" (38=huella, 155=facial)
+  employeeId: string; // Ej: "29789773" (cédula del empleado)
+  employeeName?: string; // Ej: "EMANUEL APONTE" (se llena después)
+  timestamp: Date; // Ej: 2026-08-25T14:08:12.000Z (fecha exacta)
+  horaLocal?: string; // Ej: "25/08/2026, 10:08:12 a. m." (texto legible)
+  deviceName: string; // Ej: "DS-K1A8503MF" (modelo del biométrico)
+  rawType: string; // Ej: "38" (38=huella, 155=facial)
 }
 
 // ============================================
@@ -75,57 +75,56 @@ export interface AttendanceRecord {
 // ============================================
 @Injectable()
 export class BiometricoService {
-  
   // ============================================
   // LÍNEA 13: Crea un Logger específico para esta clase
   // Los mensajes aparecerán como: [BiometricoService] mensaje
   // ============================================
   private readonly logger = new Logger(BiometricoService.name);
-  
+
   // ============================================
   // LÍNEA 14: Define la ruta del archivo JSON
   // process.cwd() = carpeta donde se ejecuta el proyecto
   // Resultado: C:\Users\...\sistema\marcajes.json
   // ============================================
   private readonly filePath = path.join(process.cwd(), 'marcajes.json');
-  
+
   // ============================================
   // LÍNEA 15: Define la ruta del archivo Excel
   // Resultado: C:\Users\...\sistema\marcajes.xlsx
   // ============================================
   private readonly excelFilePath = path.join(process.cwd(), 'marcajes.xlsx');
-  
+
   // ============================================
   // LÍNEA 16: Define la zona horaria de Venezuela
   // Se usa como referencia (aunque la hora se toma del biométrico)
   // ============================================
   private readonly timeZone = 'America/Caracas';
-  
+
   // ============================================
   // LÍNEA 17: Crea un Map para guardar nombres en caché
   // Clave: ID del empleado, Valor: Nombre
   // Evita consultar al biométrico 100 veces por el mismo empleado
   // ============================================
   private employeeMap = new Map<string, string>();
-  
+
   // ============================================
   // LÍNEA 18: Contador de errores consecutivos
   // Si hay 5 errores seguidos, sabes que algo anda mal
   // ============================================
   private errorCount = 0;
-  
+
   // ============================================
   // LÍNEA 19: Timestamp del último error registrado
   // Se usa para no mostrar 100 errores en 1 minuto
   // ============================================
   private lastErrorLog = 0;
-  
+
   // ============================================
   // LÍNEA 20: Flag que indica si hay una sincronización en curso
   // true = hay sincronización activa, no empezar otra
   // ============================================
   private isSyncing = false;
-  
+
   // ============================================
   // LÍNEA 21: Fecha de la última sincronización exitosa
   // null = nunca se ha sincronizado
@@ -151,7 +150,7 @@ export class BiometricoService {
     // LÍNEA 24: Bloquea el flag para evitar otra sincronización
     // ============================================
     this.isSyncing = true;
-    
+
     // ============================================
     // LÍNEA 25: Inicia bloque try (para capturar errores)
     // ============================================
@@ -162,28 +161,30 @@ export class BiometricoService {
       // Guarda el resultado en la variable result
       // ============================================
       const result = await this.syncAllLogsFromDevice();
-      
+
       // ============================================
       // LÍNEA 27: Muestra un log con el resumen
       // Ej: "⏰ Cron: 38 eventos válidos, 1 nuevos guardados"
       // ============================================
-      this.logger.log(`⏰ Cron: ${result.totalEventosValidos} eventos válidos, ${result.totalRegistrosNuevosGuardados} nuevos guardados`);
-      
+      this.logger.log(
+        `⏰ Cron: ${result.totalEventosValidos} eventos válidos, ${result.totalRegistrosNuevosGuardados} nuevos guardados`,
+      );
+
       // ============================================
       // LÍNEA 28: Resetea el contador de errores
       // Si llegamos aquí, todo salió bien
       // ============================================
       this.errorCount = 0;
-      
-    // ============================================
-    // LÍNEA 29: Captura cualquier error que ocurra
-    // ============================================
+
+      // ============================================
+      // LÍNEA 29: Captura cualquier error que ocurra
+      // ============================================
     } catch (error: any) {
       // ============================================
       // LÍNEA 30: Obtiene el tiempo actual en milisegundos
       // ============================================
       const now = Date.now();
-      
+
       // ============================================
       // LÍNEA 31: Solo muestra error si pasó 1 minuto del último
       // Evita spam de errores cada 5 segundos
@@ -192,7 +193,9 @@ export class BiometricoService {
         // LÍNEA 32: Incrementa contador de errores
         this.errorCount++;
         // LÍNEA 33: Muestra advertencia con el número de intento
-        this.logger.warn(`⚠️ Error (Intento #${this.errorCount}): ${error.message}`);
+        this.logger.warn(
+          `⚠️ Error (Intento #${this.errorCount}): ${error.message}`,
+        );
         // LÍNEA 34: Actualiza el timestamp del último error
         this.lastErrorLog = now;
       }
@@ -224,7 +227,7 @@ export class BiometricoService {
       // Necesario porque el biométrico está en zona +08:00
       // ============================================
       endDate.setDate(endDate.getDate() + 1);
-      
+
       // ============================================
       // LÍNEA 39: Crea fecha de inicio (HOY)
       // ============================================
@@ -296,13 +299,13 @@ export class BiometricoService {
         // ============================================
         const payloadObj = {
           AcsEventCond: {
-            searchID: '1',                          // ID de búsqueda fijo
-            searchResultPosition: searchResultPosition,  // Posición actual
-            maxResults: maxResultsPerPage,          // 100 eventos por página
-            major: 0,                               // 0 = todos los tipos
-            minor: 0,                               // 0 = todos los subtipos
-            startTime: startTime,                   // Fecha inicio
-            endTime: endTime,                       // Fecha fin
+            searchID: '1', // ID de búsqueda fijo
+            searchResultPosition: searchResultPosition, // Posición actual
+            maxResults: maxResultsPerPage, // 100 eventos por página
+            major: 0, // 0 = todos los tipos
+            minor: 0, // 0 = todos los subtipos
+            startTime: startTime, // Fecha inicio
+            endTime: endTime, // Fecha fin
           },
         };
 
@@ -311,7 +314,7 @@ export class BiometricoService {
         // Reemplaza " por \" para que curl lo entienda
         // ============================================
         const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
-        
+
         // ============================================
         // LÍNEA 58: Construye el comando curl completo
         // --digest: autenticación digest
@@ -328,9 +331,9 @@ export class BiometricoService {
         // timeout: 30 segundos máximo
         // maxBuffer: 50MB máximo de respuesta
         // ============================================
-        const { stdout } = await execPromise(command, { 
+        const { stdout } = await execPromise(command, {
           timeout: 30000,
-          maxBuffer: 1024 * 1024 * 50
+          maxBuffer: 1024 * 1024 * 50,
         });
 
         // ============================================
@@ -366,7 +369,7 @@ export class BiometricoService {
           // LÍNEA 66: Avanza la posición para la siguiente página
           // ============================================
           searchResultPosition += events.length;
-          
+
           // ============================================
           // LÍNEA 67: Si ya recuperamos todos los eventos
           // ============================================
@@ -481,17 +484,17 @@ export class BiometricoService {
         // LÍNEA 93: Parsea la fecha y hora a formato Venezuela
         // ============================================
         const { dateObj, horaLocal } = this.parseDeviceTimeToLocal(ev.time);
-        
+
         // ============================================
         // LÍNEA 94: Crea el registro de asistencia
         // ============================================
         const record: AttendanceRecord = {
-          employeeId: idStr,                              // ID del empleado
-          employeeName: name,                              // Nombre resuelto
-          timestamp: dateObj,                              // Fecha exacta
-          horaLocal,                                       // Hora legible
-          deviceName: ev.deviceName || 'DS-K1A8503MF',     // Modelo del biométrico
-          rawType: String(minor || ev.eventType || '38'),  // Tipo de marcaje
+          employeeId: idStr, // ID del empleado
+          employeeName: name, // Nombre resuelto
+          timestamp: dateObj, // Fecha exacta
+          horaLocal, // Hora legible
+          deviceName: ev.deviceName || 'DS-K1A8503MF', // Modelo del biométrico
+          rawType: String(minor || ev.eventType || '38'), // Tipo de marcaje
         };
 
         // ============================================
@@ -503,7 +506,9 @@ export class BiometricoService {
       // ============================================
       // LÍNEA 96: Log con resumen del filtrado
       // ============================================
-      this.logger.log(`✅ Eventos válidos: ${validRecords.length} | Sistema: ${ignoredSystemEvents} | Sin empleado: ${ignoredEmptyEmployee} | Major inválido: ${ignoredInvalidMajor}`);
+      this.logger.log(
+        `✅ Eventos válidos: ${validRecords.length} | Sistema: ${ignoredSystemEvents} | Sin empleado: ${ignoredEmptyEmployee} | Major inválido: ${ignoredInvalidMajor}`,
+      );
 
       // ============================================
       // LÍNEA 97: Variable para contar registros nuevos
@@ -533,20 +538,21 @@ export class BiometricoService {
       // LÍNEA 102-110: Retorna objeto con resumen completo
       // ============================================
       return {
-        success: true,                                    // Indica éxito
-        message: 'Sincronización completa',               // Mensaje
-        totalEventosEnBiometrico: allEvents.length,       // Total eventos
-        totalEventosValidos: validRecords.length,         // Eventos válidos
-        totalRegistrosNuevosGuardados: newRecordsAdded,   // Nuevos guardados
+        success: true, // Indica éxito
+        message: 'Sincronización completa', // Mensaje
+        totalEventosEnBiometrico: allEvents.length, // Total eventos
+        totalEventosValidos: validRecords.length, // Eventos válidos
+        totalRegistrosNuevosGuardados: newRecordsAdded, // Nuevos guardados
         totalEventosSistemaIgnorados: ignoredSystemEvents, // Del sistema
-        totalSinEmpleadoIgnorados: ignoredEmptyEmployee,  // Sin empleado
+        totalSinEmpleadoIgnorados: ignoredEmptyEmployee, // Sin empleado
         totalMajorInvalidoIgnorados: ignoredInvalidMajor, // Major inválido
-        empleadosUnicos: [...new Set(validRecords.map(v => v.employeeId))].length, // Empleados únicos
+        empleadosUnicos: [...new Set(validRecords.map((v) => v.employeeId))]
+          .length, // Empleados únicos
       };
-      
-    // ============================================
-    // LÍNEA 111: Captura errores
-    // ============================================
+
+      // ============================================
+      // LÍNEA 111: Captura errores
+      // ============================================
     } catch (error: any) {
       // LÍNEA 112: Log del error
       this.logger.error('Error al sincronizar:', error?.message || error);
@@ -563,11 +569,12 @@ export class BiometricoService {
     ip: string = '172.18.0.89',
     user: string = 'admin',
     pass: string = 'Dtd2026*',
-    options?: {  // Parámetros opcionales
-      startDate?: string;  // Fecha inicio (YYYY-MM-DD)
-      endDate?: string;    // Fecha fin (YYYY-MM-DD)
-      daysBack?: number;   // O días hacia atrás
-    }
+    options?: {
+      // Parámetros opcionales
+      startDate?: string; // Fecha inicio (YYYY-MM-DD)
+      endDate?: string; // Fecha fin (YYYY-MM-DD)
+      daysBack?: number; // O días hacia atrás
+    },
   ) {
     try {
       // ============================================
@@ -575,30 +582,30 @@ export class BiometricoService {
       // ============================================
       let startDate: Date;
       let endDate: Date;
-      
+
       // ============================================
       // LÍNEA 117: Si se proporcionaron fechas específicas
       // ============================================
       if (options?.startDate && options?.endDate) {
         startDate = new Date(options.startDate);
         endDate = new Date(options.endDate);
-      // ============================================
-      // LÍNEA 118: Si se proporcionó días hacia atrás
-      // ============================================
+        // ============================================
+        // LÍNEA 118: Si se proporcionó días hacia atrás
+        // ============================================
       } else if (options?.daysBack) {
         endDate = new Date();
         endDate.setDate(endDate.getDate() + 1);
         startDate = new Date();
         startDate.setDate(startDate.getDate() - options.daysBack);
-      // ============================================
-      // LÍNEA 119: Por defecto: hoy hasta mañana
-      // ============================================
+        // ============================================
+        // LÍNEA 119: Por defecto: hoy hasta mañana
+        // ============================================
       } else {
         startDate = new Date();
         endDate = new Date();
         endDate.setDate(endDate.getDate() + 1);
       }
-      
+
       // ============================================
       // LÍNEA 120-127: Formatea las fechas (igual que antes)
       // ============================================
@@ -609,12 +616,12 @@ export class BiometricoService {
         const time = isStart ? '00:00:00' : '23:59:59';
         return `${year}-${month}-${day}T${time}+08:00`;
       };
-      
+
       const startTime = formatDate(startDate, true);
       const endTime = formatDate(endDate, false);
-      
+
       this.logger.log(`📅 Buscando desde ${startTime} hasta ${endTime}`);
-      
+
       // ============================================
       // LÍNEA 128-137: Construye payload (máx 500 eventos)
       // ============================================
@@ -629,30 +636,30 @@ export class BiometricoService {
           endTime: endTime,
         },
       };
-      
+
       const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
       const command = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X POST -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/AcsEvent?format=json`;
-      
+
       // ============================================
       // LÍNEA 138-140: Ejecuta y valida respuesta
       // ============================================
-      const { stdout } = await execPromise(command, { 
+      const { stdout } = await execPromise(command, {
         timeout: 30000,
-        maxBuffer: 1024 * 1024 * 50
+        maxBuffer: 1024 * 1024 * 50,
       });
-      
+
       if (!stdout) {
         throw new Error('Sin respuesta del biométrico');
       }
-      
+
       // ============================================
       // LÍNEA 141-143: Parsea respuesta
       // ============================================
       const data = JSON.parse(stdout);
       const events = data?.AcsEvent?.InfoList || [];
-      
+
       this.logger.log(`📋 Eventos recibidos: ${events.length}`);
-      
+
       // ============================================
       // LÍNEA 144-147: Variables de filtrado
       // ============================================
@@ -660,36 +667,36 @@ export class BiometricoService {
       let ignoredSystemEvents = 0;
       let ignoredEmptyEmployee = 0;
       let ignoredInvalidMajor = 0;
-      
+
       // ============================================
       // LÍNEA 148-188: Mismo bucle de filtrado que syncAll
       // ============================================
       for (const ev of events) {
         const minor = Number(ev.minor);
         const major = Number(ev.major);
-        
+
         const systemEventMinors = [49, 50, 51, 52, 53, 54, 55];
         if (systemEventMinors.includes(minor)) {
           ignoredSystemEvents++;
           continue;
         }
-        
+
         if (major !== 5) {
           ignoredInvalidMajor++;
           continue;
         }
-        
+
         const empId = ev.employeeNoString || ev.employeeNo || ev.cardNo;
-        
+
         if (!empId || String(empId).trim() === '' || empId === '0') {
           ignoredEmptyEmployee++;
           continue;
         }
-        
+
         const idStr = String(empId);
         const name = await this.getEmployeeName(idStr, ip, user, pass);
         const { dateObj, horaLocal } = this.parseDeviceTimeToLocal(ev.time);
-        
+
         const record: AttendanceRecord = {
           employeeId: idStr,
           employeeName: name,
@@ -698,10 +705,10 @@ export class BiometricoService {
           deviceName: ev.deviceName || 'DS-K1A8503MF',
           rawType: String(minor || ev.eventType || '38'),
         };
-        
+
         validRecords.push(record);
       }
-      
+
       // ============================================
       // LÍNEA 189-192: Guarda registros
       // ============================================
@@ -709,7 +716,7 @@ export class BiometricoService {
       if (validRecords.length > 0) {
         newRecordsAdded = await this.saveMultipleRecords(validRecords);
       }
-      
+
       // ============================================
       // LÍNEA 193-205: Retorna resumen
       // ============================================
@@ -722,9 +729,9 @@ export class BiometricoService {
         totalEventosSistemaIgnorados: ignoredSystemEvents,
         totalSinEmpleadoIgnorados: ignoredEmptyEmployee,
         totalMajorInvalidoIgnorados: ignoredInvalidMajor,
-        empleadosUnicos: [...new Set(validRecords.map(v => v.employeeId))].length,
+        empleadosUnicos: [...new Set(validRecords.map((v) => v.employeeId))]
+          .length,
       };
-      
     } catch (error: any) {
       this.logger.error('Error al sincronizar:', error?.message || error);
       throw error;
@@ -769,7 +776,7 @@ export class BiometricoService {
       // LÍNEA 211: Obtiene estadísticas del archivo (tamaño, fecha)
       // ============================================
       const stats = fs.statSync(this.excelFilePath);
-      
+
       // ============================================
       // LÍNEA 212: Crea un nuevo Workbook
       // ============================================
@@ -782,7 +789,7 @@ export class BiometricoService {
       // LÍNEA 214: Obtiene la hoja "Marcajes"
       // ============================================
       const worksheet: any = workbook.getWorksheet('Marcajes');
-      
+
       // ============================================
       // LÍNEA 215: Si no existe la hoja
       // ============================================
@@ -795,7 +802,7 @@ export class BiometricoService {
           ultimosRegistros: [],
         };
       }
-      
+
       // ============================================
       // LÍNEA 216: Array para las últimas 5 filas
       // ============================================
@@ -809,7 +816,7 @@ export class BiometricoService {
       // Math.max(2, ...) = nunca menor a 2 (salta el header)
       // ============================================
       const startRow = Math.max(2, totalRows - 4);
-      
+
       // ============================================
       // LÍNEA 219: Bucle desde startRow hasta totalRows
       // ============================================
@@ -818,7 +825,7 @@ export class BiometricoService {
         // LÍNEA 220: Obtiene la fila actual
         // ============================================
         const row = worksheet.getRow(i);
-        
+
         // ============================================
         // LÍNEA 221-226: Agrega datos de la fila al array
         // getCell(1) = Columna A (ID)
@@ -836,7 +843,7 @@ export class BiometricoService {
           dispositivo: row.getCell(5).value?.toString() || '',
         });
       }
-      
+
       // ============================================
       // LÍNEA 227-235: Retorna información completa
       // ============================================
@@ -844,11 +851,11 @@ export class BiometricoService {
         success: true,
         message: 'Excel verificado correctamente',
         path: this.excelFilePath,
-        tamanoKB: (stats.size / 1024).toFixed(2),     // Tamaño en KB
-        ultimaModificacion: stats.mtime,               // Fecha modificación
-        totalFilas: worksheet.rowCount - 1,            // -1 por el header
-        columnas: worksheet.columnCount,               // Número de columnas
-        ultimosRegistros: lastRows,                    // Últimas 5 filas
+        tamanoKB: (stats.size / 1024).toFixed(2), // Tamaño en KB
+        ultimaModificacion: stats.mtime, // Fecha modificación
+        totalFilas: worksheet.rowCount - 1, // -1 por el header
+        columnas: worksheet.columnCount, // Número de columnas
+        ultimosRegistros: lastRows, // Últimas 5 filas
       };
     } catch (error: any) {
       this.logger.error('Error verificando Excel:', error);
@@ -877,12 +884,12 @@ export class BiometricoService {
       // LÍNEA 238: Ejecuta el comando
       // ============================================
       const { stdout } = await execPromise(command, { timeout: 10000 });
-      
+
       // ============================================
       // LÍNEA 239: Parsea la respuesta XML
       // ============================================
       const parsed = await this.parseXml(stdout);
-      
+
       // ============================================
       // LÍNEA 240-249: Retorna información del dispositivo
       // ============================================
@@ -895,7 +902,7 @@ export class BiometricoService {
           firmwareVersion: parsed?.DeviceInfo?.firmwareVersion || 'N/A',
           macAddress: parsed?.DeviceInfo?.macAddress || 'N/A',
           ip: ip,
-        }
+        },
       };
     } catch (error: any) {
       this.logger.error('Error obteniendo info:', error.message);
@@ -923,7 +930,7 @@ export class BiometricoService {
     // LÍNEA 253: Contador de duplicados eliminados
     // ============================================
     let removed = 0;
-    
+
     // ============================================
     // LÍNEA 254: Bucle para filtrar duplicados
     // ============================================
@@ -936,7 +943,7 @@ export class BiometricoService {
       // LÍNEA 256: Crea clave única (empleado + fecha)
       // ============================================
       const key = `${event.employeeId}_${timestamp.toISOString()}`;
-      
+
       // ============================================
       // LÍNEA 257: Si no existe, agregarlo
       // ============================================
@@ -949,12 +956,12 @@ export class BiometricoService {
         removed++;
       }
     }
-    
+
     // ============================================
     // LÍNEA 259: Convierte Map a Array
     // ============================================
     const cleanEvents = Array.from(uniqueEvents.values());
-    
+
     // ============================================
     // LÍNEA 260-264: Ordena por fecha
     // ============================================
@@ -963,23 +970,27 @@ export class BiometricoService {
       const dateB = this.normalizeDate(b.timestamp);
       return dateA.getTime() - dateB.getTime();
     });
-    
+
     // ============================================
     // LÍNEA 265: Guarda JSON limpio
     // ============================================
-    fs.writeFileSync(this.filePath, JSON.stringify(cleanEvents, null, 2), 'utf-8');
-    
+    fs.writeFileSync(
+      this.filePath,
+      JSON.stringify(cleanEvents, null, 2),
+      'utf-8',
+    );
+
     // ============================================
     // LÍNEA 266: Regenera Excel con datos limpios
     // ============================================
     await this.regenerateExcel(cleanEvents);
-    
+
     // ============================================
     // LÍNEA 267-270: Retorna resultado
     // ============================================
     return {
       removed,
-      message: `Se eliminaron ${removed} duplicados. Total: ${cleanEvents.length}`
+      message: `Se eliminaron ${removed} duplicados. Total: ${cleanEvents.length}`,
     };
   }
 
@@ -995,12 +1006,12 @@ export class BiometricoService {
     // LÍNEA 273: Crea hoja "Marcajes"
     // ============================================
     const worksheet: any = workbook.addWorksheet('Marcajes');
-    
+
     // ============================================
     // LÍNEA 274: Configura columnas
     // ============================================
     this.setupWorksheetColumns(worksheet);
-    
+
     // ============================================
     // LÍNEA 275-279: Ordena registros por fecha
     // ============================================
@@ -1009,7 +1020,7 @@ export class BiometricoService {
       const dateB = this.normalizeDate(b.timestamp);
       return dateA.getTime() - dateB.getTime();
     });
-    
+
     // ============================================
     // LÍNEA 280: Bucle para agregar cada registro
     // ============================================
@@ -1025,7 +1036,7 @@ export class BiometricoService {
         deviceName: record.deviceName,
       });
     }
-    
+
     // ============================================
     // LÍNEA 287: Guarda el archivo Excel
     // ============================================
@@ -1033,7 +1044,9 @@ export class BiometricoService {
     // ============================================
     // LÍNEA 288: Log de confirmación
     // ============================================
-    this.logger.log(`📊 Excel regenerado con ${sortedRecords.length} registros`);
+    this.logger.log(
+      `📊 Excel regenerado con ${sortedRecords.length} registros`,
+    );
   }
 
   // ============================================
@@ -1082,7 +1095,7 @@ export class BiometricoService {
     // LÍNEA 306: Obtiene todos los registros
     // ============================================
     const events = this.getSavedEvents();
-    
+
     // ============================================
     // LÍNEA 307: Objeto para agrupar por día
     // ============================================
@@ -1090,7 +1103,7 @@ export class BiometricoService {
     // ============================================
     // LÍNEA 308: Bucle para agrupar por día
     // ============================================
-    events.forEach(e => {
+    events.forEach((e) => {
       // LÍNEA 309: Normaliza fecha
       const timestamp = this.normalizeDate(e.timestamp);
       // LÍNEA 310: Obtiene fecha en formato local
@@ -1100,7 +1113,7 @@ export class BiometricoService {
       // LÍNEA 312: Agrega evento al día
       byDay[day].push(e);
     });
-    
+
     // ============================================
     // LÍNEA 313: Objeto para agrupar por empleado
     // ============================================
@@ -1108,7 +1121,7 @@ export class BiometricoService {
     // ============================================
     // LÍNEA 314: Bucle para agrupar por empleado
     // ============================================
-    events.forEach(e => {
+    events.forEach((e) => {
       // LÍNEA 315: Si no existe el empleado, crearlo
       if (!byEmployee[e.employeeId]) {
         byEmployee[e.employeeId] = {
@@ -1122,7 +1135,7 @@ export class BiometricoService {
       // LÍNEA 317: Actualiza último marcaje
       byEmployee[e.employeeId].ultimoMarcaje = e.horaLocal;
     });
-    
+
     // ============================================
     // LÍNEA 318-329: Retorna estadísticas completas
     // ============================================
@@ -1130,12 +1143,13 @@ export class BiometricoService {
       totalRegistros: events.length,
       totalDias: Object.keys(byDay).length,
       totalEmpleados: Object.keys(byEmployee).length,
-      registrosPorDia: Object.keys(byDay).map(day => ({
+      registrosPorDia: Object.keys(byDay).map((day) => ({
         fecha: day,
         total: byDay[day].length,
-        empleadosUnicos: [...new Set(byDay[day].map((e: any) => e.employeeId))].length,
+        empleadosUnicos: [...new Set(byDay[day].map((e: any) => e.employeeId))]
+          .length,
       })),
-      resumenPorEmpleado: Object.keys(byEmployee).map(id => ({
+      resumenPorEmpleado: Object.keys(byEmployee).map((id) => ({
         empleadoId: id,
         ...byEmployee[id],
       })),
@@ -1149,7 +1163,7 @@ export class BiometricoService {
     // ============================================
     // LÍNEA 331: Retorna una promesa que se resuelve después de ms
     // ============================================
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // ============================================
@@ -1177,24 +1191,27 @@ export class BiometricoService {
   // ============================================
   // LÍNEA 342: Método para convertir fecha del biométrico a hora local
   // ============================================
-  private parseDeviceTimeToLocal(timeStr: string): { dateObj: Date; horaLocal: string } {
+  private parseDeviceTimeToLocal(timeStr: string): {
+    dateObj: Date;
+    horaLocal: string;
+  } {
     // ============================================
     // LÍNEA 343: Variable para la fecha
     // ============================================
     let dateObj: Date;
-    
+
     try {
       // ============================================
       // LÍNEA 344: Quita la zona horaria (+08:00)
       // Ej: "2026-08-25T10:08:12+08:00" → "2026-08-25T10:08:12"
       // ============================================
       const timeWithoutZone = timeStr.replace(/[+-]\d{2}:\d{2}$/, '');
-      
+
       // ============================================
       // LÍNEA 345: Parsea la fecha sin zona horaria
       // ============================================
       dateObj = new Date(timeWithoutZone);
-      
+
       // ============================================
       // LÍNEA 346: Si falla, intentar parse manual
       // ============================================
@@ -1202,7 +1219,9 @@ export class BiometricoService {
         // ============================================
         // LÍNEA 347: Extrae componentes con regex
         // ============================================
-        const match = timeStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+        const match = timeStr.match(
+          /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/,
+        );
         // ============================================
         // LÍNEA 348: Si hay match
         // ============================================
@@ -1210,7 +1229,8 @@ export class BiometricoService {
           // ============================================
           // LÍNEA 349: Desestructura y convierte a números
           // ============================================
-          const [, year, month, day, hours, minutes, seconds] = match.map(Number);
+          const [, year, month, day, hours, minutes, seconds] =
+            match.map(Number);
           // ============================================
           // LÍNEA 350: Crea fecha manualmente
           // month - 1 porque JS usa meses 0-11
@@ -1218,7 +1238,7 @@ export class BiometricoService {
           dateObj = new Date(year, month - 1, day, hours, minutes, seconds);
         }
       }
-      
+
       // ============================================
       // LÍNEA 351-359: Formatea en español venezolano
       // hour12: true = formato 12 horas (a.m./p.m.)
@@ -1232,12 +1252,11 @@ export class BiometricoService {
         second: '2-digit',
         hour12: true,
       }).format(dateObj);
-      
+
       // ============================================
       // LÍNEA 360: Retorna fecha y hora formateada
       // ============================================
       return { dateObj, horaLocal };
-      
     } catch (error) {
       // ============================================
       // LÍNEA 361: Si hay error, usar fecha actual
@@ -1335,7 +1354,10 @@ export class BiometricoService {
       // ============================================
       // LÍNEA 388: Log del error
       // ============================================
-      this.logger.error(`Error obteniendo nombre para ${employeeId}:`, error.message);
+      this.logger.error(
+        `Error obteniendo nombre para ${employeeId}:`,
+        error.message,
+      );
     }
 
     // ============================================
@@ -1347,7 +1369,9 @@ export class BiometricoService {
   // ============================================
   // LÍNEA 390: Método para guardar registros en JSON y Excel
   // ============================================
-  private async saveMultipleRecords(records: AttendanceRecord[]): Promise<number> {
+  private async saveMultipleRecords(
+    records: AttendanceRecord[],
+  ): Promise<number> {
     // ============================================
     // LÍNEA 391: Si no hay registros, retornar 0
     // ============================================
@@ -1357,18 +1381,18 @@ export class BiometricoService {
     // LÍNEA 392: Obtiene registros actuales del JSON
     // ============================================
     const currentEvents = this.getSavedEvents();
-    
+
     // ============================================
     // LÍNEA 393-398: Crea Set de claves existentes
     // Clave = empleado + fecha (para detectar duplicados)
     // ============================================
     const existingKeys = new Set(
-      currentEvents.map(e => {
+      currentEvents.map((e) => {
         const timestamp = this.normalizeDate(e.timestamp);
         return `${e.employeeId}_${timestamp.toISOString()}`;
-      })
+      }),
     );
-    
+
     // ============================================
     // LÍNEA 399: Contador de registros nuevos
     // ============================================
@@ -1390,7 +1414,7 @@ export class BiometricoService {
       // LÍNEA 403: Crea clave única
       // ============================================
       const key = `${record.employeeId}_${timestamp.toISOString()}`;
-      
+
       // ============================================
       // LÍNEA 404: Si no existe, agregarlo
       // ============================================
@@ -1414,7 +1438,7 @@ export class BiometricoService {
       // LÍNEA 410: Combina registros viejos y nuevos
       // ============================================
       const updatedEvents = [...currentEvents, ...recordsToAdd];
-      
+
       // ============================================
       // LÍNEA 411-415: Ordena por fecha
       // ============================================
@@ -1423,21 +1447,27 @@ export class BiometricoService {
         const dateB = this.normalizeDate(b.timestamp);
         return dateA.getTime() - dateB.getTime();
       });
-      
+
       // ============================================
       // LÍNEA 416: Guarda en JSON
       // ============================================
-      fs.writeFileSync(this.filePath, JSON.stringify(updatedEvents, null, 2), 'utf-8');
-      
+      fs.writeFileSync(
+        this.filePath,
+        JSON.stringify(updatedEvents, null, 2),
+        'utf-8',
+      );
+
       // ============================================
       // LÍNEA 417: Regenera Excel completo
       // ============================================
       await this.saveMultipleRecordsToExcel(recordsToAdd);
-      
+
       // ============================================
       // LÍNEA 418: Log de confirmación
       // ============================================
-      this.logger.log(`✅ ${newRecordsCount} registros nuevos guardados en JSON y Excel`);
+      this.logger.log(
+        `✅ ${newRecordsCount} registros nuevos guardados en JSON y Excel`,
+      );
     }
 
     // ============================================
@@ -1449,17 +1479,19 @@ export class BiometricoService {
   // ============================================
   // LÍNEA 420: Método para guardar en Excel (regenera completo)
   // ============================================
-  private async saveMultipleRecordsToExcel(records: AttendanceRecord[]): Promise<void> {
+  private async saveMultipleRecordsToExcel(
+    records: AttendanceRecord[],
+  ): Promise<void> {
     // ============================================
     // LÍNEA 421: Si no hay registros, salir
     // ============================================
     if (records.length === 0) return;
-    
+
     // ============================================
     // LÍNEA 422: Obtiene TODOS los registros del JSON
     // ============================================
     const allRecords = this.getSavedEvents();
-    
+
     // ============================================
     // LÍNEA 423: Crea nuevo Workbook
     // ============================================
@@ -1468,7 +1500,7 @@ export class BiometricoService {
     // LÍNEA 424: Crea hoja "Marcajes"
     // ============================================
     const worksheet: any = workbook.addWorksheet('Marcajes');
-    
+
     // ============================================
     // LÍNEA 425-431: Configura columnas
     // ============================================
@@ -1500,7 +1532,7 @@ export class BiometricoService {
     // LÍNEA 439: Centrado
     // ============================================
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-    
+
     // ============================================
     // LÍNEA 440: Bucle para agregar todos los registros
     // ============================================
@@ -1516,7 +1548,7 @@ export class BiometricoService {
         deviceName: record.deviceName,
       });
     }
-    
+
     // ============================================
     // LÍNEA 447: Guarda archivo Excel
     // ============================================
@@ -1531,11 +1563,11 @@ export class BiometricoService {
   // LÍNEA 449: Método para insertar registro manualmente
   // ============================================
   async insertAttendanceRecord(data: {
-    employeeId: string;      // ID obligatorio
-    employeeName?: string;   // Nombre opcional
+    employeeId: string; // ID obligatorio
+    employeeName?: string; // Nombre opcional
     timestamp?: string | Date; // Fecha opcional
-    deviceName?: string;     // Dispositivo opcional
-    rawType?: string;        // Tipo opcional
+    deviceName?: string; // Dispositivo opcional
+    rawType?: string; // Tipo opcional
   }) {
     try {
       // ============================================
@@ -1553,16 +1585,18 @@ export class BiometricoService {
       // LÍNEA 452: Obtiene nombre (del dato o consulta)
       // ============================================
       const name = data.employeeName || (await this.getEmployeeName(idStr));
-      
+
       // ============================================
       // LÍNEA 453: Prepara fecha (dato o ahora)
       // ============================================
-      const rawDate = data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString();
+      const rawDate = data.timestamp
+        ? new Date(data.timestamp).toISOString()
+        : new Date().toISOString();
       // ============================================
       // LÍNEA 454: Parsea fecha a formato local
       // ============================================
       const { dateObj, horaLocal } = this.parseDeviceTimeToLocal(rawDate);
-      
+
       // ============================================
       // LÍNEA 455: Tipo de marcaje (default: 38 = huella)
       // ============================================
@@ -1594,14 +1628,20 @@ export class BiometricoService {
       // ============================================
       return {
         success: added > 0,
-        message: added > 0 ? 'Marcaje registrado exitosamente.' : 'El marcaje ya existe.',
-        data: added > 0 ? {
-          empleadoId: record.employeeId,
-          nombre: record.employeeName,
-          horaLocal: record.horaLocal,
-          metodoMarcaje: this.parseEventType(record.rawType),
-          dispositivo: record.deviceName,
-        } : null,
+        message:
+          added > 0
+            ? 'Marcaje registrado exitosamente.'
+            : 'El marcaje ya existe.',
+        data:
+          added > 0
+            ? {
+                empleadoId: record.employeeId,
+                nombre: record.employeeName,
+                horaLocal: record.horaLocal,
+                metodoMarcaje: this.parseEventType(record.rawType),
+                dispositivo: record.deviceName,
+              }
+            : null,
       };
     } catch (error: any) {
       this.logger.error('Error al insertar marcaje:', error?.message || error);
@@ -1710,7 +1750,7 @@ export class BiometricoService {
     // LÍNEA 502: Verifica si existe el archivo
     // ============================================
     if (!fs.existsSync(this.filePath)) return [];
-    
+
     // ============================================
     // LÍNEA 503: Lee el archivo
     // ============================================
@@ -1719,19 +1759,19 @@ export class BiometricoService {
     // LÍNEA 504: Si está vacío, retornar array vacío
     // ============================================
     if (!fileData) return [];
-    
+
     try {
       // ============================================
       // LÍNEA 505: Parsea JSON
       // ============================================
       const records = JSON.parse(fileData);
-      
+
       // ============================================
       // LÍNEA 506-509: Normaliza timestamps a Date
       // ============================================
       return records.map((r: any) => ({
         ...r,
-        timestamp: this.normalizeDate(r.timestamp)
+        timestamp: this.normalizeDate(r.timestamp),
       }));
     } catch (error) {
       this.logger.error('Error parseando marcajes.json:', error);
@@ -1747,16 +1787,16 @@ export class BiometricoService {
     // LÍNEA 511: Obtiene todos los eventos
     // ============================================
     const events = this.getSavedEvents();
-    
+
     // ============================================
     // LÍNEA 512-518: Formatea registros
     // ============================================
-    const detailed = events.map(e => ({
+    const detailed = events.map((e) => ({
       empleadoId: e.employeeId,
       nombreCompleto: e.employeeName || 'DESCONOCIDO',
       metodoMarcaje: this.parseEventType(e.rawType),
       horaLocal: e.horaLocal,
-      dispositivo: e.deviceName
+      dispositivo: e.deviceName,
     }));
 
     // ============================================
@@ -1767,7 +1807,7 @@ export class BiometricoService {
     // LÍNEA 520: Guarda archivo
     // ============================================
     fs.writeFileSync(exportPath, JSON.stringify(detailed, null, 2), 'utf-8');
-    
+
     // ============================================
     // LÍNEA 521-525: Retorna resultado
     // ============================================
@@ -1775,7 +1815,7 @@ export class BiometricoService {
       success: true,
       message: `Archivo exportado a ${exportPath}`,
       total: detailed.length,
-      data: detailed
+      data: detailed,
     };
   }
 
@@ -1799,7 +1839,7 @@ export class BiometricoService {
     // LÍNEA 531: Convierte major a número
     // ============================================
     const major = Number(event.major);
-    
+
     // ============================================
     // LÍNEA 532: Lista de events del sistema
     // ============================================
@@ -1897,7 +1937,7 @@ export class BiometricoService {
     // LÍNEA 565: Obtiene todos los eventos
     // ============================================
     const events = this.getSavedEvents();
-    
+
     // ============================================
     // LÍNEA 566-570: Ordena por fecha
     // ============================================
@@ -1906,16 +1946,16 @@ export class BiometricoService {
       const dateB = this.normalizeDate(b.timestamp);
       return dateA.getTime() - dateB.getTime();
     });
-    
+
     // ============================================
     // LÍNEA 571: Objeto para agrupar por fecha
     // ============================================
     const grouped: any = {};
-    
+
     // ============================================
     // LÍNEA 572: Bucle para agrupar
     // ============================================
-    sortedEvents.forEach(record => {
+    sortedEvents.forEach((record) => {
       // LÍNEA 573: Normaliza fecha
       const timestamp = this.normalizeDate(record.timestamp);
       // LÍNEA 574-578: Obtiene clave de fecha
@@ -1924,7 +1964,7 @@ export class BiometricoService {
         month: '2-digit',
         day: '2-digit',
       });
-      
+
       // LÍNEA 579: Si no existe el grupo, crearlo
       if (!grouped[dateKey]) {
         grouped[dateKey] = {
@@ -1936,10 +1976,10 @@ export class BiometricoService {
             day: 'numeric',
           }),
           totalMarcajes: 0,
-          marcajes: []
+          marcajes: [],
         };
       }
-      
+
       // LÍNEA 587: Incrementa contador
       grouped[dateKey].totalMarcajes++;
       // LÍNEA 588-595: Agrega marcaje al grupo
@@ -1952,21 +1992,22 @@ export class BiometricoService {
         dispositivo: record.deviceName,
       });
     });
-    
+
     // LÍNEA 596: Ordena las fechas
     const sortedDates = Object.keys(grouped).sort();
-    
+
     // LÍNEA 597-604: Retorna resultado
     return {
       totalRegistros: sortedEvents.length,
       totalDias: sortedDates.length,
-      registrosPorFecha: sortedDates.map(key => ({
+      registrosPorFecha: sortedDates.map((key) => ({
         fecha: grouped[key].fecha,
         totalMarcajes: grouped[key].totalMarcajes,
-        marcajes: grouped[key].marcajes
-      }))
+        marcajes: grouped[key].marcajes,
+      })),
     };
   }
+}
 
 
 

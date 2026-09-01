@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Query, Delete, Param } from '@nestjs/common';
 import { BiometricoService } from './biometrico.service';
 import type { Request } from 'express';
 
@@ -162,6 +162,15 @@ export class BiometricoController {
     return { success };
   }
 
+   /* 📥 Importar usuarios desde Excel
+   * Body: { "filePath": "C:\\ruta\\al\\archivo.xlsx" }
+   * El Excel debe tener las columnas: Cédula, Nombre, Apellido, Cargo
+   */
+  @Post('import-users')
+  async importUsers(@Body('filePath') filePath: string) {
+    return await this.biometricoService.importUsersFromExcel(filePath);
+  }
+
   /**
    * Limpiar caché de empleados
    */
@@ -180,5 +189,58 @@ export class BiometricoController {
   @Get('device-info')
   async getDeviceInfo() {
     return await this.biometricoService.getDeviceInfo();
+  }
+
+  @Get('list-users')
+  async listUsers() {
+    return await this.biometricoService.listUsers();
+  }
+
+    /**
+   * Eliminar usuario del biométrico
+   * Ejemplo: DELETE /biometrico/delete-user/16335012
+   */
+  @Delete('delete-user/:employeeNo')
+  async deleteUser(@Param('employeeNo') employeeNo: string) {
+    return await this.biometricoService.deleteUserFromDevice(employeeNo);
+  }
+
+    /**
+   * 🔐 Preparar usuario para registrar huella
+   * POST /biometrico/prepare-fingerprint/12345
+   */
+  @Post('prepare-fingerprint/:employeeNo')
+  async prepareFingerprint(@Param('employeeNo') employeeNo: string) {
+    return await this.biometricoService.prepareUserForFingerprint(employeeNo);
+  }
+
+  @Post('remove-pending/:employeeNo')
+  async removePending(@Param('employeeNo') employeeNo: string) {
+    return this.biometricoService.removeFromPendingFingerprintList(employeeNo);
+  }
+
+  @Get('pending-fingerprint')
+  async pendingFingerprint() {
+    const pendientes = await this.biometricoService.listPendingFingerprint();
+    return { success: true, pendientes };
+  }
+
+   /**
+   * Obtener marcajes de una fecha específica
+   * GET /biometrico/marcajes/:fecha
+   */
+  @Get('marcajes/:fecha')
+  async getMarcajesPorFecha(@Param('fecha') fecha: string) {
+    return await this.biometricoService.getMarcajesPorFecha(fecha);
+  }
+
+   @Get('list-all-users')
+  async listAllUsers() {
+    return await this.biometricoService.listUsers(
+      '172.18.0.89',
+      'admin',
+      'Dtd2026*',
+      true, // incluirInactivos = true
+    );
   }
 }

@@ -45,6 +45,16 @@ export interface EvaluacionAsistencia {
   retardoLegible: string;
   salidaTempranaLegible: string;
   tipoTurno?: 'DIURNO' | 'NOCTURNO';
+
+  // Nuevos campos para el desglose de horas
+  horasDiurnas: number;
+  horasNocturnas: number;
+  horasExtraDiurnas: number;
+  horasExtraNocturnas: number;
+  horasDiurnasLegible: string;
+  horasNocturnasLegible: string;
+  horasExtraDiurnasLegible: string;
+  horasExtraNocturnasLegible: string;
 }
 
 @Injectable()
@@ -166,7 +176,6 @@ export class ReglasBiometricosService {
   /**
    * Obtiene asignaciones con días libres fijos y rotativos de una semana.
    * La semana debe ser la fecha del domingo de esa semana (YYYY-MM-DD).
-   * Si no se especifica, se usa la semana actual.
    */
   getAsignaciones(semana?: string) {
     const semanaClave = semana || this.obtenerInicioSemana(new Date());
@@ -298,6 +307,15 @@ export class ReglasBiometricosService {
     return `${m}m`;
   }
 
+  private formatearHoras(horas: number): string {
+    if (horas <= 0) return '0h';
+    const h = Math.floor(horas);
+    const m = Math.round((horas - h) * 60);
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+  }
+
   async evaluarEmpleado(
     employeeId: string,
     fecha: Date,
@@ -322,6 +340,14 @@ export class ReglasBiometricosService {
         horasExtra: 0,
         retardoLegible: '0m',
         salidaTempranaLegible: '0m',
+        horasDiurnas: 0,
+        horasNocturnas: 0,
+        horasExtraDiurnas: 0,
+        horasExtraNocturnas: 0,
+        horasDiurnasLegible: '0h',
+        horasNocturnasLegible: '0h',
+        horasExtraDiurnasLegible: '0h',
+        horasExtraNocturnasLegible: '0h',
       };
     }
 
@@ -347,6 +373,14 @@ export class ReglasBiometricosService {
         horasExtra: 0,
         retardoLegible: '0m',
         salidaTempranaLegible: '0m',
+        horasDiurnas: 0,
+        horasNocturnas: 0,
+        horasExtraDiurnas: 0,
+        horasExtraNocturnas: 0,
+        horasDiurnasLegible: '0h',
+        horasNocturnasLegible: '0h',
+        horasExtraDiurnasLegible: '0h',
+        horasExtraNocturnasLegible: '0h',
       };
     }
 
@@ -354,6 +388,7 @@ export class ReglasBiometricosService {
     const entradaReal = marcajesDia[0];
     const salidaReal = marcajesDia.length >= 2 ? marcajesDia[marcajesDia.length - 1] : null;
 
+    // Sin salida
     if (!salidaReal) {
       const ahora = await this.biometricoService.obtenerHoraBiometrico();
       const esMismoDia = ahora.toDateString() === fecha.toDateString();
@@ -372,6 +407,14 @@ export class ReglasBiometricosService {
           horasExtra: 0,
           retardoLegible: '0m',
           salidaTempranaLegible: '0m',
+          horasDiurnas: 0,
+          horasNocturnas: 0,
+          horasExtraDiurnas: 0,
+          horasExtraNocturnas: 0,
+          horasDiurnasLegible: '0h',
+          horasNocturnasLegible: '0h',
+          horasExtraDiurnasLegible: '0h',
+          horasExtraNocturnasLegible: '0h',
         };
       } else {
         return {
@@ -387,10 +430,19 @@ export class ReglasBiometricosService {
           horasExtra: 0,
           retardoLegible: '0m',
           salidaTempranaLegible: '0m',
+          horasDiurnas: 0,
+          horasNocturnas: 0,
+          horasExtraDiurnas: 0,
+          horasExtraNocturnas: 0,
+          horasDiurnasLegible: '0h',
+          horasNocturnasLegible: '0h',
+          horasExtraDiurnasLegible: '0h',
+          horasExtraNocturnasLegible: '0h',
         };
       }
     }
 
+    // Con salida
     if (!horario.diasLaborales.includes(diaSemana)) {
       return {
         employeeId,
@@ -405,6 +457,14 @@ export class ReglasBiometricosService {
         horasExtra: 0,
         retardoLegible: '0m',
         salidaTempranaLegible: '0m',
+        horasDiurnas: 0,
+        horasNocturnas: 0,
+        horasExtraDiurnas: 0,
+        horasExtraNocturnas: 0,
+        horasDiurnasLegible: '0h',
+        horasNocturnasLegible: '0h',
+        horasExtraDiurnasLegible: '0h',
+        horasExtraNocturnasLegible: '0h',
       };
     }
 
@@ -413,17 +473,67 @@ export class ReglasBiometricosService {
     const entradaEsperada = this.horaAMinutos(horario.entrada);
     const salidaEsperada = this.horaAMinutos(horario.salida);
 
-    const horaNocturnaMin = this.horaAMinutos(this.HORA_NOCTURNA);
-    const tipoTurno = salidaMin >= horaNocturnaMin ? 'NOCTURNO' : 'DIURNO';
-
     const minutosRetardo = Math.max(0, entradaMin - entradaEsperada - horario.toleranciaMin);
     const minutosSalidaTemprana = Math.max(0, salidaEsperada - salidaMin);
 
+    // =====================================================
+    // Cálculo de horas diurnas/nocturnas normales y extras
+    // =====================================================
+    const HORA_NOCTURNA = this.horaAMinutos(this.HORA_NOCTURNA);
     const duracionTurnoMin = this.horaAMinutos(horario.salida) - this.horaAMinutos(horario.entrada);
     const tiempoTrabajadoMin = salidaMin - entradaMin;
+    const totalHorasExtra = Math.max(0, (tiempoTrabajadoMin - duracionTurnoMin) / 60);
 
-    let horasExtra = Math.max(0, (tiempoTrabajadoMin - duracionTurnoMin) / 60);
-    horasExtra = Math.round(horasExtra * 100) / 100;
+    let horasDiurnas = 0;
+    let horasNocturnas = 0;
+    let horasExtraDiurnas = 0;
+    let horasExtraNocturnas = 0;
+
+    // Jornada normal diurna/nocturna
+    if (entradaMin >= HORA_NOCTURNA) {
+      // Toda la jornada normal es nocturna
+      horasNocturnas = Math.min(duracionTurnoMin, tiempoTrabajadoMin) / 60;
+    } else if (salidaMin <= HORA_NOCTURNA) {
+      // Toda la jornada normal es diurna
+      horasDiurnas = Math.min(duracionTurnoMin, tiempoTrabajadoMin) / 60;
+    } else {
+      // Cruza de diurno a nocturno
+      horasDiurnas = (HORA_NOCTURNA - entradaMin) / 60;
+      const jornadaRestanteMin = duracionTurnoMin - (HORA_NOCTURNA - entradaMin);
+      horasNocturnas = Math.max(0, jornadaRestanteMin / 60);
+    }
+
+    // Horas extra
+    if (totalHorasExtra > 0) {
+      if (salidaMin <= HORA_NOCTURNA) {
+        // Extra diurno
+        horasExtraDiurnas = totalHorasExtra;
+      } else {
+        const salidaJornadaNormalMin = this.horaAMinutos(horario.salida);
+        if (salidaJornadaNormalMin <= HORA_NOCTURNA) {
+          // Extra mixto
+          const extraDiurnoMin = Math.min(HORA_NOCTURNA, salidaMin) - salidaJornadaNormalMin;
+          const extraNocturnoMin = salidaMin - Math.max(HORA_NOCTURNA, salidaJornadaNormalMin);
+          horasExtraDiurnas = extraDiurnoMin / 60;
+          horasExtraNocturnas = extraNocturnoMin / 60;
+        } else {
+          // Toda la extra es nocturna
+          horasExtraNocturnas = totalHorasExtra;
+        }
+      }
+    }
+
+    // Redondear
+    horasDiurnas = Math.round(horasDiurnas * 100) / 100;
+    horasNocturnas = Math.round(horasNocturnas * 100) / 100;
+    horasExtraDiurnas = Math.round(horasExtraDiurnas * 100) / 100;
+    horasExtraNocturnas = Math.round(horasExtraNocturnas * 100) / 100;
+
+    // Tipo de turno
+    const tipoTurno = salidaMin >= HORA_NOCTURNA ? 'NOCTURNO' : 'DIURNO';
+
+    // Horas extra totales (para compatibilidad)
+    const horasExtra = Math.round(totalHorasExtra * 100) / 100;
 
     let estado: EvaluacionAsistencia['estado'] = 'PUNTUAL';
     if (minutosRetardo > 0 && minutosSalidaTemprana === 0) estado = 'RETARDO';
@@ -444,6 +554,14 @@ export class ReglasBiometricosService {
       retardoLegible: this.formatearMinutos(minutosRetardo),
       salidaTempranaLegible: this.formatearMinutos(minutosSalidaTemprana),
       tipoTurno,
+      horasDiurnas,
+      horasNocturnas,
+      horasExtraDiurnas,
+      horasExtraNocturnas,
+      horasDiurnasLegible: this.formatearHoras(horasDiurnas),
+      horasNocturnasLegible: this.formatearHoras(horasNocturnas),
+      horasExtraDiurnasLegible: this.formatearHoras(horasExtraDiurnas),
+      horasExtraNocturnasLegible: this.formatearHoras(horasExtraNocturnas),
     };
   }
 

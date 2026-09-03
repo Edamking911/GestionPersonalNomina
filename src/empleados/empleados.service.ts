@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Empleado } from '../Entitys/Empleados/Empleado.entity';
 import { Cargo } from '../Entitys/Cargos/Cargos.entity';
 import { Departamento } from '../Entitys/Departamentos/Departamentos.entity';
@@ -43,23 +47,10 @@ export class EmpleadosService {
     }
   }
 
-  async validarEmailUnico(email: string, excludeId?: string): Promise<void> {
-    const query = this.empleadoRepository
-      .createQueryBuilder('empleado')
-      .where('empleado.email = :email', { email });
-
-    if (excludeId) {
-      query.andWhere('empleado.id != :excludeId', { excludeId });
-    }
-
-    const existe = await query.getOne();
-    if (existe) {
-      throw new ConflictException(`El email ${email} ya está registrado`);
-    }
-  }
-
   async validarCargo(cargoId: string): Promise<Cargo> {
-    const cargo = await this.cargoRepository.findOne({ where: { id: cargoId } });
+    const cargo = await this.cargoRepository.findOne({
+      where: { id: cargoId },
+    });
     if (!cargo) {
       throw new NotFoundException(`Cargo con ID ${cargoId} no encontrado`);
     }
@@ -67,16 +58,19 @@ export class EmpleadosService {
   }
 
   async validarDepartamento(departamentoId: string): Promise<Departamento> {
-    const departamento = await this.departamentoRepository.findOne({ where: { id: departamentoId } });
+    const departamento = await this.departamentoRepository.findOne({
+      where: { id: departamentoId },
+    });
     if (!departamento) {
-      throw new NotFoundException(`Departamento con ID ${departamentoId} no encontrado`);
+      throw new NotFoundException(
+        `Departamento con ID ${departamentoId} no encontrado`,
+      );
     }
     return departamento;
   }
 
   async create(createDto: CreateEmpleadoDto): Promise<Empleado> {
     await this.validarCedulaUnica(createDto.cedula);
-    await this.validarEmailUnico(createDto.email);
 
     if (createDto.cargoId) {
       await this.validarCargo(createDto.cargoId);
@@ -88,10 +82,7 @@ export class EmpleadosService {
     const empleado = this.empleadoRepository.create({
       cedula: createDto.cedula,
       nombre: createDto.nombre,
-      apellido: createDto.nombre,
-      email: createDto.email,
-      telefono: createDto.telefono,
-      fechaIngreso: createDto.fechaIngreso,
+      apellido: createDto.apellido,
       cargoId: createDto.cargoId,
       departamentoId: createDto.departamentoId,
       estado: createDto.estado || 'ACTIVO',
@@ -107,21 +98,31 @@ export class EmpleadosService {
     departamentoId?: string;
     estado?: string;
   }): Promise<Empleado[]> {
-    const query = this.empleadoRepository.createQueryBuilder('empleado')
+    const query = this.empleadoRepository
+      .createQueryBuilder('empleado')
       .leftJoinAndSelect('empleado.cargo', 'cargo')
       .leftJoinAndSelect('empleado.departamento', 'departamento');
 
     if (filters?.nombre) {
-      query.andWhere('(empleado.nombre ILIKE :nombre OR empleado.apellido ILIKE :nombre)', { nombre: `%${filters.nombre}%` });
+      query.andWhere(
+        '(empleado.nombre ILIKE :nombre OR empleado.apellido ILIKE :nombre)',
+        { nombre: `%${filters.nombre}%` },
+      );
     }
     if (filters?.cedula) {
-      query.andWhere('empleado.cedula ILIKE :cedula', { cedula: `%${filters.cedula}%` });
+      query.andWhere('empleado.cedula ILIKE :cedula', {
+        cedula: `%${filters.cedula}%`,
+      });
     }
     if (filters?.cargoId) {
-      query.andWhere('empleado.cargoId = :cargoId', { cargoId: filters.cargoId });
+      query.andWhere('empleado.cargoId = :cargoId', {
+        cargoId: filters.cargoId,
+      });
     }
     if (filters?.departamentoId) {
-      query.andWhere('empleado.departamentoId = :departamentoId', { departamentoId: filters.departamentoId });
+      query.andWhere('empleado.departamentoId = :departamentoId', {
+        departamentoId: filters.departamentoId,
+      });
     }
     if (filters?.estado) {
       query.andWhere('empleado.estado = :estado', { estado: filters.estado });
@@ -143,7 +144,9 @@ export class EmpleadosService {
       },
     });
     if (!empleado) {
-      throw new NotFoundException(`Empleado con cédula ${cedula} no encontrado`);
+      throw new NotFoundException(
+        `Empleado con cédula ${cedula} no encontrado`,
+      );
     }
     return empleado;
   }
@@ -171,9 +174,6 @@ export class EmpleadosService {
     if (updateDto.cedula && updateDto.cedula !== empleado.cedula) {
       await this.validarCedulaUnica(updateDto.cedula, id);
     }
-    if (updateDto.email && updateDto.email !== empleado.email) {
-      await this.validarEmailUnico(updateDto.email, id);
-    }
     if (updateDto.cargoId) {
       await this.validarCargo(updateDto.cargoId);
     }
@@ -185,11 +185,10 @@ export class EmpleadosService {
       ...(updateDto.cedula && { cedula: updateDto.cedula }),
       ...(updateDto.nombre && { nombre: updateDto.nombre }),
       ...(updateDto.apellido && { apellido: updateDto.apellido }),
-      ...(updateDto.email && { email: updateDto.email }),
-      ...(updateDto.telefono !== undefined && { telefono: updateDto.telefono }),
-      ...(updateDto.fechaIngreso && { fechaIngreso: updateDto.fechaIngreso }),
       ...(updateDto.cargoId !== undefined && { cargoId: updateDto.cargoId }),
-      ...(updateDto.departamentoId !== undefined && { departamentoId: updateDto.departamentoId }),
+      ...(updateDto.departamentoId !== undefined && {
+        departamentoId: updateDto.departamentoId,
+      }),
       ...(updateDto.estado && { estado: updateDto.estado }),
     });
 
@@ -219,7 +218,9 @@ export class EmpleadosService {
     return await this.empleadoRepository.remove(empleado);
   }
 
-  async addHistoricoSalario(createDto: CreateHistoricoSalarioDto): Promise<HistoricoSalario> {
+  async addHistoricoSalario(
+    createDto: CreateHistoricoSalarioDto,
+  ): Promise<HistoricoSalario> {
     await this.findOne(createDto.empleadoId);
 
     const historico = this.historicoRepository.create({

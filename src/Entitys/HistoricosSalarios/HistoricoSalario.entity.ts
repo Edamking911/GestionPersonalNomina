@@ -17,7 +17,13 @@ export class HistoricoSalario {
   @Column({ name: 'empleado_id', type: 'uuid', nullable: false })
   empleadoId!: string;
 
-  @Column({ name: 'monto_sueldo', type: 'decimal', precision: 15, scale: 2, nullable: false })
+  @Column({
+    name: 'monto_sueldo',
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    nullable: false,
+  })
   montoSueldo!: number;
 
   @Column({ name: 'moneda_id', type: 'uuid', nullable: false })
@@ -35,7 +41,9 @@ export class HistoricoSalario {
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 
-  @ManyToOne(() => Empleado, (empleado) => empleado.historicoSalarios, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Empleado, (empleado) => empleado.historicoSalarios, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'empleado_id' })
   empleado!: Empleado;
 }

@@ -5,7 +5,7 @@ import { BiometricoService } from 'src/biometrico/biometrico.service';
 
 @Module({
   controllers: [ReglasBiometricosController],
-  providers: [ReglasBiometricosService,BiometricoService],
-  exports: [ReglasBiometricosService]
+  providers: [ReglasBiometricosService, BiometricoService],
+  exports: [ReglasBiometricosService],
 })
 export class ReglasBiometricosModule {}

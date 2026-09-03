@@ -7,7 +7,12 @@ import { DepartamentosModule } from './departamentos/departamentos.module';
 import { CargosModule } from './cargos/cargos.module';
 import { CuentasBancariasModule } from './cuentas-bancarias/cuentas-bancarias.module';
 import { EgresosPersonalesModule } from './egresos-personales/egresos-personales.module';
+
 import { EmpleadosModule } from './empleados/empleados.module';
+import { MonedaModule } from './moneda/moneda.module';
+import { TasaCambioModule } from './tasa_cambio/tasa_cambio.module';
+import { BiometricoModule } from './biometrico/biometrico.module';
+import { ReglasBiometricosModule } from './reglas-biometricos/reglas-biometricos.module';
 
 @Module({
   imports: [
@@ -26,6 +31,12 @@ import { EmpleadosModule } from './empleados/empleados.module';
     CargosModule,
     CuentasBancariasModule,
     EgresosPersonalesModule,
+    DepartamentosModule,
+    CargosModule,
+    MonedaModule,
+    TasaCambioModule,
+    // BiometricoModule,
+    // ReglasBiometricosModule,
     EmpleadosModule,
   ],
 

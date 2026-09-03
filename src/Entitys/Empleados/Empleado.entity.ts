@@ -29,15 +29,6 @@ export class Empleado {
   @Column({ type: 'varchar', length: 100, nullable: false })
   apellido!: string;
 
-  @Column({ type: 'varchar', length: 150, unique: true, nullable: false })
-  email!: string;
-
-  @Column({ type: 'varchar', length: 20, nullable: true })
-  telefono?: string;
-
-  @Column({ type: 'date', nullable: false })
-  fechaIngreso!: Date;
-
   @Column({ name: 'cargo_id', type: 'uuid', nullable: true })
   cargoId?: string;
 

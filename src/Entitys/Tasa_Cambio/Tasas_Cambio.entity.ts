@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Moneda } from '../Moneda/Moneda.entity';
 
 @Entity('tasas_cambio')
@@ -18,7 +25,9 @@ export class TasaCambio {
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
-  @ManyToOne(() => Moneda, (moneda) => moneda.tasasCambio, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => Moneda, (moneda) => moneda.tasasCambio, {
+    onDelete: 'RESTRICT',
+  })
   @JoinColumn({ name: 'moneda_id' })
   moneda!: Moneda;
 }

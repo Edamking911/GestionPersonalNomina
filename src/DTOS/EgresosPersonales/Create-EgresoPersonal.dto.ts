@@ -1,10 +1,4 @@
-import {
-  IsNotEmpty,
-  IsString,
-  IsUUID,
-  IsDateString,
-  MaxLength,
-} from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, IsDateString, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateEgresoPersonalDto {
@@ -17,7 +11,7 @@ export class CreateEgresoPersonalDto {
   empleadoId!: string;
 
   @ApiProperty({
-    example: '2026-08-28',
+    example: '2024-01-15',
     description: 'Fecha de egreso (YYYY-MM-DD)',
   })
   @IsNotEmpty({ message: 'La fecha de egreso es obligatoria' })
@@ -31,7 +25,7 @@ export class CreateEgresoPersonalDto {
     example: 'Renuncia voluntaria',
     description: 'Motivo del egreso',
   })
-  @IsNotEmpty({ message: 'El motivo del egreso es obligatorio' })
+  @IsNotEmpty({ message: 'El motivo es obligatorio' })
   @IsString({ message: 'El motivo debe ser una cadena de texto' })
   @MaxLength(500, { message: 'El motivo no puede superar los 500 caracteres' })
   motivo!: string;

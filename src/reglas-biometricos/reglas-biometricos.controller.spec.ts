@@ -11,7 +11,9 @@ describe('ReglasBiometricosController', () => {
       providers: [ReglasBiometricosService],
     }).compile();
 
-    controller = module.get<ReglasBiometricosController>(ReglasBiometricosController);
+    controller = module.get<ReglasBiometricosController>(
+      ReglasBiometricosController,
+    );
   });
 
   it('should be defined', () => {

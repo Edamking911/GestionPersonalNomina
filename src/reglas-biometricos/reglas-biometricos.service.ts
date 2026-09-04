@@ -61,7 +61,10 @@ export interface EvaluacionAsistencia {
 export class ReglasBiometricosService {
   private readonly logger = new Logger(ReglasBiometricosService.name);
   private reglasPath = path.join(process.cwd(), 'reglas_asistencia.json');
-  private asignacionesPath = path.join(process.cwd(), 'asignaciones_turnos.json');
+  private asignacionesPath = path.join(
+    process.cwd(),
+    'asignaciones_turnos.json',
+  );
   private marcajesPath = path.join(process.cwd(), 'marcajes.json');
   private diasLibresPath = path.join(process.cwd(), 'dias_libres.json');
 
@@ -141,7 +144,9 @@ export class ReglasBiometricosService {
 
   private inicializarAsignaciones() {
     if (fs.existsSync(this.asignacionesPath)) {
-      this.asignaciones = JSON.parse(fs.readFileSync(this.asignacionesPath, 'utf-8'));
+      this.asignaciones = JSON.parse(
+        fs.readFileSync(this.asignacionesPath, 'utf-8'),
+      );
     } else {
       this.asignaciones = [];
       this.guardarAsignaciones();
@@ -150,7 +155,9 @@ export class ReglasBiometricosService {
 
   private inicializarDiasLibres() {
     if (fs.existsSync(this.diasLibresPath)) {
-      this.diasLibres = JSON.parse(fs.readFileSync(this.diasLibresPath, 'utf-8'));
+      this.diasLibres = JSON.parse(
+        fs.readFileSync(this.diasLibresPath, 'utf-8'),
+      );
     } else {
       this.diasLibres = {};
       this.guardarDiasLibres();
@@ -158,15 +165,27 @@ export class ReglasBiometricosService {
   }
 
   private guardarReglas() {
-    fs.writeFileSync(this.reglasPath, JSON.stringify(this.reglas, null, 2), 'utf-8');
+    fs.writeFileSync(
+      this.reglasPath,
+      JSON.stringify(this.reglas, null, 2),
+      'utf-8',
+    );
   }
 
   private guardarAsignaciones() {
-    fs.writeFileSync(this.asignacionesPath, JSON.stringify(this.asignaciones, null, 2), 'utf-8');
+    fs.writeFileSync(
+      this.asignacionesPath,
+      JSON.stringify(this.asignaciones, null, 2),
+      'utf-8',
+    );
   }
 
   private guardarDiasLibres() {
-    fs.writeFileSync(this.diasLibresPath, JSON.stringify(this.diasLibres, null, 2), 'utf-8');
+    fs.writeFileSync(
+      this.diasLibresPath,
+      JSON.stringify(this.diasLibres, null, 2),
+      'utf-8',
+    );
   }
 
   getReglas() {
@@ -180,14 +199,16 @@ export class ReglasBiometricosService {
   getAsignaciones(semana?: string) {
     const semanaClave = semana || this.obtenerInicioSemana(new Date());
 
-    return this.asignaciones.map(a => {
-      const diasLibresRotativos = this.diasLibres[a.employeeId]?.[semanaClave] || [];
+    return this.asignaciones.map((a) => {
+      const diasLibresRotativos =
+        this.diasLibres[a.employeeId]?.[semanaClave] || [];
       return {
         ...a,
         diasLibresRotativos,
-        diasLibresEfectivos: diasLibresRotativos.length > 0
-          ? diasLibresRotativos
-          : a.diasLibresFijos || [],
+        diasLibresEfectivos:
+          diasLibresRotativos.length > 0
+            ? diasLibresRotativos
+            : a.diasLibresFijos || [],
       };
     });
   }
@@ -201,12 +222,14 @@ export class ReglasBiometricosService {
     horarioId: string,
     diasLibresFijos?: string[],
   ) {
-    const horarioExiste = this.reglas.horarios.some(h => h.id === horarioId);
+    const horarioExiste = this.reglas.horarios.some((h) => h.id === horarioId);
     if (!horarioExiste) {
       return { success: false, message: 'Horario no válido' };
     }
 
-    const existente = this.asignaciones.find(a => a.employeeId === employeeId);
+    const existente = this.asignaciones.find(
+      (a) => a.employeeId === employeeId,
+    );
     if (existente) {
       existente.horarioId = horarioId;
       existente.diasLibresFijos = diasLibresFijos;
@@ -242,10 +265,17 @@ export class ReglasBiometricosService {
     return this.diasLibres[employeeId]?.[semana] || [];
   }
 
-  private obtenerHorarioAsignado(employeeId: string, fecha?: Date): HorarioAsistencia | null {
-    const asignacion = this.asignaciones.find(a => a.employeeId === employeeId);
+  private obtenerHorarioAsignado(
+    employeeId: string,
+    fecha?: Date,
+  ): HorarioAsistencia | null {
+    const asignacion = this.asignaciones.find(
+      (a) => a.employeeId === employeeId,
+    );
     if (asignacion) {
-      const horario = this.reglas.horarios.find(h => h.id === asignacion.horarioId);
+      const horario = this.reglas.horarios.find(
+        (h) => h.id === asignacion.horarioId,
+      );
       if (horario) {
         if (fecha) {
           let diasLibres = this.obtenerDiasLibresSemana(employeeId, fecha);
@@ -254,7 +284,9 @@ export class ReglasBiometricosService {
             diasLibres = asignacion.diasLibresFijos;
           }
 
-          const diasLaborales = this.todosLosDias.filter(d => !diasLibres.includes(d));
+          const diasLaborales = this.todosLosDias.filter(
+            (d) => !diasLibres.includes(d),
+          );
           return { ...horario, diasLaborales };
         }
         return horario;
@@ -273,7 +305,15 @@ export class ReglasBiometricosService {
   }
 
   private obtenerDiaSemana(fecha: Date): string {
-    const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const dias = [
+      'domingo',
+      'lunes',
+      'martes',
+      'miércoles',
+      'jueves',
+      'viernes',
+      'sábado',
+    ];
     return dias[fecha.getDay()];
   }
 
@@ -283,8 +323,13 @@ export class ReglasBiometricosService {
     return data ? JSON.parse(data) : [];
   }
 
-  private async obtenerNombreEmpleado(employeeId: string, marcajes: any[]): Promise<string> {
-    const marcajeConNombre = marcajes.find(m => m.employeeId === employeeId && m.employeeName);
+  private async obtenerNombreEmpleado(
+    employeeId: string,
+    marcajes: any[],
+  ): Promise<string> {
+    const marcajeConNombre = marcajes.find(
+      (m) => m.employeeId === employeeId && m.employeeName,
+    );
     if (marcajeConNombre?.employeeName) {
       return marcajeConNombre.employeeName;
     }
@@ -322,9 +367,12 @@ export class ReglasBiometricosService {
     employeeName?: string,
   ): Promise<EvaluacionAsistencia> {
     const marcajes = this.leerMarcajes();
-    const marcajesEmpleado = marcajes.filter(m => m.employeeId === employeeId);
+    const marcajesEmpleado = marcajes.filter(
+      (m) => m.employeeId === employeeId,
+    );
     const horario = this.obtenerHorarioAsignado(employeeId, fecha);
-    const nombre = employeeName || (await this.obtenerNombreEmpleado(employeeId, marcajes));
+    const nombre =
+      employeeName || (await this.obtenerNombreEmpleado(employeeId, marcajes));
 
     if (!horario) {
       return {
@@ -353,13 +401,17 @@ export class ReglasBiometricosService {
 
     const diaSemana = this.obtenerDiaSemana(fecha);
 
-    const marcajesDia = marcajesEmpleado.filter(m => {
+    const marcajesDia = marcajesEmpleado.filter((m) => {
       const d = new Date(m.timestamp);
-      return d.toLocaleDateString('es-VE') === fecha.toLocaleDateString('es-VE');
+      return (
+        d.toLocaleDateString('es-VE') === fecha.toLocaleDateString('es-VE')
+      );
     });
 
     if (marcajesDia.length === 0) {
-      const estado = horario.diasLaborales.includes(diaSemana) ? 'AUSENTE' : 'DESCANSO';
+      const estado = horario.diasLaborales.includes(diaSemana)
+        ? 'AUSENTE'
+        : 'DESCANSO';
       return {
         employeeId,
         nombre,
@@ -384,9 +436,13 @@ export class ReglasBiometricosService {
       };
     }
 
-    marcajesDia.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    marcajesDia.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
     const entradaReal = marcajesDia[0];
-    const salidaReal = marcajesDia.length >= 2 ? marcajesDia[marcajesDia.length - 1] : null;
+    const salidaReal =
+      marcajesDia.length >= 2 ? marcajesDia[marcajesDia.length - 1] : null;
 
     // Sin salida
     if (!salidaReal) {
@@ -468,21 +524,32 @@ export class ReglasBiometricosService {
       };
     }
 
-    const entradaMin = this.obtenerMinutosDeFecha(new Date(entradaReal.timestamp));
-    const salidaMin = this.obtenerMinutosDeFecha(new Date(salidaReal.timestamp));
+    const entradaMin = this.obtenerMinutosDeFecha(
+      new Date(entradaReal.timestamp),
+    );
+    const salidaMin = this.obtenerMinutosDeFecha(
+      new Date(salidaReal.timestamp),
+    );
     const entradaEsperada = this.horaAMinutos(horario.entrada);
     const salidaEsperada = this.horaAMinutos(horario.salida);
 
-    const minutosRetardo = Math.max(0, entradaMin - entradaEsperada - horario.toleranciaMin);
+    const minutosRetardo = Math.max(
+      0,
+      entradaMin - entradaEsperada - horario.toleranciaMin,
+    );
     const minutosSalidaTemprana = Math.max(0, salidaEsperada - salidaMin);
 
     // =====================================================
     // Cálculo de horas diurnas/nocturnas normales y extras
     // =====================================================
     const HORA_NOCTURNA = this.horaAMinutos(this.HORA_NOCTURNA);
-    const duracionTurnoMin = this.horaAMinutos(horario.salida) - this.horaAMinutos(horario.entrada);
+    const duracionTurnoMin =
+      this.horaAMinutos(horario.salida) - this.horaAMinutos(horario.entrada);
     const tiempoTrabajadoMin = salidaMin - entradaMin;
-    const totalHorasExtra = Math.max(0, (tiempoTrabajadoMin - duracionTurnoMin) / 60);
+    const totalHorasExtra = Math.max(
+      0,
+      (tiempoTrabajadoMin - duracionTurnoMin) / 60,
+    );
 
     let horasDiurnas = 0;
     let horasNocturnas = 0;
@@ -499,7 +566,8 @@ export class ReglasBiometricosService {
     } else {
       // Cruza de diurno a nocturno
       horasDiurnas = (HORA_NOCTURNA - entradaMin) / 60;
-      const jornadaRestanteMin = duracionTurnoMin - (HORA_NOCTURNA - entradaMin);
+      const jornadaRestanteMin =
+        duracionTurnoMin - (HORA_NOCTURNA - entradaMin);
       horasNocturnas = Math.max(0, jornadaRestanteMin / 60);
     }
 
@@ -512,8 +580,10 @@ export class ReglasBiometricosService {
         const salidaJornadaNormalMin = this.horaAMinutos(horario.salida);
         if (salidaJornadaNormalMin <= HORA_NOCTURNA) {
           // Extra mixto
-          const extraDiurnoMin = Math.min(HORA_NOCTURNA, salidaMin) - salidaJornadaNormalMin;
-          const extraNocturnoMin = salidaMin - Math.max(HORA_NOCTURNA, salidaJornadaNormalMin);
+          const extraDiurnoMin =
+            Math.min(HORA_NOCTURNA, salidaMin) - salidaJornadaNormalMin;
+          const extraNocturnoMin =
+            salidaMin - Math.max(HORA_NOCTURNA, salidaJornadaNormalMin);
           horasExtraDiurnas = extraDiurnoMin / 60;
           horasExtraNocturnas = extraNocturnoMin / 60;
         } else {
@@ -537,8 +607,10 @@ export class ReglasBiometricosService {
 
     let estado: EvaluacionAsistencia['estado'] = 'PUNTUAL';
     if (minutosRetardo > 0 && minutosSalidaTemprana === 0) estado = 'RETARDO';
-    if (minutosSalidaTemprana > 0 && minutosRetardo === 0) estado = 'SALIDA_TEMPRANA';
-    if (minutosRetardo > 0 && minutosSalidaTemprana > 0) estado = 'SALIDA_TEMPRANA';
+    if (minutosSalidaTemprana > 0 && minutosRetardo === 0)
+      estado = 'SALIDA_TEMPRANA';
+    if (minutosRetardo > 0 && minutosSalidaTemprana > 0)
+      estado = 'SALIDA_TEMPRANA';
 
     return {
       employeeId,
@@ -571,17 +643,21 @@ export class ReglasBiometricosService {
 
     const mapaUsuarios = new Map<string, string>();
     if (usuarios?.success && Array.isArray(usuarios.usuarios)) {
-      usuarios.usuarios.forEach(u => mapaUsuarios.set(u.employeeNo, u.name));
+      usuarios.usuarios.forEach((u) => mapaUsuarios.set(u.employeeNo, u.name));
     }
 
-    const empleados = this.asignaciones.map(a => ({
+    const empleados = this.asignaciones.map((a) => ({
       employeeId: a.employeeId,
       nombre: mapaUsuarios.get(a.employeeId) || 'DESCONOCIDO',
     }));
 
     const reporte: EvaluacionAsistencia[] = [];
     for (const emp of empleados) {
-      const evaluacion = await this.evaluarEmpleado(emp.employeeId, fecha, emp.nombre);
+      const evaluacion = await this.evaluarEmpleado(
+        emp.employeeId,
+        fecha,
+        emp.nombre,
+      );
       reporte.push(evaluacion);
     }
 
@@ -594,16 +670,20 @@ export class ReglasBiometricosService {
 
   async validarSalidasPendientes(fecha: Date) {
     const ahora = await this.biometricoService.obtenerHoraBiometrico();
-    const esFechaPasada = fecha.toDateString() !== ahora.toDateString() && fecha < ahora;
+    const esFechaPasada =
+      fecha.toDateString() !== ahora.toDateString() && fecha < ahora;
 
     if (!esFechaPasada) {
-      return { success: false, message: 'La fecha debe ser anterior a hoy para validar salidas' };
+      return {
+        success: false,
+        message: 'La fecha debe ser anterior a hoy para validar salidas',
+      };
     }
 
     const usuarios = await this.biometricoService.listUsers();
     const mapaUsuarios = new Map<string, string>();
     if (usuarios?.success && Array.isArray(usuarios.usuarios)) {
-      usuarios.usuarios.forEach(u => mapaUsuarios.set(u.employeeNo, u.name));
+      usuarios.usuarios.forEach((u) => mapaUsuarios.set(u.employeeNo, u.name));
     }
 
     const resultados: EvaluacionAsistencia[] = [];
@@ -613,7 +693,10 @@ export class ReglasBiometricosService {
       const nombre = mapaUsuarios.get(empId) || 'DESCONOCIDO';
       const evaluacion = await this.evaluarEmpleado(empId, fecha, nombre);
 
-      if (evaluacion.estado === 'PENDIENTE' || evaluacion.estado === 'NO_MARCO_SALIDA') {
+      if (
+        evaluacion.estado === 'PENDIENTE' ||
+        evaluacion.estado === 'NO_MARCO_SALIDA'
+      ) {
         let evaluacionFinal: EvaluacionAsistencia = { ...evaluacion };
 
         if (evaluacion.estado === 'PENDIENTE') {
@@ -630,8 +713,15 @@ export class ReglasBiometricosService {
       }
     }
 
-    const validacionesPath = path.join(process.cwd(), 'validaciones_salida.json');
-    fs.writeFileSync(validacionesPath, JSON.stringify(resultados, null, 2), 'utf-8');
+    const validacionesPath = path.join(
+      process.cwd(),
+      'validaciones_salida.json',
+    );
+    fs.writeFileSync(
+      validacionesPath,
+      JSON.stringify(resultados, null, 2),
+      'utf-8',
+    );
 
     return {
       success: true,

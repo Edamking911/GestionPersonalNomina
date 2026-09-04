@@ -1,4 +1,10 @@
-import { IsUUID, IsNotEmpty, IsNumber, IsDateString, IsOptional } from 'class-validator';
+import {
+  IsUUID,
+  IsNotEmpty,
+  IsNumber,
+  IsDateString,
+  IsOptional,
+} from 'class-validator';
 
 export class CreateTasaCambioDto {
   @IsUUID()

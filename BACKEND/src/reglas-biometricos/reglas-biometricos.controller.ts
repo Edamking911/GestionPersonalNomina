@@ -27,12 +27,7 @@ export class ReglasBiometricosController {
 
   @Post('asignar')
   asignarHorario(
-    @Body()
-    body: {
-      employeeId: string;
-      horarioId: string;
-      diasLibresFijos?: string[];
-    },
+    @Body() body: { employeeId: string; horarioId: string; diasLibresFijos?: string[] },
   ) {
     return this.reglasService.asignarHorario(
       body.employeeId,

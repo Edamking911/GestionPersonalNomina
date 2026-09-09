@@ -1,6 +1,3 @@
-<<<<<<< Updated upstream:src/biometrico/biometrico.controller.ts
-import { Controller, Get, Post, Body, Req, Query, Delete, Param } from '@nestjs/common';
-=======
 import {
   Controller,
   Get,
@@ -10,28 +7,13 @@ import {
   Query,
   Delete,
   Param,
-  UseInterceptors,
-  UploadedFile,
-  BadRequestException,
 } from '@nestjs/common';
->>>>>>> Stashed changes:BACKEND/src/biometrico/biometrico.controller.ts
 import { BiometricoService } from './biometrico.service';
 import type { Request } from 'express';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 
 @Controller('biometrico')
 export class BiometricoController {
   constructor(private readonly biometricoService: BiometricoService) {}
-
-  /**
-   * Verificar estado de salud y conexión del biométrico
-   */
-  @Get('status')
-  getStatus() {
-    return this.biometricoService.getDeviceInfo();
-  }
 
   /**
    * Sincronización automática (solo hoy)
@@ -53,7 +35,9 @@ export class BiometricoController {
    * Sincronización por rango de fechas específico
    */
   @Post('sync-range')
-  async syncRange(@Body() body: { startDate?: string; endDate?: string; daysBack?: number }) {
+  async syncRange(
+    @Body() body: { startDate?: string; endDate?: string; daysBack?: number },
+  ) {
     return await this.biometricoService.syncLogsFromDevice(
       '172.18.0.89',
       'admin',
@@ -62,7 +46,7 @@ export class BiometricoController {
         startDate: body.startDate,
         endDate: body.endDate,
         daysBack: body.daysBack,
-      }
+      },
     );
   }
 
@@ -73,9 +57,9 @@ export class BiometricoController {
   async syncYesterday() {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const yesterdayStr = yesterday.toISOString().split('T')[0];
-    
+
     return await this.biometricoService.syncLogsFromDevice(
       '172.18.0.89',
       'admin',
@@ -83,7 +67,7 @@ export class BiometricoController {
       {
         startDate: yesterdayStr,
         endDate: yesterdayStr,
-      }
+      },
     );
   }
 
@@ -109,33 +93,33 @@ export class BiometricoController {
   @Get('records-by-date')
   async getRecordsByDate(@Query('employeeId') employeeId?: string) {
     const allRecords: any = this.biometricoService.getAllRecordsOrderedByDate();
-    
+
     if (employeeId) {
       const filtered: any = {
         totalRegistros: 0,
         totalDias: 0,
-        registrosPorFecha: []
+        registrosPorFecha: [],
       };
-      
+
       allRecords.registrosPorFecha.forEach((fecha: any) => {
         const marcajesFiltrados = fecha.marcajes.filter(
-          (m: any) => m.empleadoId === employeeId
+          (m: any) => m.empleadoId === employeeId,
         );
-        
+
         if (marcajesFiltrados.length > 0) {
           filtered.registrosPorFecha.push({
             fecha: fecha.fecha,
             totalMarcajes: marcajesFiltrados.length,
-            marcajes: marcajesFiltrados
+            marcajes: marcajesFiltrados,
           });
           filtered.totalRegistros += marcajesFiltrados.length;
         }
       });
-      
+
       filtered.totalDias = filtered.registrosPorFecha.length;
       return filtered;
     }
-    
+
     return allRecords;
   }
 
@@ -185,32 +169,20 @@ export class BiometricoController {
   @Post('webhook')
   async handleWebhook(@Req() req: Request) {
     const contentType = req.headers['content-type'];
-    const success = await this.biometricoService.processEventPayload(req.body, contentType);
+    const success = await this.biometricoService.processEventPayload(
+      req.body,
+      contentType,
+    );
     return { success };
   }
 
-   /* 📥 Importar usuarios desde Excel
+  /* 📥 Importar usuarios desde Excel
    * Body: { "filePath": "C:\\ruta\\al\\archivo.xlsx" }
    * El Excel debe tener las columnas: Cédula, Nombre, Apellido, Cargo
    */
   @Post('import-users')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, `excel-${uniqueSuffix}${extname(file.originalname)}`);
-        },
-      }),
-    }),
-  )
-  async importUsers(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No se ha subido ningún archivo Excel.');
-    }
-    
-    return await this.biometricoService.importUsersFromExcel(file.path);
+  async importUsers(@Body('filePath') filePath: string) {
+    return await this.biometricoService.importUsersFromExcel(filePath);
   }
 
   /**
@@ -219,9 +191,9 @@ export class BiometricoController {
   @Get('clear-cache')
   async clearCache() {
     this.biometricoService.clearEmployeeCache();
-    return { 
-      success: true, 
-      message: 'Caché de empleados limpiada exitosamente' 
+    return {
+      success: true,
+      message: 'Caché de empleados limpiada exitosamente',
     };
   }
 
@@ -233,21 +205,23 @@ export class BiometricoController {
     return await this.biometricoService.getDeviceInfo();
   }
 
-  @Get('lista-users')
+  @Get('list-users')
   async listUsers() {
     return await this.biometricoService.listUsers();
   }
 
-    /**
+  /**
    * Eliminar usuario del biométrico
+   * Ejemplo: DELETE /biometrico/delete-user/16335012
    */
   @Delete('delete-user/:employeeNo')
   async deleteUser(@Param('employeeNo') employeeNo: string) {
     return await this.biometricoService.deleteUserFromDevice(employeeNo);
   }
 
-    /**
+  /**
    * 🔐 Preparar usuario para registrar huella
+   * POST /biometrico/prepare-fingerprint/12345
    */
   @Post('prepare-fingerprint/:employeeNo')
   async prepareFingerprint(@Param('employeeNo') employeeNo: string) {
@@ -265,21 +239,22 @@ export class BiometricoController {
     return { success: true, pendientes };
   }
 
-   /**
+  /**
    * Obtener marcajes de una fecha específica
+   * GET /biometrico/marcajes/:fecha
    */
   @Get('marcajes/:fecha')
   async getMarcajesPorFecha(@Param('fecha') fecha: string) {
     return await this.biometricoService.getMarcajesPorFecha(fecha);
   }
 
-   @Get('list-all-users')
+  @Get('list-all-users')
   async listAllUsers() {
     return await this.biometricoService.listUsers(
       '172.18.0.89',
       'admin',
       'Dtd2026*',
-      true,
+      true, // incluirInactivos = true
     );
   }
 }

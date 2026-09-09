@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Departamento } from '../Departamentos/Departamentos.entity';
 // (Aquí después importarás la entidad Empleado cuando la hagamos)
 // import { Empleado } from '../empleados/empleado.entity';
@@ -21,7 +29,9 @@ export class Cargo {
   updatedAt!: Date;
 
   // Relación N:1 con Departamento
-  @ManyToOne(() => Departamento, (departamento) => departamento.cargos, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => Departamento, (departamento) => departamento.cargos, {
+    onDelete: 'RESTRICT',
+  })
   @JoinColumn({ name: 'departamento_id' })
   departamento!: Departamento;
 

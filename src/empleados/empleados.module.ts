@@ -7,7 +7,6 @@ import { Cargo } from '../Entitys/Cargos/Cargos.entity';
 import { Departamento } from '../Entitys/Departamentos/Departamentos.entity';
 import { CuentaBancaria } from '../Entitys/CuentasBancarias/CuentaBancaria.entity';
 import { EgresoPersonal } from '../Entitys/EgresosPersonales/EgresoPersonal.entity';
-import { HistoricoSalario } from '../Entitys/HistoricosSalarios/HistoricoSalario.entity';
 
 @Module({
   imports: [
@@ -17,7 +16,6 @@ import { HistoricoSalario } from '../Entitys/HistoricosSalarios/HistoricoSalario
       Departamento,
       CuentaBancaria,
       EgresoPersonal,
-      HistoricoSalario,
     ]),
   ],
   controllers: [EmpleadosController],

@@ -22,7 +22,6 @@ import {
 import { EmpleadosService } from './empleados.service';
 import { CreateEmpleadoDto } from '../DTOS/Empleados/Create-Empleado.dto';
 import { UpdateEmpleadoDto } from '../DTOS/Empleados/Update-Empleado.dto';
-import { CreateHistoricoSalarioDto } from '../DTOS/HistoricosSalarios/Create-HistoricoSalario.dto';
 
 @ApiTags('Empleados')
 @Controller('empleados')
@@ -236,64 +235,6 @@ export class EmpleadosController {
     return {
       message: 'Empleado eliminado exitosamente (soft delete)',
       empleado,
-    };
-  }
-
-  @Post(':id/historico-salario')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Agregar histórico de salario',
-    description: 'Registra un nuevo histórico de salario para el empleado',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'ID del empleado (UUID)',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  })
-  @ApiBody({ type: CreateHistoricoSalarioDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Histórico de salario creado exitosamente',
-  })
-  @ApiResponse({ status: 400, description: 'Datos inválidos' })
-  @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
-  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async addHistoricoSalario(
-    @Param('id') id: string,
-    @Body() createDto: CreateHistoricoSalarioDto,
-  ) {
-    const historico = await this.empleadosService.addHistoricoSalario({
-      ...createDto,
-      empleadoId: id,
-    });
-    return {
-      message: 'Histórico de salario creado exitosamente',
-      historico,
-    };
-  }
-
-  @Get(':id/historico-salario')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Obtener histórico de salarios',
-    description: 'Retorna el histórico de salarios del empleado',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'ID del empleado (UUID)',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Histórico de salarios obtenido exitosamente',
-  })
-  @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
-  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async getHistoricoSalarios(@Param('id') id: string) {
-    const historicos = await this.empleadosService.getHistoricoSalarios(id);
-    return {
-      message: 'Histórico de salarios del empleado',
-      historicos,
     };
   }
 }

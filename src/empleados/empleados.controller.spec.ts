@@ -20,8 +20,6 @@ describe('EmpleadosController', () => {
             toggleEstado: jest.fn(),
             softDelete: jest.fn(),
             remove: jest.fn(),
-            addHistoricoSalario: jest.fn(),
-            getHistoricoSalarios: jest.fn(),
           },
         },
       ],

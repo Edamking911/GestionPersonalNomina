@@ -11,7 +11,7 @@ import {
 } from 'typeorm';
 import { CuentaBancaria } from '../CuentasBancarias/CuentaBancaria.entity';
 import { EgresoPersonal } from '../EgresosPersonales/EgresoPersonal.entity';
-import { HistoricoSalario } from '../HistoricosSalarios/HistoricoSalario.entity';
+
 import { Cargo } from '../Cargos/Cargos.entity';
 import { Departamento } from '../Departamentos/Departamentos.entity';
 
@@ -65,8 +65,4 @@ export class Empleado {
   })
   egresosPersonales!: EgresoPersonal[];
 
-  @OneToMany(() => HistoricoSalario, (historial) => historial.empleado, {
-    cascade: true,
-  })
-  historicoSalarios!: HistoricoSalario[];
-}
+  }

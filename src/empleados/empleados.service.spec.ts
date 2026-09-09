@@ -6,7 +6,6 @@ import { Cargo } from '../Entitys/Cargos/Cargos.entity';
 import { Departamento } from '../Entitys/Departamentos/Departamentos.entity';
 import { CuentaBancaria } from '../Entitys/CuentasBancarias/CuentaBancaria.entity';
 import { EgresoPersonal } from '../Entitys/EgresosPersonales/EgresoPersonal.entity';
-import { HistoricoSalario } from '../Entitys/HistoricosSalarios/HistoricoSalario.entity';
 
 describe('EmpleadosService', () => {
   let service: EmpleadosService;
@@ -58,16 +57,6 @@ describe('EmpleadosService', () => {
         },
         {
           provide: getRepositoryToken(EgresoPersonal),
-          useValue: {
-            findOne: jest.fn(),
-            find: jest.fn(),
-            save: jest.fn(),
-            remove: jest.fn(),
-            create: jest.fn(),
-          },
-        },
-        {
-          provide: getRepositoryToken(HistoricoSalario),
           useValue: {
             findOne: jest.fn(),
             find: jest.fn(),

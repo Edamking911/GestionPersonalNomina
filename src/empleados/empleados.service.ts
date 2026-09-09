@@ -10,10 +10,8 @@ import { Cargo } from '../Entitys/Cargos/Cargos.entity';
 import { Departamento } from '../Entitys/Departamentos/Departamentos.entity';
 import { CuentaBancaria } from '../Entitys/CuentasBancarias/CuentaBancaria.entity';
 import { EgresoPersonal } from '../Entitys/EgresosPersonales/EgresoPersonal.entity';
-import { HistoricoSalario } from '../Entitys/HistoricosSalarios/HistoricoSalario.entity';
 import { CreateEmpleadoDto } from '../DTOS/Empleados/Create-Empleado.dto';
 import { UpdateEmpleadoDto } from '../DTOS/Empleados/Update-Empleado.dto';
-import { CreateHistoricoSalarioDto } from '../DTOS/HistoricosSalarios/Create-HistoricoSalario.dto';
 
 @Injectable()
 export class EmpleadosService {
@@ -28,8 +26,6 @@ export class EmpleadosService {
     private readonly cuentaRepository: Repository<CuentaBancaria>,
     @InjectRepository(EgresoPersonal)
     private readonly egresoRepository: Repository<EgresoPersonal>,
-    @InjectRepository(HistoricoSalario)
-    private readonly historicoRepository: Repository<HistoricoSalario>,
   ) {}
 
   async validarCedulaUnica(cedula: string, excludeId?: string): Promise<void> {
@@ -140,7 +136,6 @@ export class EmpleadosService {
         departamento: true,
         cuentasBancarias: true,
         egresosPersonales: true,
-        historicoSalarios: true,
       },
     });
     if (!empleado) {
@@ -159,7 +154,6 @@ export class EmpleadosService {
         departamento: true,
         cuentasBancarias: true,
         egresosPersonales: true,
-        historicoSalarios: true,
       },
     });
     if (!empleado) {
@@ -216,29 +210,5 @@ export class EmpleadosService {
   async remove(id: string): Promise<Empleado> {
     const empleado = await this.findOne(id);
     return await this.empleadoRepository.remove(empleado);
-  }
-
-  async addHistoricoSalario(
-    createDto: CreateHistoricoSalarioDto,
-  ): Promise<HistoricoSalario> {
-    await this.findOne(createDto.empleadoId);
-
-    const historico = this.historicoRepository.create({
-      empleadoId: createDto.empleadoId,
-      montoSueldo: createDto.montoSueldo,
-      monedaId: createDto.monedaId,
-      fechaInicio: createDto.fechaInicio,
-      fechaFin: createDto.fechaFin,
-    });
-
-    return await this.historicoRepository.save(historico);
-  }
-
-  async getHistoricoSalarios(empleadoId: string): Promise<HistoricoSalario[]> {
-    await this.findOne(empleadoId);
-    return await this.historicoRepository.find({
-      where: { empleadoId },
-      order: { fechaInicio: 'DESC' },
-    });
   }
 }

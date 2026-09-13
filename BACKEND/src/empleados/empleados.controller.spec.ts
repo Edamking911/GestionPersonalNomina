@@ -1,31 +1,31 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { EgresosPersonalesController } from './egresos-personales.controller';
-import { EgresosPersonalesService } from './egresos-personales.service';
+import { EmpleadosController } from './empleados.controller';
+import { EmpleadosService } from './empleados.service';
 
-describe('EgresosPersonalesController', () => {
-  let controller: EgresosPersonalesController;
+describe('EmpleadosController', () => {
+  let controller: EmpleadosController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [EgresosPersonalesController],
+      controllers: [EmpleadosController],
       providers: [
         {
-          provide: EgresosPersonalesService,
+          provide: EmpleadosService,
           useValue: {
             create: jest.fn(),
             findAll: jest.fn(),
-            findByEmpleado: jest.fn(),
+            findByCedula: jest.fn(),
             findOne: jest.fn(),
             update: jest.fn(),
+            toggleEstado: jest.fn(),
+            softDelete: jest.fn(),
             remove: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    controller = module.get<EgresosPersonalesController>(
-      EgresosPersonalesController,
-    );
+    controller = module.get<EmpleadosController>(EmpleadosController);
   });
 
   it('should be defined', () => {

@@ -6,10 +6,17 @@ import {
   Req,
   Query,
   Delete,
-  Param,
+  Param, UploadedFile, 
+  UseInterceptors,
 } from '@nestjs/common';
 import { BiometricoService } from './biometrico.service';
 import type { Request } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
+
+
 
 @Controller('biometrico')
 export class BiometricoController {
@@ -181,8 +188,39 @@ export class BiometricoController {
    * El Excel debe tener las columnas: Cédula, Nombre, Apellido, Cargo
    */
   @Post('import-users')
-  async importUsers(@Body('filePath') filePath: string) {
-    return await this.biometricoService.importUsersFromExcel(filePath);
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const tempDir = path.join(process.cwd(), 'temp');
+          if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+          cb(null, tempDir);
+        },
+        filename: (_req, file, cb) => {
+          const timestamp = Date.now();
+          cb(null, `usuarios_${timestamp}_${file.originalname}`);
+        },
+      }),
+      fileFilter: (_req, file, cb) => {
+        const ok = /\.(xlsx|xls)$/i.test(file.originalname);
+        if (!ok) return cb(new Error('Solo se permiten archivos .xlsx o .xls'), false);
+        cb(null, true);
+      },
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    }),
+  )
+  async importUsers(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      return { success: false, message: 'No se recibió ningún archivo' };
+    }
+
+    try {
+      const resultado = await this.biometricoService.importUsersFromExcel(file.path);
+      return resultado;
+    } finally {
+      // 🔑 Borrar el archivo temporal después de procesarlo
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    }
   }
 
   /**
@@ -200,14 +238,24 @@ export class BiometricoController {
   /**
    * Obtener información del dispositivo biométrico
    */
-  @Get('device-info')
-  async getDeviceInfo() {
-    return await this.biometricoService.getDeviceInfo();
+  @Get('status')
+  async getStatus() {
+    const result = await this.biometricoService.getDeviceInfo();
+    return {
+      online: result.success,
+      ...(result.success ? { deviceInfo: result.deviceInfo } : { message: result.message })
+    };
   }
 
   @Get('list-users')
-  async listUsers() {
-    return await this.biometricoService.listUsers();
+  async listUsers(@Query('incluirInactivos') incluirInactivos?: string) {
+    const incluir = incluirInactivos === 'true';
+    return await this.biometricoService.listUsers(
+      '172.18.0.89',
+      'admin',
+      'Dtd2026*',
+      incluir,  // 👈 CLAVE
+    );
   }
 
   /**
@@ -217,6 +265,15 @@ export class BiometricoController {
   @Delete('delete-user/:employeeNo')
   async deleteUser(@Param('employeeNo') employeeNo: string) {
     return await this.biometricoService.deleteUserFromDevice(employeeNo);
+  }
+
+    /**
+   * Activar usuario previamente desactivado
+   * Ejemplo: POST /biometrico/activate-user/16335012
+   */
+  @Post('activate-user/:employeeNo')
+  async activateUser(@Param('employeeNo') employeeNo: string) {
+    return await this.biometricoService.activateUserInDevice(employeeNo);
   }
 
   /**

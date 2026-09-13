@@ -24,7 +24,8 @@ export class BiometricoService {
   private readonly filePath = path.join(process.cwd(), 'marcajes.json');
   private readonly excelFilePath = path.join(process.cwd(), 'marcajes.xlsx');
   private readonly timeZone = 'America/Caracas';
-  private employeeMap = new Map<string, string>();
+  private employeeMap = new Map<string, { name: string; timestamp: number }>();
+  private readonly EMPLOYEE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
 
   private errorCount = 0;
   private lastErrorLog = 0;
@@ -34,7 +35,7 @@ export class BiometricoService {
   // =========================================================
   // CRON JOB AUTOMÁTICO
   // =========================================================
-  @Cron(CronExpression.EVERY_5_SECONDS)
+  @Cron('*/10 * * * * *') // cada 10 segundos
   async handleAutoSync() {
     if (this.isSyncing) return;
     this.isSyncing = true;
@@ -333,127 +334,172 @@ export class BiometricoService {
     };
   }
 
-  async importUsersFromExcel(
-    excelPath: string,
-    ip = '172.18.0.89',
-    user = 'admin',
-    pass = 'Dtd2026*',
-  ) {
-    const workbook: any = new Workbook.Workbook();
-    try {
-      await workbook.xlsx.readFile(excelPath);
-      const worksheet: any = workbook.getWorksheet(1);
-      if (!worksheet) throw new Error('No se encontró la hoja en el Excel');
+   async importUsersFromExcel(
+      excelPath: string,
+      ip = '172.18.0.89',
+      user = 'admin',
+      pass = 'Dtd2026*',
+    ) {
+      const workbook: any = new Workbook.Workbook();
+      try {
+        await workbook.xlsx.readFile(excelPath);
+        const worksheet: any = workbook.getWorksheet(1);
+        if (!worksheet) throw new Error('No se encontró la hoja en el Excel');
 
-      this.logger.log(`📄 Leyendo usuarios desde: ${excelPath}`);
+        this.logger.log(`📄 Leyendo usuarios desde: ${excelPath}`);
 
-      const resultados = {
-        totalFilas: 0,
-        creados: 0,
-        actualizados: 0,
-        fallidos: 0,
-        errores: [] as string[],
-      };
-
-      for (let i = 2; i <= worksheet.rowCount; i++) {
-        const row = worksheet.getRow(i);
-        let cedula = row.getCell(1).value?.toString().trim() || '';
-        cedula = cedula.replace(/[^0-9]/g, '');
-        const nombre = row.getCell(2).value?.toString().trim() || '';
-        const apellido = row.getCell(3).value?.toString().trim() || '';
-        const cargo = row.getCell(4).value?.toString().trim() || 'EMPLEADO';
-
-        if (!cedula) continue;
-
-        resultados.totalFilas++;
-        const nombreCompleto = `${nombre} ${apellido}`.trim();
-        const userType = cargo.toLowerCase().includes('admin')
-          ? 'admin'
-          : 'normal';
-
-        const fechaActual = new Date();
-        const fechaFin = new Date();
-        fechaFin.setFullYear(fechaFin.getFullYear() + 10);
-
-        const payloadObj = {
-          UserInfo: {
-            employeeNo: cedula,
-            name: nombreCompleto,
-            userType: userType,
-            userGroup: cargo,
-            doorRight: '1',
-            Valid: {
-              enable: true,
-              beginTime: fechaActual.toISOString().slice(0, 19),
-              endTime: fechaFin.toISOString().slice(0, 19),
-            },
-          },
+        const resultados = {
+          totalFilas: 0,
+          creados: 0,
+          actualizados: 0,
+          fallidos: 0,
+          errores: [] as string[],
         };
 
-        const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
+        for (let i = 2; i <= worksheet.rowCount; i++) {
+          const row = worksheet.getRow(i);
 
-        const createCommand = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X POST -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Record?format=json`;
+          // 🔑 Cédula (solo números)
+          let cedula = row.getCell(1).value?.toString().trim() || '';
+          cedula = cedula.replace(/[^0-9]/g, '');
 
-        try {
-          const { stdout } = await execPromise(createCommand, {
-            timeout: 10000,
-          });
-          const response = JSON.parse(stdout);
+          // 🔑 Nombre, apellido y cargo
+          const nombreRaw = row.getCell(2).value?.toString().trim() || '';
+          const apellidoRaw = row.getCell(3).value?.toString().trim() || '';
+          const cargo = row.getCell(4).value?.toString().trim() || 'EMPLEADO';
 
-          if (response?.statusCode === 1 || response?.statusString === 'OK') {
-            resultados.creados++;
-            this.logger.log(
-              `✅ Usuario creado: ${cedula} - ${nombreCompleto} (${cargo})`,
+          // 🔑 Limpiar espacios múltiples
+          const nombre = nombreRaw.replace(/\s+/g, ' ').trim();
+          const apellido = apellidoRaw.replace(/\s+/g, ' ').trim();
+
+          if (!cedula) continue;
+
+          // 🔑 Construir nombre completo (funciona con formato A o B)
+          let nombreCompleto: string;
+          if (nombre && apellido) {
+            nombreCompleto = `${nombre} ${apellido}`;
+          } else if (nombre) {
+            nombreCompleto = nombre;
+          } else if (apellido) {
+            nombreCompleto = apellido;
+          } else {
+            nombreCompleto = `EMPLEADO ${cedula}`;
+            this.logger.warn(
+              `⚠️ Fila ${i}: cédula ${cedula} sin nombre. Usando "${nombreCompleto}"`,
             );
-          } else if (response?.subStatusCode === 'deviceUserAlreadyExist') {
-            const updateCommand = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X PUT -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Modify?format=json`;
-            const { stdout: updateStdout } = await execPromise(updateCommand, {
-              timeout: 10000,
-            });
-            const updateResponse = JSON.parse(updateStdout);
+          }
 
-            if (updateResponse?.statusCode === 1 || updateResponse?.statusString === 'OK') {
-              resultados.actualizados++;
+          // 🔑 Normalizar espacios y truncar a 32 caracteres (límite Hikvision)
+          nombreCompleto = nombreCompleto.replace(/\s+/g, ' ').trim();
+          if (nombreCompleto.length > 32) {
+            this.logger.warn(
+              `⚠️ Fila ${i}: nombre "${nombreCompleto}" excede 32 caracteres, se trunca`,
+            );
+            nombreCompleto = nombreCompleto.slice(0, 32).trim();
+          }
+
+          resultados.totalFilas++;
+
+          const userType = cargo.toLowerCase().includes('admin') ? 'admin' : 'normal';
+          const fechaActual = new Date();
+          const fechaFin = new Date();
+          fechaFin.setFullYear(fechaFin.getFullYear() + 10);
+
+          const payloadObj = {
+            UserInfo: {
+              employeeNo: cedula,
+              name: nombreCompleto,
+              userType: userType,
+              userGroup: cargo,
+              doorRight: '1',
+              Valid: {
+                enable: true,
+                beginTime: fechaActual.toISOString().slice(0, 19),
+                endTime: fechaFin.toISOString().slice(0, 19),
+              },
+            },
+          };
+
+          const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
+
+          try {
+            // 🔑 PASO 1: Intentar CREAR
+            const createCommand = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X POST -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Record?format=json`;
+
+            const { stdout } = await execPromise(createCommand, { timeout: 10000 });
+            const response = JSON.parse(stdout);
+
+            if (response?.statusCode === 1 || response?.statusString === 'OK') {
+              resultados.creados++;
               this.logger.log(
-                `🔄 Usuario actualizado: ${cedula} - ${nombreCompleto}`,
+                `✅ Usuario creado: ${cedula} - ${nombreCompleto} (${cargo})`,
               );
+            } else if (
+              response?.subStatusCode === 'deviceUserAlreadyExist' ||
+              response?.errorMsg === 'deviceUserAlreadyExist'
+            ) {
+              // 🔑 PASO 2: Ya existe → ACTUALIZAR
+              const updateCommand = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X PUT -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Modify?format=json`;
+
+              const { stdout: updateStdout } = await execPromise(updateCommand, {
+                timeout: 10000,
+              });
+              const updateResponse = JSON.parse(updateStdout);
+
+              if (
+                updateResponse?.statusCode === 1 ||
+                updateResponse?.statusString === 'OK'
+              ) {
+                resultados.actualizados++;
+                this.logger.log(
+                  `🔄 Usuario actualizado: ${cedula} - ${nombreCompleto} (${cargo})`,
+                );
+              } else {
+                resultados.fallidos++;
+                resultados.errores.push(
+                  `Error actualizando ${cedula}: ${JSON.stringify(updateResponse)}`,
+                );
+                this.logger.warn(
+                  `❌ Error actualizando ${cedula}: ${JSON.stringify(updateResponse)}`,
+                );
+              }
             } else {
               resultados.fallidos++;
               resultados.errores.push(
-                `Error actualizando ${cedula}: ${JSON.stringify(updateResponse)}`,
+                `Error con ${cedula}: ${JSON.stringify(response)}`,
+              );
+              this.logger.warn(
+                `❌ Error con ${cedula}: ${JSON.stringify(response)}`,
               );
             }
-          } else {
+          } catch (error: any) {
             resultados.fallidos++;
-            resultados.errores.push(
-              `Error con ${cedula}: ${JSON.stringify(response)}`,
-            );
+            resultados.errores.push(`Error con ${cedula}: ${error.message}`);
+            this.logger.warn(`❌ Error con ${cedula}: ${error.message}`);
           }
-        } catch (error: any) {
-          resultados.fallidos++;
-          resultados.errores.push(`Error con ${cedula}: ${error.message}`);
+
+          // 🔑 Delay para no saturar el biométrico
+          await this.delay(200);
         }
 
-        await this.delay(200);
-      }
+        this.logger.log(
+          `📊 Importación completada: ${resultados.creados} creados, ${resultados.actualizados} actualizados, ${resultados.fallidos} fallidos`,
+        );
 
-      this.logger.log(
-        `📊 Importación: ${resultados.creados} creados, ${resultados.actualizados} actualizados, ${resultados.fallidos} fallidos`,
-      );
-      return {
-        success: true,
-        message: 'Importación masiva completada',
-        ...resultados,
-      };
-    } catch (error: any) {
-      this.logger.error('Error en importación masiva:', error.message);
-      return {
-        success: false,
-        message: 'Error al importar usuarios',
-        error: error.message,
-      };
+        return {
+          success: true,
+          message: 'Importación masiva completada',
+          ...resultados,
+        };
+      } catch (error: any) {
+        this.logger.error('Error en importación masiva:', error.message);
+        return {
+          success: false,
+          message: 'Error al importar usuarios',
+          error: error.message,
+        };
+      }
     }
-  }
 
   async deleteUserFromDevice(
     employeeNo: string,
@@ -495,6 +541,79 @@ export class BiometricoService {
     } catch (error: any) {
       this.logger.error(`Error desactivando ${employeeNo}: ${error.message}`);
       return { success: false, message: 'Error al desactivar el usuario', error: error.message };
+    }
+  }
+
+  async activateUserInDevice(
+    employeeNo: string,
+    ip = '172.18.0.89',
+    user = 'admin',
+    pass = 'Dtd2026*',
+  ) {
+    try {
+      // 🔑 Verificar que el usuario existe antes de activarlo
+      const currentUser = await this.getUserByEmployeeNo(employeeNo, ip, user, pass);
+
+      if (!currentUser) {
+        this.logger.warn(`⚠️ Usuario ${employeeNo} no existe en el biométrico`);
+        return {
+          success: false,
+          message: `El usuario ${employeeNo} no existe en el biométrico`,
+        };
+      }
+
+      // 🔑 Reconstruir el payload completo (Hikvision requiere todos los campos)
+      const payloadObj = {
+        UserInfo: {
+          employeeNo: employeeNo,
+          name: currentUser.name || 'DESCONOCIDO',
+          userType: currentUser.userType || 'normal',
+          userGroup: currentUser.userGroup || 'EMPLEADO',
+          doorRight: currentUser.doorRight || '1',
+          Valid: {
+            enable: true,
+            beginTime: currentUser.Valid?.beginTime || '2026-01-01T00:00:00',
+            endTime: currentUser.Valid?.endTime || '2036-01-01T23:59:59',
+          },
+        },
+      };
+
+      const payloadStr = JSON.stringify(payloadObj).replace(/"/g, '\\"');
+      const command = `curl --digest -u ${user}:${pass} -H "Content-Type: application/json" -X PUT -d "${payloadStr}" http://${ip}/ISAPI/AccessControl/UserInfo/Modify?format=json`;
+
+      const { stdout } = await execPromise(command, { timeout: 10000 });
+      const response = JSON.parse(stdout);
+
+      if (response?.statusCode === 1 || response?.statusString === 'OK') {
+        // 🔑 Limpiar caché para que no quede el nombre viejo
+        this.employeeMap.delete(employeeNo);
+        this.logger.log(`✅ Usuario ${employeeNo} activado correctamente`);
+        return {
+          success: true,
+          message: `Usuario ${employeeNo} (${currentUser.name}) activado. Ya puede marcar.`,
+          usuario: {
+            employeeNo,
+            nombre: currentUser.name,
+            activo: true,
+          },
+        };
+      } else {
+        this.logger.warn(
+          `⚠️ No se pudo activar ${employeeNo}: ${JSON.stringify(response)}`,
+        );
+        return {
+          success: false,
+          message: 'No se pudo activar el usuario',
+          detail: response,
+        };
+      }
+    } catch (error: any) {
+      this.logger.error(`Error activando ${employeeNo}: ${error.message}`);
+      return {
+        success: false,
+        message: 'Error al activar el usuario',
+        error: error.message,
+      };
     }
   }
 
@@ -782,39 +901,71 @@ export class BiometricoService {
     return { removed, message: `Se eliminaron ${removed} duplicados. Total: ${cleanEvents.length}` };
   }
 
-  private async regenerateExcel(records: AttendanceRecord[]) {
-    const workbook: any = new Workbook.Workbook();
-    const worksheet: any = workbook.addWorksheet('Marcajes');
+    private async regenerateExcel(records: AttendanceRecord[]): Promise<void> {
+      const maxReintentos = 3;
 
-    worksheet.columns = [
-      { header: 'ID / Cédula', key: 'employeeId', width: 15 },
-      { header: 'Nombre del Empleado', key: 'employeeName', width: 30 },
-      { header: 'Fecha y Hora Local', key: 'horaLocal', width: 25 },
-      { header: 'Método de Marcaje', key: 'metodoMarcaje', width: 22 },
-      { header: 'Dispositivo', key: 'deviceName', width: 20 },
-    ];
+      for (let intento = 1; intento <= maxReintentos; intento++) {
+        try {
+          const workbook: any = new Workbook.Workbook();
+          const worksheet: any = workbook.addWorksheet('Marcajes');
 
-    const headerRow = worksheet.getRow(1);
-    headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
-    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '004080' } };
-    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+          worksheet.columns = [
+            { header: 'ID / Cédula', key: 'employeeId', width: 15 },
+            { header: 'Nombre del Empleado', key: 'employeeName', width: 30 },
+            { header: 'Fecha y Hora Local', key: 'horaLocal', width: 25 },
+            { header: 'Método de Marcaje', key: 'metodoMarcaje', width: 22 },
+            { header: 'Dispositivo', key: 'deviceName', width: 20 },
+          ];
 
-    const sortedRecords = records.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    for (const record of sortedRecords) {
-      worksheet.addRow({
-        employeeId: record.employeeId,
-        employeeName: record.employeeName || 'DESCONOCIDO',
-        horaLocal: record.horaLocal,
-        metodoMarcaje: this.parseEventType(record.rawType),
-        deviceName: record.deviceName,
-      });
-    }
+          const headerRow = worksheet.getRow(1);
+          headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
+          headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '004080' } };
+          headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-    await workbook.xlsx.writeFile(this.excelFilePath);
-    this.logger.log(`📊 Excel regenerado con ${sortedRecords.length} registros`);
+          const sortedRecords = records.sort(
+            (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+          );
+
+          for (const record of sortedRecords) {
+            worksheet.addRow({
+              employeeId: record.employeeId,
+              employeeName: record.employeeName || 'DESCONOCIDO',
+              horaLocal: record.horaLocal,
+              metodoMarcaje: this.parseEventType(record.rawType),
+              deviceName: record.deviceName,
+            });
+          }
+
+          await workbook.xlsx.writeFile(this.excelFilePath);
+          this.logger.log(`📊 Excel regenerado con ${sortedRecords.length} registros`);
+
+          // 🔑 Éxito → salir del bucle
+          return;
+        } catch (error: any) {
+          // 🔑 EBUSY: archivo abierto en Excel
+          if (error.code === 'EBUSY' || error.message?.includes('EBUSY')) {
+            if (intento < maxReintentos) {
+              this.logger.warn(
+                `⚠️ Excel abierto (intento ${intento}/${maxReintentos}). Reintentando en 2s...`,
+              );
+              await this.delay(2000);
+              continue;
+            } else {
+              this.logger.error(
+                '❌ No se pudo escribir el Excel: está abierto. Ciérralo para que se actualice.',
+              );
+              return; // No relanzar, solo avisar
+            }
+          }
+
+          // Otro error distinto → relanzar
+          this.logger.error('Error inesperado al escribir Excel:', error.message);
+          throw error;
+        }
+      }
   }
 
-  private async saveMultipleRecords(records: AttendanceRecord[]): Promise<number> {
+    private async saveMultipleRecords(records: AttendanceRecord[]): Promise<number> {
     if (records.length === 0) return 0;
     const currentEvents = this.getSavedEvents();
 
@@ -836,9 +987,24 @@ export class BiometricoService {
 
     if (recordsToAdd.length > 0) {
       const updatedEvents = [...currentEvents, ...recordsToAdd];
-      updatedEvents.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      updatedEvents.sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      );
+
+      // 🔑 Guardar JSON (rápido)
       fs.writeFileSync(this.filePath, JSON.stringify(updatedEvents, null, 2), 'utf-8');
-      await this.regenerateExcel(updatedEvents);
+
+      // 🔑 Regenerar Excel SIN bloquear el ciclo
+      // Si falla (Excel abierto), no rompe el cron
+      try {
+        await this.regenerateExcel(updatedEvents);
+      } catch (error: any) {
+        this.logger.warn(
+          `⚠️ No se pudo actualizar Excel (JSON sí se guardó): ${error.message}`,
+        );
+      }
+
+      this.logger.log(`📊 ${newRecordsCount} registros nuevos guardados en JSON y Excel`);
     }
 
     return newRecordsCount;
@@ -873,9 +1039,19 @@ export class BiometricoService {
     return { dateObj, horaLocal };
   }
 
-  async getEmployeeName(employeeId: string, ip = '172.18.0.89', user = 'admin', pass = 'Dtd2026*'): Promise<string> {
+    async getEmployeeName(
+    employeeId: string,
+    ip = '172.18.0.89',
+    user = 'admin',
+    pass = 'Dtd2026*',
+  ): Promise<string> {
     if (!employeeId || employeeId === '0') return 'DESCONOCIDO';
-    if (this.employeeMap.has(employeeId)) return this.employeeMap.get(employeeId)!;
+
+    // 🔑 Verificar cache con TTL
+    const cached = this.employeeMap.get(employeeId);
+    if (cached && Date.now() - cached.timestamp < this.EMPLOYEE_CACHE_TTL) {
+      return cached.name;
+    }
 
     try {
       const payloadObj = {
@@ -894,7 +1070,9 @@ export class BiometricoService {
         const data = JSON.parse(stdout);
         const userInfo = data?.UserInfoSearch?.UserInfo?.[0];
         const name = userInfo?.name || 'DESCONOCIDO';
-        this.employeeMap.set(employeeId, name);
+
+        // 🔑 Guardar con timestamp
+        this.employeeMap.set(employeeId, { name, timestamp: Date.now() });
         return name;
       }
     } catch (error: any) {
@@ -902,7 +1080,6 @@ export class BiometricoService {
     }
     return 'DESCONOCIDO';
   }
-
   private parseXml(xmlString: string): Promise<any> {
     return new Promise((resolve, reject) => {
       xml2js.parseString(xmlString, { explicitArray: false }, (err, result) => {

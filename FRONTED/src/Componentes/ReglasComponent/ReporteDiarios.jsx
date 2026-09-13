@@ -1,5 +1,23 @@
 // src/Componentes/ReglasComponent/ReporteDiario.jsx
 import { useState } from 'react';
+import Card from '../UI/Card';
+import Button from '../UI/Button';
+import Badge from '../UI/Badge';
+
+// 🔧 Función auxiliar: separa nombre y apellido
+function separarNombreApellido(nombreCompleto) {
+  if (!nombreCompleto) return { nombre: '', apellido: 'N/A' };
+  const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
+  const total = partes.length;
+  if (total === 1) return { nombre: partes[0], apellido: 'N/A' };
+  if (total === 2) return { nombre: partes[0], apellido: partes[1] };
+  if (total === 3) return { nombre: partes[0], apellido: partes.slice(1).join(' ') };
+  if (total === 4) {
+    return { nombre: partes.slice(0, 2).join(' '), apellido: partes.slice(2).join(' ') };
+  }
+  const mitad = Math.ceil(total / 2);
+  return { nombre: partes.slice(0, mitad).join(' '), apellido: partes.slice(mitad).join(' ') };
+}
 
 export default function ReporteDiario({ onGenerar, reporte }) {
   const [fecha, setFecha] = useState('');
@@ -15,143 +33,191 @@ export default function ReporteDiario({ onGenerar, reporte }) {
     try {
       await onGenerar(fecha);
     } catch (error) {
-      // manejo en el hook
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const getEstadoColor = (estado) => {
-    const colores = {
-      'PRESENTE': '#38a169',
-      'AUSENTE': '#e53e3e',
-      'RETARDO': '#dd6b20',
-      'SALIDA TEMPRANA': '#d69e2e',
-      'PENDIENTE': '#3182ce',
-      'NO_MARCO_SALIDA': '#e53e3e',
-    };
-    return colores[estado] || '#718096';
+  const handleDescargarExcel = () => {
+    if (!fecha) {
+      alert('Selecciona una fecha primero.');
+      return;
+    }
+    window.open(`http://localhost:3000/reglas/reporte/${fecha}?generarExcel=true`, '_blank');
   };
 
-  const getEstadoTexto = (estado) => {
-    const textos = {
-      'PRESENTE': '✅ Presente',
-      'AUSENTE': '❌ Ausente',
-      'RETARDO': '⏰ Retardo',
-      'SALIDA TEMPRANA': '🏃 Salida temprana',
-      'PENDIENTE': '⏳ Pendiente',
-      'NO_MARCO_SALIDA': '⚠️ Sin salida',
+  const getEstadoBadge = (estado) => {
+    const map = {
+      PUNTUAL: { variant: 'success', texto: 'Puntual' },
+      RETARDO: { variant: 'warning', texto: 'Retardo' },
+      SALIDA_TEMPRANA: { variant: 'warning', texto: 'Salida Temprana' },
+      COMPLETO: { variant: 'success', texto: 'Completo' },
+      AUSENTE: { variant: 'danger', texto: 'Ausente' },
+      DESCANSO: { variant: 'info', texto: 'Descanso' },
+      SIN_HORARIO: { variant: 'default', texto: 'Sin Horario' },
+      PENDIENTE: { variant: 'info', texto: 'Pendiente' },
+      NO_MARCO_SALIDA: { variant: 'danger', texto: 'Sin Salida' },
     };
-    return textos[estado] || estado;
-  };
-
-  const formatearHoras = (minutos) => {
-    if (!minutos && minutos !== 0) return '0h';
-    const horas = Math.floor(minutos / 60);
-    const mins = minutos % 60;
-    if (horas === 0) return `${mins}m`;
-    if (mins === 0) return `${horas}h`;
-    return `${horas}h ${mins}m`;
+    return map[estado] || { variant: 'default', texto: estado };
   };
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '10px' }}>
-      <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#2d3748' }}>📄 Reporte Diario de Asistencia</h3>
-
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '20px' }}>
+    <Card
+      title="Reporte Diario de Asistencia"
+      subtitle="Consulta los marcajes y horas trabajadas en un día"
+      icon="📄"
+      variant="warning"
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: 'flex',
+          gap: '12px',
+          alignItems: 'flex-end',
+          flexWrap: 'wrap',
+          marginBottom: '20px',
+        }}
+      >
         <div>
-          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '14px' }}>Fecha</label>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '6px',
+              fontWeight: '600',
+              fontSize: '13px',
+              color: '#4a5568',
+            }}
+          >
+            Fecha
+          </label>
           <input
             type="date"
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
-            style={{ padding: '10px 12px', border: '1px solid #cbd5e0', borderRadius: '6px', fontSize: '14px' }}
+            style={{
+              padding: '0 14px',
+              height: '42px',
+              border: '1px solid #cbd5e0',
+              borderRadius: '8px',
+              fontSize: '14px',
+              color: '#2d3748',
+              background: '#fff',
+              colorScheme: 'light',
+              outline: 'none',
+              fontFamily: 'inherit',
+            }}
             required
           />
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: '10px 20px',
-            background: '#dd6b20',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            fontWeight: '600',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1,
-            fontSize: '14px',
-            whiteSpace: 'nowrap'
-          }}
+
+        <Button type="submit" variant="warning" size="md" loading={loading} iconLeft="🔍">
+          {loading ? 'Generando...' : 'Ver Reporte'}
+        </Button>
+
+        <Button
+          variant="success"
+          size="md"
+          onClick={handleDescargarExcel}
+          disabled={!fecha}
+          iconLeft="📥"
         >
-          {loading ? 'Generando...' : '📄 Generar Reporte'}
-        </button>
+          Descargar Excel
+        </Button>
       </form>
 
       {reporte && (
         <div style={{ marginTop: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h4 style={{ margin: 0, fontSize: '16px', color: '#2d3748' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}
+          >
+            <h4 style={{ margin: 0, fontSize: '15px', color: '#2d3748' }}>
               Reporte del {reporte.fecha || 'día'}
             </h4>
-            <span style={{ background: '#ebf8ff', color: '#2b6cb0', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600' }}>
+            <Badge variant="info" size="md">
               {reporte.totalEmpleados} empleados
-            </span>
+            </Badge>
           </div>
 
           {reporte.reporte && reporte.reporte.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
+            <div
+              style={{
+                overflowX: 'auto',
+                borderRadius: '10px',
+                border: '1px solid #e2e8f0',
+              }}
+            >
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
-                  <tr style={{ background: '#f7fafc', borderBottom: '2px solid #e2e8f0' }}>
-                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Empleado</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Horario</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Entrada</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Salida</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Estado</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Horas Diurnas</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Horas Nocturnas</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Extra Diurnas</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'left' }}>Extra Nocturnas</th>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                    {['Cédula', 'Nombre', 'Apellido', 'Horario', 'Entrada', 'Salida', 'Estado', 'H. Diurnas', 'H. Nocturnas', 'Extra Diur.', 'Extra Noct.'].map((h, i) => (
+                      <th
+                        key={i}
+                        style={{
+                          padding: '10px 12px',
+                          textAlign: 'left',
+                          fontSize: '11px',
+                          color: '#4a5568',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          fontWeight: '700',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {reporte.reporte.map((item, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #edf2f7' }}>
-                      <td style={{ padding: '8px 10px', fontWeight: '500' }}>
-                        {item.nombre} <span style={{ color: '#718096', fontSize: '11px' }}>({item.employeeId})</span>
-                      </td>
-                      <td style={{ padding: '8px 10px' }}>{item.horario || 'N/A'}</td>
-                      <td style={{ padding: '8px 10px' }}>{item.entradaReal || '—'}</td>
-                      <td style={{ padding: '8px 10px' }}>{item.salidaReal || '—'}</td>
-                      <td style={{ padding: '8px 10px' }}>
-                        <span style={{
-                          background: getEstadoColor(item.estado),
-                          color: '#fff',
-                          padding: '2px 10px',
-                          borderRadius: '20px',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {getEstadoTexto(item.estado)}
-                        </span>
-                      </td>
-                      <td style={{ padding: '8px 10px' }}>{item.horasDiurnasLegible || '0h'}</td>
-                      <td style={{ padding: '8px 10px' }}>{item.horasNocturnasLegible || '0h'}</td>
-                      <td style={{ padding: '8px 10px' }}>{item.horasExtraDiurnasLegible || '0h'}</td>
-                      <td style={{ padding: '8px 10px' }}>{item.horasExtraNocturnasLegible || '0h'}</td>
-                    </tr>
-                  ))}
+                  {reporte.reporte.map((item, idx) => {
+                    const { nombre, apellido } = separarNombreApellido(item.nombre || '');
+                    const badge = getEstadoBadge(item.estado);
+                    return (
+                      <tr
+                        key={idx}
+                        style={{
+                          borderBottom: '1px solid #edf2f7',
+                          background: idx % 2 === 0 ? '#fff' : '#fafbfc',
+                        }}
+                      >
+                        <td style={{ padding: '10px 12px', fontWeight: '600', color: '#2b6cb0', whiteSpace: 'nowrap' }}>
+                          {item.employeeId}
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>{nombre}</td>
+                        <td style={{ padding: '10px 12px', color: '#4a5568' }}>{apellido}</td>
+                        <td style={{ padding: '10px 12px', color: '#718096', whiteSpace: 'nowrap' }}>{item.horario}</td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{item.entradaReal || '—'}</td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>{item.salidaReal || '—'}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <Badge variant={badge.variant} size="sm">
+                            {badge.texto}
+                          </Badge>
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>{item.horasDiurnasLegible || '0h'}</td>
+                        <td style={{ padding: '10px 12px' }}>{item.horasNocturnasLegible || '0h'}</td>
+                        <td style={{ padding: '10px 12px' }}>{item.horasExtraDiurnasLegible || '0h'}</td>
+                        <td style={{ padding: '10px 12px' }}>{item.horasExtraNocturnasLegible || '0h'}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           ) : (
-            <p style={{ color: '#a0aec0', textAlign: 'center', padding: '20px' }}>No hay datos para mostrar.</p>
+            <p style={{ color: '#a0aec0', textAlign: 'center', padding: '20px' }}>
+              No hay datos para mostrar.
+            </p>
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

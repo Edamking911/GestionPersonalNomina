@@ -18,40 +18,38 @@ export function useBiometrico() {
   const [marcajesFechaUnica, setMarcajesFechaUnica] = useState(null);
   const [marcajesHoy, setMarcajesHoy] = useState([]);
 
-  // ✅ Formateo de hora (MEJORADO)
+  // ✅ Formateo de hora
   const formatearHoraDesdeTimestamp = useCallback((timestamp, fallbackHora) => {
-  // Si fallbackHora existe y tiene AM/PM, devolverlo tal cual
-      if (fallbackHora && typeof fallbackHora === 'string') {
-        if (fallbackHora.includes('a. m.') || fallbackHora.includes('p. m.')) {
-          return fallbackHora.trim();
-        }
-        // Si no tiene AM/PM, extraer la hora y convertirla
-        const match = fallbackHora.match(/(\d{1,2}):(\d{2}):(\d{2})/);
-        if (match) {
-          let h = parseInt(match[1], 10);
-          const min = match[2];
-          const s = match[3];
-          const ampm = h >= 12 ? 'p. m.' : 'a. m.';
-          h = h % 12 || 12;
-          return `${String(h).padStart(2, '0')}:${min}:${s} ${ampm}`;
-        }
+    if (fallbackHora && typeof fallbackHora === 'string') {
+      if (fallbackHora.includes('a. m.') || fallbackHora.includes('p. m.')) {
         return fallbackHora.trim();
       }
-
-      // Si no hay fallbackHora, usar timestamp (con hora LOCAL)
-      if (timestamp) {
-        const d = new Date(timestamp);
-        if (!isNaN(d.getTime())) {
-          let h = d.getHours(); // Hora local del navegador
-          const min = String(d.getMinutes()).padStart(2, '0');
-          const s = String(d.getSeconds()).padStart(2, '0');
-          const ampm = h >= 12 ? 'p. m.' : 'a. m.';
-          h = h % 12 || 12;
-          return `${String(h).padStart(2, '0')}:${min}:${s} ${ampm}`;
-        }
+      const match = fallbackHora.match(/(\d{1,2}):(\d{2}):(\d{2})/);
+      if (match) {
+        let h = parseInt(match[1], 10);
+        const min = match[2];
+        const s = match[3];
+        const ampm = h >= 12 ? 'p. m.' : 'a. m.';
+        h = h % 12 || 12;
+        return `${String(h).padStart(2, '0')}:${min}:${s} ${ampm}`;
       }
-      return 'N/A';
-    }, []);
+      return fallbackHora.trim();
+    }
+
+    if (timestamp) {
+      const d = new Date(timestamp);
+      if (!isNaN(d.getTime())) {
+        let h = d.getHours();
+        const min = String(d.getMinutes()).padStart(2, '0');
+        const s = String(d.getSeconds()).padStart(2, '0');
+        const ampm = h >= 12 ? 'p. m.' : 'a. m.';
+        h = h % 12 || 12;
+        return `${String(h).padStart(2, '0')}:${min}:${s} ${ampm}`;
+      }
+    }
+    return 'N/A';
+  }, []);
+
   // Verificar estado del backend
   const checkStatusAutomatico = useCallback(async () => {
     try {
@@ -62,7 +60,7 @@ export function useBiometrico() {
     }
   }, []);
 
-  // ⭐ Cargar marcajes de hoy con formato YYYY-MM-DD (ISO)
+  // ⭐ Cargar marcajes de hoy
   const cargarMarcajesHoy = useCallback(async () => {
     try {
       const hoy = new Date();
@@ -74,10 +72,8 @@ export function useBiometrico() {
       console.log(`📅 [cargarMarcajesHoy] Consultando para hoy (${fechaStr})...`);
 
       const res = await api.get(`/biometrico/marcajes/${fechaStr}`);
-      console.log('📦 [cargarMarcajesHoy] Respuesta completa:', res);
       console.log('📦 [cargarMarcajesHoy] res.data:', res.data);
 
-      // Extraer marcajes
       let marcajes = res.data?.marcajes || [];
       if (!Array.isArray(marcajes)) {
         console.warn('⚠️ [cargarMarcajesHoy] No es un arreglo, convirtiendo...');
@@ -92,7 +88,7 @@ export function useBiometrico() {
     }
   }, []);
 
-  // ⭐ Cargar todos los datos (usuarios, stats, marcajes de hoy)
+  // ⭐ Cargar todos los datos
   const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
@@ -100,13 +96,11 @@ export function useBiometrico() {
 
       const [resUsers, resStats] = await Promise.all([
         api.get('/biometrico/list-all-users'),
-        api.get('/biometrico/stats')
+        api.get('/biometrico/stats'),
       ]);
 
-      console.log('📦 [cargarDatos] resUsers (completo):', resUsers);
       console.log('📦 [cargarDatos] resUsers.data:', resUsers.data);
 
-      // EXTRAER USUARIOS DE LA RESPUESTA
       let usuariosData = [];
       if (resUsers.data) {
         if (Array.isArray(resUsers.data.usuarios)) {
@@ -116,7 +110,7 @@ export function useBiometrico() {
         } else {
           for (let key in resUsers.data) {
             if (Array.isArray(resUsers.data[key])) {
-              console.log(`🔍 [cargarDatos] Encontrado arreglo en la propiedad "${key}"`);
+              console.log(`🔍 [cargarDatos] Encontrado arreglo en "${key}"`);
               usuariosData = resUsers.data[key];
               break;
             }
@@ -126,14 +120,12 @@ export function useBiometrico() {
 
       console.log('👥 [cargarDatos] Usuarios crudos:', usuariosData);
 
-      const usuariosConEstado = usuariosData.map(u => ({
+      const usuariosConEstado = usuariosData.map((u) => ({
         ...u,
-        activo: u.activo !== undefined ? u.activo : true
+        activo: u.activo !== undefined ? u.activo : true,
       }));
 
-      console.log('👥 [cargarDatos] Usuarios con estado:', usuariosConEstado);
       setUsuarios(usuariosConEstado);
-
       setStats(resStats.data || null);
 
       await cargarMarcajesHoy();
@@ -197,27 +189,65 @@ export function useBiometrico() {
     }
   }, []);
 
+  // 🔴 Desactivar usuario
   const handleEliminarUsuario = useCallback(async (employeeNo) => {
-    if (!window.confirm(`¿Seguro que deseas desactivar al usuario con cédula ${employeeNo}?`)) return;
+    if (
+      !window.confirm(
+        `¿Seguro que deseas desactivar al usuario con cédula ${employeeNo}?`
+      )
+    )
+      return;
     try {
       setMensaje(`Desactivando usuario ${employeeNo}...`);
       await api.delete(`/biometrico/delete-user/${employeeNo}`);
       setMensaje('Usuario desactivado con éxito.');
-      setUsuarios(prevUsuarios =>
-        prevUsuarios.map(u =>
+      setUsuarios((prevUsuarios) =>
+        prevUsuarios.map((u) =>
           String(u.employeeNo || u.cedula) === String(employeeNo)
             ? { ...u, activo: false }
             : u
         )
       );
-      setMarcajesHoy(prev =>
-        prev.filter(m => String(m.employeeId || m.empleadoId) !== String(employeeNo))
+      setMarcajesHoy((prev) =>
+        prev.filter(
+          (m) => String(m.employeeId || m.empleadoId) !== String(employeeNo)
+        )
       );
     } catch (error) {
       console.error(error);
       setMensaje('Error al intentar desactivar el usuario.');
     }
   }, []);
+
+  // 🟢 NUEVO: Activar usuario
+  const handleActivarUsuario = useCallback(async (employeeNo) => {
+    if (
+      !window.confirm(
+        `¿Reactivar al usuario con cédula ${employeeNo}? Podrá volver a marcar en el biométrico.`
+      )
+    )
+      return;
+
+    try {
+      setMensaje(`Activando usuario ${employeeNo}...`);
+      await api.post(`/biometrico/activate-user/${employeeNo}`);
+      setMensaje('Usuario activado con éxito.');
+
+      setUsuarios((prevUsuarios) =>
+        prevUsuarios.map((u) =>
+          String(u.employeeNo || u.cedula) === String(employeeNo)
+            ? { ...u, activo: true }
+            : u
+        )
+      );
+
+      // Refrescar para sincronizar con el backend
+      cargarDatos();
+    } catch (error) {
+      console.error(error);
+      setMensaje('Error al intentar activar el usuario.');
+    }
+  }, [cargarDatos]);
 
   const handleSubirExcel = useCallback(async (e) => {
     e.preventDefault();
@@ -232,7 +262,11 @@ export function useBiometrico() {
       const res = await api.post('/biometrico/import-users', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setMensaje(`Carga exitosa: ${res.data.creados || 0} creados, ${res.data.actualizados || 0} actualizados.`);
+      setMensaje(
+        `Carga exitosa: ${res.data.creados || 0} creados, ${
+          res.data.actualizados || 0
+        } actualizados.`
+      );
       setArchivoExcel(null);
       cargarDatos();
     } catch {
@@ -245,7 +279,9 @@ export function useBiometrico() {
     if (!cedulaBusqueda) return;
     try {
       setLoading(true);
-      const res = await api.get(`/biometrico/events?employeeId=${cedulaBusqueda}`);
+      const res = await api.get(
+        `/biometrico/events?employeeId=${cedulaBusqueda}`
+      );
       setEventosEmpleado(res.data);
       setMensaje(`Resultados cargados para la cédula: ${cedulaBusqueda}`);
     } catch {
@@ -260,9 +296,8 @@ export function useBiometrico() {
     try {
       setLoading(true);
       const res = await api.get('/biometrico/records-by-date');
-      console.log('📦 [cargarRegistrosPorFecha] Respuesta completa:', res.data);
+      console.log('📦 [cargarRegistrosPorFecha] res.data:', res.data);
       setRegistrosFecha(res.data);
-      console.log('✅ [cargarRegistrosPorFecha] registrosFecha actualizado:', res.data);
     } catch {
       setMensaje('Error al obtener registros por fecha.');
     } finally {
@@ -291,49 +326,38 @@ export function useBiometrico() {
 
   // ---------- EFECTOS ----------
   useEffect(() => {
-  cargarDatos();
-  const timerStatus = setInterval(checkStatusAutomatico, 8000);
-  const timerSync = setInterval(cargarMarcajesHoy, 10000);
-  
-  // Nuevo intervalo para recargar historial cada 10s
-  const timerHistory = setInterval(() => {
-    // Solo recargar si la vista activa es "marcajes"
-    if (vistaActiva === 'marcajes') {
-      cargarRegistrosPorFecha();
-    }
-  }, 10000);
+    cargarDatos();
+    const timerStatus = setInterval(checkStatusAutomatico, 8000);
+    const timerSync = setInterval(cargarMarcajesHoy, 10000);
 
-  return () => {
-    clearInterval(timerStatus);
-    clearInterval(timerSync);
-    clearInterval(timerHistory);
-  };
-}, [cargarDatos, checkStatusAutomatico, cargarMarcajesHoy, cargarRegistrosPorFecha, vistaActiva]);
+    const timerHistory = setInterval(() => {
+      if (vistaActiva === 'marcajes') {
+        cargarRegistrosPorFecha();
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(timerStatus);
+      clearInterval(timerSync);
+      clearInterval(timerHistory);
+    };
+  }, [cargarDatos, checkStatusAutomatico, cargarMarcajesHoy, cargarRegistrosPorFecha, vistaActiva]);
 
   // ---------- ESTADOS DERIVADOS ----------
-  const usuariosActivos = usuarios.filter(u => u.activo === true);
-  const usuariosInactivos = usuarios.filter(u => u.activo === false);
-
-  console.log('📊 TOTAL USUARIOS (todos):', usuarios.length);
-  console.log('✅ USUARIOS ACTIVOS:', usuariosActivos.length);
-  console.log('🚫 USUARIOS INACTIVOS:', usuariosInactivos.length);
+  const usuariosActivos = usuarios.filter((u) => u.activo === true);
+  const usuariosInactivos = usuarios.filter((u) => u.activo === false);
 
   const cedulasMarcadasSet = new Set(
-    marcajesHoy.map(m => String(m.employeeId || m.empleadoId || '').trim())
+    marcajesHoy.map((m) => String(m.employeeId || m.empleadoId || '').trim())
   );
 
-  console.log('🔑 Cédulas que marcaron hoy:', Array.from(cedulasMarcadasSet));
-
-  const usuariosMarcados = usuariosActivos.filter(u =>
+  const usuariosMarcados = usuariosActivos.filter((u) =>
     cedulasMarcadasSet.has(String(u.employeeNo || u.cedula || '').trim())
   );
 
-  const usuariosPendientes = usuariosActivos.filter(u =>
-    !cedulasMarcadasSet.has(String(u.employeeNo || u.cedula || '').trim())
+  const usuariosPendientes = usuariosActivos.filter(
+    (u) => !cedulasMarcadasSet.has(String(u.employeeNo || u.cedula || '').trim())
   );
-
-  console.log('👥 USUARIOS MARCADOS HOY:', usuariosMarcados.length);
-  console.log('⏳ USUARIOS PENDIENTES:', usuariosPendientes.length);
 
   // ---------- RETORNO ----------
   return {
@@ -366,6 +390,7 @@ export function useBiometrico() {
     handleLimpiarDuplicados,
     handleLimpiarCache,
     handleEliminarUsuario,
+    handleActivarUsuario,   // 👈 NUEVO
     handleSubirExcel,
     buscarEventosPorCedula,
     cargarRegistrosPorFecha,

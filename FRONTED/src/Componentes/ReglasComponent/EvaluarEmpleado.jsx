@@ -1,211 +1,279 @@
 // src/Componentes/ReglasComponent/EvaluarEmpleado.jsx
 import { useState } from 'react';
+import Card from '../UI/Card';
+import Input from '../UI/Input';
+import Button from '../UI/Button';
+import Badge from '../UI/Badge';
 
-export default function EvaluarEmpleado({ onEvaluar, evaluacion, onLimpiar }) {
+export default function EvaluarEmpleado({ onEvaluar, evaluacion, onLimpiar, showToast }) {
   const [employeeId, setEmployeeId] = useState('');
   const [fecha, setFecha] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!employeeId || !fecha) {
-      alert('Completa ambos campos.');
+
+    if (!employeeId.trim() || !fecha) {
+      showToast?.('Completa ambos campos.', 'warning');
       return;
     }
+
     setLoading(true);
     try {
-      await onEvaluar(employeeId, fecha);
-    } catch (error) {
-      // manejo en el hook
+      await onEvaluar(employeeId.trim(), fecha);
+    } catch (err) {
+      console.log('Error manejado por Toast:', err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleNuevaBusqueda = () => {
-    // Limpiar inputs locales
     setEmployeeId('');
     setFecha('');
-    // Resetear evaluación en el hook
-    onLimpiar();
+    if (onLimpiar) onLimpiar();
   };
 
-  const getEstadoColor = (estado) => {
-    const estados = {
-      'PRESENTE': '#38a169',
-      'AUSENTE': '#e53e3e',
-      'RETARDO': '#dd6b20',
-      'SALIDA TEMPRANA': '#d69e2e',
-      'FALTA': '#e53e3e',
+  const getEstadoBadge = (estado) => {
+    const map = {
+      PUNTUAL: { variant: 'success', texto: '✅ PUNTUAL' },
+      PRESENTE: { variant: 'success', texto: '✅ PRESENTE' },
+      COMPLETO: { variant: 'success', texto: '✅ COMPLETO' },
+      RETARDO: { variant: 'warning', texto: '⏰ RETARDO' },
+      SALIDA_TEMPRANA: { variant: 'warning', texto: '🏃 SALIDA TEMPRANA' },
+      AUSENTE: { variant: 'danger', texto: '❌ AUSENTE' },
+      DESCANSO: { variant: 'info', texto: '💤 DESCANSO' },
+      SIN_HORARIO: { variant: 'default', texto: '⚠️ SIN HORARIO' },
+      PENDIENTE: { variant: 'info', texto: '⏳ PENDIENTE' },
+      NO_MARCO_SALIDA: { variant: 'danger', texto: '⚠️ SIN SALIDA' },
     };
-    return estados[estado] || '#718096';
-  };
-
-  const formatearHoras = (minutos) => {
-    if (!minutos && minutos !== 0) return '0h';
-    const horas = Math.floor(minutos / 60);
-    const mins = minutos % 60;
-    if (horas === 0) return `${mins}m`;
-    if (mins === 0) return `${horas}h`;
-    return `${horas}h ${mins}m`;
+    return map[estado] || { variant: 'default', texto: estado };
   };
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '10px' }}>
-      <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#2d3748' }}>🔍 Evaluar Empleado en Fecha Específica</h3>
-
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: '150px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '14px' }}>Cédula del empleado</label>
-          <input
-            type="text"
-            placeholder="Ej. 29789773"
+    <Card
+      title="Evaluar Empleado en Fecha Específica"
+      subtitle="Consulta el cumplimiento de un empleado en un día concreto"
+      icon="🔍"
+      variant="info"
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: 'flex',
+          gap: '16px',
+          alignItems: 'flex-end',
+          flexWrap: 'wrap',
+          marginBottom: '24px',
+        }}
+      >
+        <div style={{ flex: '1 1 220px' }}>
+          <Input
+            label="Cédula del Empleado"
+            placeholder="Cedula"
             value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e0', borderRadius: '6px', fontSize: '14px' }}
+            onChange={(e) => setEmployeeId(e.target.value.replace(/\D/g, ''))}
+            icon="👤"
             required
           />
         </div>
-        <div style={{ flex: 1, minWidth: '150px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '14px' }}>Fecha</label>
+
+        <div style={{ flex: '1 1 200px' }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '6px',
+              fontWeight: '600',
+              fontSize: '13px',
+              color: '#4a5568',
+            }}
+          >
+            Fecha
+          </label>
           <input
             type="date"
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e0', borderRadius: '6px', fontSize: '14px' }}
+            style={{
+              width: '100%',
+              height: '42px',
+              padding: '0 14px',
+              border: '1px solid #cbd5e0',
+              borderRadius: '8px',
+              fontSize: '14px',
+              color: '#2d3748',
+              background: '#fff',
+              colorScheme: 'light',
+              outline: 'none',
+              fontFamily: 'inherit',
+            }}
             required
           />
         </div>
-        <button
+
+        <Button
           type="submit"
-          disabled={loading}
-          style={{
-            padding: '10px 20px',
-            background: '#2b6cb0',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            fontWeight: '600',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1,
-            fontSize: '14px',
-            whiteSpace: 'nowrap'
-          }}
+          variant="primary"
+          size="lg"
+          loading={loading}
+          iconLeft="🔍"
+          style={{ flexShrink: 0 }}
         >
-          {loading ? 'Evaluando...' : '🔍 Evaluar'}
-        </button>
+          {loading ? 'Evaluando...' : 'Evaluar'}
+        </Button>
       </form>
 
       {evaluacion && (
         <div style={{ marginTop: '20px' }}>
-          {/* Encabezado con nombre y estado */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px',
+              marginBottom: '20px',
+              paddingBottom: '16px',
+              borderBottom: '1px solid #e2e8f0',
+            }}
+          >
             <div>
               <h4 style={{ margin: 0, fontSize: '20px', color: '#2d3748' }}>
                 {evaluacion.nombre || 'Empleado'}
               </h4>
-              <p style={{ margin: '4px 0 0 0', color: '#718096', fontSize: '14px' }}>
+              <p style={{ margin: '4px 0 0 0', color: '#718096', fontSize: '13px' }}>
                 Cédula: {evaluacion.employeeId} &nbsp;|&nbsp; Fecha: {evaluacion.fecha}
               </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{
-                background: getEstadoColor(evaluacion.estado),
-                color: '#fff',
-                padding: '6px 16px',
-                borderRadius: '20px',
-                fontWeight: 'bold',
-                fontSize: '14px',
-                textTransform: 'uppercase'
-              }}>
-                {evaluacion.estado || 'SIN EVALUAR'}
-              </span>
-            </div>
+            {(() => {
+              const badge = getEstadoBadge(evaluacion.estado);
+              return <Badge variant={badge.variant} size="lg">{badge.texto}</Badge>;
+            })()}
           </div>
 
-          {/* Grid de tarjetas de métricas */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-            <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '12px', color: '#718096', textTransform: 'uppercase', fontWeight: '600' }}>Horario</span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: '600', color: '#2d3748' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '16px',
+              marginBottom: '20px',
+            }}
+          >
+            <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '11px', color: '#718096', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>
+                Horario
+              </span>
+              <p style={{ margin: '6px 0 0 0', fontSize: '15px', fontWeight: '600', color: '#2d3748' }}>
                 {evaluacion.horario || 'N/A'}
               </p>
             </div>
-            <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '12px', color: '#718096', textTransform: 'uppercase', fontWeight: '600' }}>Entrada Real</span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: '600', color: '#2d3748' }}>
+
+            <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '11px', color: '#718096', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>
+                Entrada Real
+              </span>
+              <p style={{ margin: '6px 0 0 0', fontSize: '15px', fontWeight: '600', color: '#2d3748' }}>
                 {evaluacion.entradaReal || '—'}
               </p>
             </div>
-            <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '12px', color: '#718096', textTransform: 'uppercase', fontWeight: '600' }}>Salida Real</span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: '600', color: '#2d3748' }}>
+
+            <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '11px', color: '#718096', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>
+                Salida Real
+              </span>
+              <p style={{ margin: '6px 0 0 0', fontSize: '15px', fontWeight: '600', color: '#2d3748' }}>
                 {evaluacion.salidaReal || '—'}
               </p>
             </div>
           </div>
 
-          {/* Tarjetas de horas y extras */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ background: '#ebf8ff', padding: '14px', borderRadius: '8px', border: '1px solid #bee3f8' }}>
-              <span style={{ fontSize: '11px', color: '#2b6cb0', textTransform: 'uppercase', fontWeight: '600' }}>Horas Diurnas</span>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: '12px',
+              marginBottom: '16px',
+            }}
+          >
+            <div style={{ background: '#ebf8ff', padding: '14px', borderRadius: '10px', border: '1px solid #bee3f8' }}>
+              <span style={{ fontSize: '11px', color: '#2b6cb0', textTransform: 'uppercase', fontWeight: '600' }}>
+                Horas Diurnas
+              </span>
               <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#2b6cb0' }}>
-                {formatearHoras(evaluacion.horasDiurnas)}
+                {evaluacion.horasDiurnasLegible || '0h'}
               </p>
             </div>
-            <div style={{ background: '#fefcbf', padding: '14px', borderRadius: '8px', border: '1px solid #f6e05e' }}>
-              <span style={{ fontSize: '11px', color: '#744210', textTransform: 'uppercase', fontWeight: '600' }}>Horas Nocturnas</span>
+
+            <div style={{ background: '#fefcbf', padding: '14px', borderRadius: '10px', border: '1px solid #f6e05e' }}>
+              <span style={{ fontSize: '11px', color: '#744210', textTransform: 'uppercase', fontWeight: '600' }}>
+                Horas Nocturnas
+              </span>
               <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#744210' }}>
-                {formatearHoras(evaluacion.horasNocturnas)}
+                {evaluacion.horasNocturnasLegible || '0h'}
               </p>
             </div>
-            <div style={{ background: '#f0fff4', padding: '14px', borderRadius: '8px', border: '1px solid #c6f6d5' }}>
-              <span style={{ fontSize: '11px', color: '#22543d', textTransform: 'uppercase', fontWeight: '600' }}>Horas Extra Diurnas</span>
+
+            <div style={{ background: '#f0fff4', padding: '14px', borderRadius: '10px', border: '1px solid #c6f6d5' }}>
+              <span style={{ fontSize: '11px', color: '#22543d', textTransform: 'uppercase', fontWeight: '600' }}>
+                Extra Diurnas
+              </span>
               <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#22543d' }}>
-                {formatearHoras(evaluacion.horasExtraDiurnas)}
+                {evaluacion.horasExtraDiurnasLegible || '0h'}
               </p>
             </div>
-            <div style={{ background: '#fed7d7', padding: '14px', borderRadius: '8px', border: '1px solid #feb2b2' }}>
-              <span style={{ fontSize: '11px', color: '#9b2c2c', textTransform: 'uppercase', fontWeight: '600' }}>Horas Extra Nocturnas</span>
+
+            <div style={{ background: '#fed7d7', padding: '14px', borderRadius: '10px', border: '1px solid #feb2b2' }}>
+              <span style={{ fontSize: '11px', color: '#9b2c2c', textTransform: 'uppercase', fontWeight: '600' }}>
+                Extra Nocturnas
+              </span>
               <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#9b2c2c' }}>
-                {formatearHoras(evaluacion.horasExtraNocturnas)}
+                {evaluacion.horasExtraNocturnasLegible || '0h'}
               </p>
             </div>
           </div>
 
-          {/* Retardos y salidas tempranas */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-            <div style={{ background: '#fff5f5', padding: '12px 16px', borderRadius: '8px', border: '1px solid #fed7d7' }}>
-              <span style={{ fontSize: '12px', color: '#9b2c2c', fontWeight: '600' }}>⏰ Retardo</span>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '12px',
+            }}
+          >
+            <div style={{ background: '#fff5f5', padding: '12px 16px', borderRadius: '10px', border: '1px solid #fed7d7' }}>
+              <span style={{ fontSize: '12px', color: '#9b2c2c', fontWeight: '600' }}>
+                ⏰ Retardo
+              </span>
               <p style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: 'bold', color: '#e53e3e' }}>
                 {evaluacion.retardoLegible || '0m'}
               </p>
             </div>
-            <div style={{ background: '#fffbeb', padding: '12px 16px', borderRadius: '8px', border: '1px solid #f6e05e' }}>
-              <span style={{ fontSize: '12px', color: '#744210', fontWeight: '600' }}>🏃 Salida Temprana</span>
+
+            <div style={{ background: '#fffbeb', padding: '12px 16px', borderRadius: '10px', border: '1px solid #f6e05e' }}>
+              <span style={{ fontSize: '12px', color: '#744210', fontWeight: '600' }}>
+                🏃 Salida Temprana
+              </span>
               <p style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: 'bold', color: '#d69e2e' }}>
                 {evaluacion.salidaTempranaLegible || '0m'}
               </p>
             </div>
-            <div style={{ background: '#ebf8ff', padding: '12px 16px', borderRadius: '8px', border: '1px solid #bee3f8' }}>
-              <span style={{ fontSize: '12px', color: '#2b6cb0', fontWeight: '600' }}>⏱️ Minutos Retardo</span>
+
+            <div style={{ background: '#ebf8ff', padding: '12px 16px', borderRadius: '10px', border: '1px solid #bee3f8' }}>
+              <span style={{ fontSize: '12px', color: '#2b6cb0', fontWeight: '600' }}>
+                ⏱️ Minutos Retardo
+              </span>
               <p style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: 'bold', color: '#2b6cb0' }}>
                 {evaluacion.minutosRetardo || 0}
               </p>
             </div>
           </div>
 
-          {/* Botón para limpiar */}
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              onClick={handleNuevaBusqueda} // 👈 ahora llama a la función combinada
-              style={{ padding: '6px 14px', background: '#718096', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}
-            >
-              🔄 Nueva Búsqueda
-            </button>
+            <Button variant="light" size="sm" onClick={handleNuevaBusqueda} iconLeft="🔄">
+              Nueva Búsqueda
+            </Button>
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

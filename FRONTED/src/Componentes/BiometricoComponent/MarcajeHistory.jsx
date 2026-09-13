@@ -1,16 +1,46 @@
 // src/Componentes/BiometricoComponent/MarcajesHistory.jsx
+import Card from '../UI/Card';
+import Badge from '../UI/Badge';
+
 export default function MarcajesHistory({ registrosFecha }) {
   if (!registrosFecha || !registrosFecha.registrosPorFecha) {
     return (
-      <div style={{ background: '#fff', padding: '40px', textAlign: 'center', borderRadius: '10px', border: '1px solid #e2e8f0', color: '#a0aec0' }}>
-        Cargando historial de marcajes...
-      </div>
+      <Card variant="default">
+        <p style={{ textAlign: 'center', color: '#a0aec0', padding: '20px' }}>
+          Cargando historial de marcajes...
+        </p>
+      </Card>
     );
   }
 
+  const MESES = {
+    enero: 0, febrero: 1, marzo: 2, abril: 3,
+    mayo: 4, junio: 5, julio: 6, agosto: 7,
+    septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
+  };
+
+  const parsearFecha = (fechaStr) => {
+    try {
+      const match = fechaStr.match(/(\d+)\s+de\s+(\w+)\s+de\s+(\d+)/i);
+      if (!match) return new Date(0);
+      const dia = parseInt(match[1], 10);
+      const mes = MESES[match[2].toLowerCase()] ?? 0;
+      const anio = parseInt(match[3], 10);
+      return new Date(anio, mes, dia);
+    } catch {
+      return new Date(0);
+    }
+  };
+
+  const registrosOrdenados = [...registrosFecha.registrosPorFecha].sort(
+    (a, b) => parsearFecha(a.fecha).getTime() - parsearFecha(b.fecha).getTime()
+  );
+
   const formatearFecha = (fechaStr) => {
     try {
-      if (fechaStr.includes('de ') && fechaStr.includes(',')) return fechaStr;
+      if (fechaStr.includes('de ') && fechaStr.includes(',')) {
+        return fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
+      }
       const partes = fechaStr.split('/');
       if (partes.length === 3) {
         const dia = parseInt(partes[0], 10);
@@ -21,7 +51,7 @@ export default function MarcajesHistory({ registrosFecha }) {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
-          day: 'numeric'
+          day: 'numeric',
         });
       }
       return fechaStr;
@@ -30,81 +60,101 @@ export default function MarcajesHistory({ registrosFecha }) {
     }
   };
 
+  const totalRegistros = registrosOrdenados.reduce(
+    (sum, item) => sum + (item.totalMarcajes || 0),
+    0
+  );
+
   return (
     <div>
-      <h3 style={{ fontSize: '16px', color: '#2d3748', marginBottom: '15px' }}>
-        Historial Cronológico de Marcajes
-      </h3>
-
-      {registrosFecha.registrosPorFecha.map((item, idx) => (
-        <div
-          key={idx}
-          style={{
-            background: '#fff',
-            border: '1px solid #e2e8f0',
-            padding: '20px',
-            borderRadius: '10px',
-            marginBottom: '20px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '15px',
-              borderBottom: '1px solid #edf2f7',
-              paddingBottom: '10px'
-            }}
-          >
-            <h4 style={{ margin: 0, color: '#2b6cb0', fontSize: '16px' }}>
-              📅 {formatearFecha(item.fecha)}
-            </h4>
-            <span
-              style={{
-                background: '#ebf8ff',
-                color: '#2b6cb0',
-                padding: '4px 10px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: '600'
-              }}
-            >
-              {item.totalMarcajes} marcajes registrados
-            </span>
-          </div>
-
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', color: '#718096', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '8px 12px' }}>Cédula</th>
-                <th style={{ padding: '8px 12px' }}>Empleado</th>
-                <th style={{ padding: '8px 12px' }}>Hora de Marcaje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {item.marcajes.map((m, mIdx) => {
-                // ✅ SIMPLEMENTE MOSTRAR horaLocal (ya viene normalizada del backend)
-                const horaMostrada = m.horaLocal || 'N/A';
-                return (
-                  <tr key={mIdx} style={{ borderBottom: '1px solid #f7fafc' }}>
-                    <td style={{ padding: '8px 12px', fontWeight: '600' }}>
-                      {m.empleadoId || m.employeeId}
-                    </td>
-                    <td style={{ padding: '8px 12px' }}>
-                      {m.nombre || m.name}
-                    </td>
-                    <td style={{ padding: '8px 12px', color: '#38a169', fontWeight: '600' }}>
-                      {horaMostrada}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {/* Encabezado global */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}
+      >
+        <h3 style={{ margin: 0, fontSize: '18px', color: '#2d3748' }}>
+          📊 Historial Cronológico de Marcajes
+        </h3>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <Badge variant="info" size="md">
+            📅 {registrosOrdenados.length} días
+          </Badge>
+          <Badge variant="success" size="md">
+            ✅ {totalRegistros} marcajes
+          </Badge>
         </div>
-      ))}
+      </div>
+
+      {/* Lista de días */}
+      {registrosOrdenados.length > 0 ? (
+        registrosOrdenados.map((item, idx) => (
+          <div key={idx} style={{ marginBottom: '20px' }}>
+            <Card
+              padding="none"
+              headerStyle={{ padding: '16px 20px', background: '#f0f9ff' }}
+              bodyStyle={{ padding: '0' }}
+            >
+              {/* Header del día */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '16px 20px',
+                  borderBottom: '1px solid #e2e8f0',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                }}
+              >
+                <h4 style={{ margin: 0, color: '#2b6cb0', fontSize: '15px' }}>
+                  📅 {formatearFecha(item.fecha)}
+                </h4>
+                <Badge variant="info" size="sm">
+                  {item.totalMarcajes} {item.totalMarcajes === 1 ? 'marcaje' : 'marcajes'}
+                </Badge>
+              </div>
+
+              {/* Tabla */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', color: '#718096', borderBottom: '1px solid #e2e8f0' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700' }}>Cédula</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700' }}>Empleado</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700' }}>Hora de Marcaje</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {item.marcajes.map((m, mIdx) => (
+                    <tr key={mIdx} style={{ borderBottom: '1px solid #f7fafc', background: mIdx % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: '600', color: '#2b6cb0' }}>
+                        {m.empleadoId || m.employeeId}
+                      </td>
+                      <td style={{ padding: '8px 12px', color: '#2d3748' }}>
+                        {m.nombre || m.name}
+                      </td>
+                      <td style={{ padding: '8px 12px', color: '#38a169', fontWeight: '600' }}>
+                        {m.horaLocal || m.hora || m.tiempo || 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          </div>
+        ))
+      ) : (
+        <Card variant="default">
+          <p style={{ textAlign: 'center', color: '#a0aec0', padding: '20px' }}>
+            No hay marcajes registrados.
+          </p>
+        </Card>
+      )}
     </div>
   );
 }

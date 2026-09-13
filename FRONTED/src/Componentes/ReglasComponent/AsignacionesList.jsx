@@ -1,13 +1,48 @@
-// src/Componentes/ReglasBiometricoComponent/AsignacionesList.jsx
+// src/Componentes/ReglasComponent/AsignacionesList.jsx
 import { useState, useEffect } from 'react';
+import Card from '../UI/Card';
+import Table from '../UI/Table';
+import Button from '../UI/Button';
+import Badge from '../UI/Badge';
+
+// 🔧 Función auxiliar: separa nombre(s) y apellido(s)
+function separarNombreApellido(nombreCompleto) {
+  if (!nombreCompleto) return { nombre: '', apellido: 'N/A' };
+
+  const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
+  const total = partes.length;
+
+  if (total === 1) return { nombre: partes[0], apellido: 'N/A' };
+  if (total === 2) return { nombre: partes[0], apellido: partes[1] };
+  if (total === 3) return { nombre: partes[0], apellido: partes.slice(1).join(' ') };
+  if (total === 4) {
+    return {
+      nombre: partes.slice(0, 2).join(' '),
+      apellido: partes.slice(2).join(' '),
+    };
+  }
+
+  const mitad = Math.ceil(total / 2);
+  return {
+    nombre: partes.slice(0, mitad).join(' '),
+    apellido: partes.slice(mitad).join(' '),
+  };
+}
 
 export default function AsignacionesList({ asignaciones, onRefresh }) {
   const [semana, setSemana] = useState('');
 
+  const horariosMap = {
+    HORARIO_8_5: '8:00 AM - 5:00 PM',
+    HORARIO_8_5_30: '8:00 AM - 5:30 PM',
+    HORARIO_8_6_30: '8:00 AM - 6:30 PM',
+    HORARIO_8_7: '8:00 AM - 7:00 PM',
+    HORARIO_8_8: '8:00 AM - 8:00 PM',
+  };
+
   useEffect(() => {
-    // Cargar la semana actual por defecto (domingo de la semana actual)
     const hoy = new Date();
-    const dia = hoy.getDay(); // 0=domingo
+    const dia = hoy.getDay();
     const domingo = new Date(hoy);
     domingo.setDate(hoy.getDate() - dia);
     const year = domingo.getFullYear();
@@ -16,58 +51,171 @@ export default function AsignacionesList({ asignaciones, onRefresh }) {
     setSemana(`${year}-${month}-${day}`);
   }, []);
 
-  const handleRefresh = () => {
-    onRefresh(semana);
-  };
-
   useEffect(() => {
     if (semana) onRefresh(semana);
   }, [semana]);
 
+  const handleRefresh = () => {
+    onRefresh(semana);
+  };
+
+  const columnas = [
+    {
+      key: 'employeeId',
+      label: 'Cédula',
+      bold: true,
+      color: '#2b6cb0',
+      width: '120px',
+      nowrap: true,
+    },
+    {
+      key: 'nombre',
+      label: 'Nombre',
+      render: (row) => {
+        const { nombre } = separarNombreApellido(row.nombre || '');
+        return <span style={{ fontWeight: '500' }}>{nombre}</span>;
+      },
+    },
+    {
+      key: 'apellido',
+      label: 'Apellido',
+      render: (row) => {
+        const { apellido } = separarNombreApellido(row.nombre || '');
+        return <span style={{ color: '#4a5568' }}>{apellido}</span>;
+      },
+    },
+    {
+      key: 'horarioId',
+      label: 'Horario',
+      render: (row) => (
+        <span
+          style={{
+            background: '#ebf8ff',
+            color: '#2b6cb0',
+            padding: '4px 10px',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: '600',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {horariosMap[row.horarioId] || row.horarioId}
+        </span>
+      ),
+    },
+    {
+      key: 'diasLibresFijos',
+      label: 'Días Libres Fijos',
+      render: (row) => {
+        if (!row.diasLibresFijos || row.diasLibresFijos.length === 0) {
+          return (
+            <span style={{ color: '#a0aec0', fontStyle: 'italic', fontSize: '12px' }}>
+              Sin fijos
+            </span>
+          );
+        }
+        return (
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {row.diasLibresFijos.map((dia, i) => (
+              <Badge key={i} variant="warning" size="sm">
+                {dia}
+              </Badge>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'diasLibresRotativos',
+      label: 'Días Libres Semana',
+      render: (row) => {
+        if (!row.diasLibresRotativos || row.diasLibresRotativos.length === 0) {
+          return (
+            <span style={{ color: '#a0aec0', fontStyle: 'italic', fontSize: '12px' }}>
+              Sin rotativos
+            </span>
+          );
+        }
+        return (
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {row.diasLibresRotativos.map((dia, i) => (
+              <Badge key={i} variant="info" size="sm" dot>
+                {dia}
+              </Badge>
+            ))}
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '20px', borderRadius: '10px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0, fontSize: '18px', color: '#2d3748' }}>Asignaciones Semanales</h3>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <input
-            type="date"
-            value={semana}
-            onChange={(e) => setSemana(e.target.value)}
-            style={{ padding: '6px 10px', border: '1px solid #cbd5e0', borderRadius: '6px', fontSize: '13px' }}
-          />
-          <button
-            onClick={handleRefresh}
-            style={{ padding: '6px 14px', background: '#38a169', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}
-          >
-            🔄 Refrescar
-          </button>
-        </div>
+    <Card
+      title="Asignaciones Semanales"
+      subtitle="Consulta los horarios y días libres por semana"
+      icon="📅"
+      variant="default"
+      padding="none"
+      headerStyle={{ padding: '16px 20px' }}
+      bodyStyle={{ padding: '0' }}
+    >
+      <div
+        style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid #e2e8f0',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+          background: '#f7fafc',
+        }}
+      >
+        <label style={{ fontSize: '13px', color: '#4a5568', fontWeight: '600' }}>
+          Semana:
+        </label>
+        <input
+          type="date"
+          value={semana}
+          onChange={(e) => setSemana(e.target.value)}
+          style={{
+            padding: '0 14px',
+            height: '38px',
+            border: '1px solid #cbd5e0',
+            borderRadius: '8px',
+            fontSize: '13px',
+            outline: 'none',
+            color: '#2d3748',
+            backgroundColor: '#ffffff',
+            colorScheme: 'light',
+            fontFamily: 'inherit',
+            transition: 'all 0.2s ease',
+            minWidth: '160px',
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = '#3182ce';
+            e.target.style.boxShadow = '0 0 0 3px rgba(49, 130, 206, 0.15)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = '#cbd5e0';
+            e.target.style.boxShadow = 'none';
+          }}
+        />
+        <Button variant="success" size="sm" onClick={handleRefresh}>
+          🔄 Refrescar
+        </Button>
       </div>
 
-      {asignaciones && asignaciones.length > 0 ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-          <thead>
-            <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-              <th style={{ padding: '10px 12px' }}>Empleado</th>
-              <th style={{ padding: '10px 12px' }}>Horario</th>
-              <th style={{ padding: '10px 12px' }}>Días Libres Fijos</th>
-              <th style={{ padding: '10px 12px' }}>Días Libres Semana</th>
-            </tr>
-          </thead>
-          <tbody>
-            {asignaciones.map((item, idx) => (
-              <tr key={idx} style={{ borderBottom: '1px solid #edf2f7' }}>
-                <td style={{ padding: '10px 12px' }}>{item.employeeId}</td>
-                <td style={{ padding: '10px 12px' }}>{item.horarioId}</td>
-                <td style={{ padding: '10px 12px' }}>{item.diasLibresFijos?.join(', ') || 'Ninguno'}</td>
-                <td style={{ padding: '10px 12px' }}>{item.diasLibresSemana?.join(', ') || 'Ninguno'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p style={{ color: '#a0aec0', textAlign: 'center', padding: '20px' }}>No hay asignaciones para esta semana.</p>
-      )}
-    </div>
+      <Table
+        columns={columnas}
+        data={asignaciones || []}
+        theme="light"
+        hoverable
+        striped
+        size="md"
+        emptyMessage="No hay asignaciones para esta semana"
+        emptyIcon="📭"
+      />
+    </Card>
   );
 }

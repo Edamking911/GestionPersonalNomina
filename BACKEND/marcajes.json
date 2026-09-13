@@ -702,5 +702,77 @@
     "horaLocal": "09/09/2026, 10:10:43 a. m.",
     "deviceName": "DS-K1A8503MF",
     "rawType": "38"
+  },
+  {
+    "employeeId": "24765865",
+    "employeeName": "LUIS ROJAS",
+    "timestamp": "2026-09-10T14:46:36.000Z",
+    "horaLocal": "10/09/2026, 10:46:36 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "29789773",
+    "employeeName": "EMANUEL APONTE",
+    "timestamp": "2026-09-10T22:21:17.000Z",
+    "horaLocal": "10/09/2026, 06:21:17 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "29789773",
+    "employeeName": "EMANUEL APONTE",
+    "timestamp": "2026-09-11T17:46:40.000Z",
+    "horaLocal": "11/09/2026, 01:46:40 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "29789773",
+    "employeeName": "EMANUEL APONTE",
+    "timestamp": "2026-09-11T19:04:36.000Z",
+    "horaLocal": "11/09/2026, 03:04:36 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "24765865",
+    "employeeName": "LUIS ROJAS",
+    "timestamp": "2026-09-12T14:08:04.000Z",
+    "horaLocal": "12/09/2026, 10:08:04 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "27280588",
+    "employeeName": "JONATHAN FARIAS",
+    "timestamp": "2026-09-12T15:21:20.000Z",
+    "horaLocal": "12/09/2026, 11:21:20 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "29789773",
+    "employeeName": "EMANUEL DAVID APONTE MARCANO",
+    "timestamp": "2026-09-12T20:27:23.000Z",
+    "horaLocal": "12/09/2026, 04:27:23 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "27280588",
+    "employeeName": "JONATHAN JOSE FARIAS RODRIGUEZ",
+    "timestamp": "2026-09-13T12:09:01.000Z",
+    "horaLocal": "13/09/2026, 08:09:01 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "29789773",
+    "employeeName": "EMANUEL DAVID APONTE MARCANO",
+    "timestamp": "2026-09-13T12:28:51.000Z",
+    "horaLocal": "13/09/2026, 08:28:51 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
   }
 ]

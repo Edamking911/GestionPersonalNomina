@@ -1,97 +1,106 @@
-// src/Components/ReglasComponent/AsignarHorario.jsx
+// src/Componentes/ReglasComponent/AsignarHorario.jsx
 import { useState } from 'react';
+import Card from '../UI/Card';
+import Input from '../UI/Input';
+import Select from '../UI/Select';
+import Button from '../UI/Button';
 
-export default function AsignarHorario({ onAsignar }) {
+export default function AsignarHorario({ onAsignar, showToast }) {
   const [employeeId, setEmployeeId] = useState('');
   const [horarioId, setHorarioId] = useState('');
-  const [diasLibresFijos, setDiasLibresFijos] = useState([]);
+  const [diasLibresFijos, setDiasLibresFijos] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mensaje, setMensaje] = useState('');
+
+  const horariosDisponibles = [
+    { value: 'HORARIO_8_5', label: '8:00 AM - 5:00 PM' },
+    { value: 'HORARIO_8_5_30', label: '8:00 AM - 5:30 PM' },
+    { value: 'HORARIO_8_6_30', label: '8:00 AM - 6:30 PM' },
+    { value: 'HORARIO_8_7', label: '8:00 AM - 7:00 PM' },
+    { value: 'HORARIO_8_8', label: '8:00 AM - 8:00 PM' },
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!employeeId || !horarioId) {
-      setMensaje('Por favor completa todos los campos obligatorios.');
+
+    if (!employeeId.trim()) {
+      showToast?.('La cédula del empleado es obligatoria.', 'warning');
       return;
     }
+    if (!horarioId) {
+      showToast?.('Debes seleccionar un horario.', 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
-      await onAsignar(employeeId, horarioId, diasLibresFijos);
-      setMensaje('Horario asignado correctamente.');
+      const diasArray = diasLibresFijos
+        .split(',')
+        .map((d) => d.trim().toLowerCase())
+        .filter(Boolean);
+
+      await onAsignar(employeeId.trim(), horarioId, diasArray);
+
       setEmployeeId('');
       setHorarioId('');
-      setDiasLibresFijos([]);
-    } catch (error) {
-      setMensaje('Error al asignar horario.');
+      setDiasLibresFijos('');
+    } catch (err) {
+      console.log('Error manejado por Toast:', err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '10px', maxWidth: '600px' }}>
-      <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#2d3748' }}>Asignar Horario a Empleado</h3>
+    <Card
+      title="Asignar Horario a Empleado"
+      subtitle="Configura el turno y los días libres del empleado"
+      icon="➕"
+      variant="info"
+      style={{ maxWidth: '640px' }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
+      >
+        <Input
+          label="Cédula del Empleado"
+          placeholder="Cedula"
+          value={employeeId}
+          onChange={(e) => setEmployeeId(e.target.value.replace(/\D/g, ''))}
+          icon="👤"
+          required
+          hint="Solo números, sin puntos ni guiones"
+        />
 
-      {mensaje && (
-        <div style={{ background: mensaje.includes('Error') ? '#fed7d7' : '#c6f6d5', padding: '12px', borderRadius: '6px', marginBottom: '16px', color: mensaje.includes('Error') ? '#9b2c2c' : '#22543d' }}>
-          {mensaje}
-        </div>
-      )}
+        <Select
+          label="Horario de Trabajo"
+          value={horarioId}
+          onChange={(e) => setHorarioId(e.target.value)}
+          options={horariosDisponibles}
+          placeholder="Selecciona un horario..."
+          required
+          hint="El horario aplica a todos los días laborables"
+        />
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '14px' }}>Cédula del Empleado *</label>
-          <input
-            type="text"
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-            placeholder="Ej. 29789773"
-            style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e0', borderRadius: '6px', fontSize: '14px' }}
-            required
-          />
-        </div>
+        <Input
+          label="Días Libres Fijos (opcional)"
+          placeholder="Ej. sábado, domingo"
+          value={diasLibresFijos}
+          onChange={(e) => setDiasLibresFijos(e.target.value)}
+          icon="📅"
+          hint="Separa los días con coma. Si no aplica, déjalo vacío."
+        />
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '14px' }}>ID del Horario *</label>
-          <input
-            type="text"
-            value={horarioId}
-            onChange={(e) => setHorarioId(e.target.value)}
-            placeholder="Ej. HOR-001"
-            style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e0', borderRadius: '6px', fontSize: '14px' }}
-            required
-          />
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', fontSize: '14px' }}>Días Libres Fijos (separados por coma)</label>
-          <input
-            type="text"
-            value={diasLibresFijos.join(', ')}
-            onChange={(e) => setDiasLibresFijos(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-            placeholder="Ej. Lunes, Miércoles, Viernes"
-            style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e0', borderRadius: '6px', fontSize: '14px' }}
-          />
-        </div>
-
-        <button
+        <Button
           type="submit"
-          disabled={loading}
-          style={{
-            padding: '10px 20px',
-            background: '#3182ce',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            fontWeight: '600',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1,
-            fontSize: '14px'
-          }}
+          variant="success"
+          size="lg"
+          loading={loading}
+          fullWidth
         >
-          {loading ? 'Asignando...' : 'Asignar Horario'}
-        </button>
+          {loading ? 'Asignando...' : '✅ Asignar Horario'}
+        </Button>
       </form>
-    </div>
+    </Card>
   );
 }

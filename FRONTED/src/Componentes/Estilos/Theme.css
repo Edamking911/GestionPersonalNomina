@@ -1,0 +1,398 @@
+/* ============================================================
+   🎨 SISTEMA DE TEMAS - VARIABLES CSS
+   ============================================================ */
+
+:root {
+  /* 🌞 MODO CLARO */
+  --bg-app: #f8f9fa;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-input: #ffffff;
+  --bg-hover: #f1f3f5;
+  --bg-navbar: #2d3748;
+  --bg-navbar-hover: #4a5568;
+
+  --text-primary: #1a202c;
+  --text-secondary: #4a5568;
+  --text-muted: #718096;
+  --text-inverse: #ffffff;
+
+  --border-color: #cbd5e0;
+  --border-light: #e2e8f0;
+  --border-strong: #a0aec0;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+
+  --primary: #3182ce;
+  --primary-hover: #2c5282;
+  --success: #38a169;
+  --success-hover: #2f855a;
+  --warning: #dd6b20;
+  --warning-hover: #c05621;
+  --danger: #e53e3e;
+  --danger-hover: #c53030;
+  --info: #805ad5;
+  --info-hover: #6b46c1;
+
+  --primary-soft: #ebf8ff;
+  --success-soft: #f0fff4;
+  --warning-soft: #fffaf0;
+  --danger-soft: #fff5f5;
+  --info-soft: #faf5ff;
+
+  --skeleton-base: #e2e8f0;
+  --skeleton-shine: #edf2f7;
+
+  /* ============================================================
+     🃏 VARIABLES DEL CARD (MODO CLARO)
+     ============================================================ */
+  --card-default-bg: #ffffff;
+  --card-default-header: #f7fafc;
+  --card-default-border: #e2e8f0;
+  --card-default-title: #2d3748;
+  --card-default-subtitle: #718096;
+  --card-default-text: #2d3748;
+
+  --card-success-bg: #f0fff4;
+  --card-success-header: #f0fff4;
+  --card-success-border: #c6f6d5;
+  --card-success-title: #22543d;
+  --card-success-subtitle: #38a169;
+  --card-success-text: #22543d;
+
+  --card-warning-bg: #fffaf0;
+  --card-warning-header: #fffaf0;
+  --card-warning-border: #feebc8;
+  --card-warning-title: #744210;
+  --card-warning-subtitle: #dd6b20;
+  --card-warning-text: #744210;
+
+  --card-danger-bg: #fff5f5;
+  --card-danger-header: #fff5f5;
+  --card-danger-border: #fed7d7;
+  --card-danger-title: #9b2c2c;
+  --card-danger-subtitle: #e53e3e;
+  --card-danger-text: #9b2c2c;
+
+  --card-info-bg: #ebf8ff;
+  --card-info-header: #ebf8ff;
+  --card-info-border: #bee3f8;
+  --card-info-title: #2c5282;
+  --card-info-subtitle: #3182ce;
+  --card-info-text: #2c5282;
+
+  --card-dark-bg: #1a202c;
+  --card-dark-header: #2d3748;
+  --card-dark-border: #2d3748;
+  --card-dark-title: #f7fafc;
+  --card-dark-subtitle: #a0aec0;
+  --card-dark-text: #e2e8f0;
+
+  /* Ícono del header */
+  --card-icon-bg: rgba(255, 255, 255, 0.6);
+}
+
+html.dark {
+  /* 🌙 MODO OSCURO */
+  --bg-app: #1a202c;
+  --bg-card: #2d3748;
+  --bg-elevated: #374151;
+  --bg-input: #1f2937;
+  --bg-hover: #374151;
+  --bg-navbar: #111827;
+  --bg-navbar-hover: #1f2937;
+
+  --text-primary: #f7fafc;
+  --text-secondary: #cbd5e0;
+  --text-muted: #a0aec0;
+  --text-inverse: #1a202c;
+
+  --border-color: #4a5568;
+  --border-light: #374151;
+  --border-strong: #718096;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+
+  --primary: #4299e1;
+  --primary-hover: #63b3ed;
+  --success: #48bb78;
+  --success-hover: #68d391;
+  --warning: #ed8936;
+  --warning-hover: #f6ad55;
+  --danger: #fc8181;
+  --danger-hover: #feb2b2;
+  --info: #9f7aea;
+  --info-hover: #b794f4;
+
+  --primary-soft: rgba(66, 153, 225, 0.15);
+  --success-soft: rgba(72, 187, 120, 0.15);
+  --warning-soft: rgba(237, 137, 54, 0.15);
+  --danger-soft: rgba(252, 129, 129, 0.15);
+  --info-soft: rgba(159, 122, 234, 0.15);
+
+  --skeleton-base: #4a5568;
+  --skeleton-shine: #718096;
+
+  /* ============================================================
+     🃏 VARIABLES DEL CARD (MODO OSCURO)
+     ============================================================ */
+  --card-default-bg: #2d3748;
+  --card-default-header: #374151;
+  --card-default-border: #4a5568;
+  --card-default-title: #f7fafc;
+  --card-default-subtitle: #a0aec0;
+  --card-default-text: #e2e8f0;
+
+  --card-success-bg: rgba(72, 187, 120, 0.12);
+  --card-success-header: rgba(72, 187, 120, 0.18);
+  --card-success-border: rgba(72, 187, 120, 0.4);
+  --card-success-title: #9ae6b4;
+  --card-success-subtitle: #68d391;
+  --card-success-text: #c6f6d5;
+
+  --card-warning-bg: rgba(237, 137, 54, 0.12);
+  --card-warning-header: rgba(237, 137, 54, 0.18);
+  --card-warning-border: rgba(237, 137, 54, 0.4);
+  --card-warning-title: #fbd38d;
+  --card-warning-subtitle: #f6ad55;
+  --card-warning-text: #feebc8;
+
+  --card-danger-bg: rgba(252, 129, 129, 0.12);
+  --card-danger-header: rgba(252, 129, 129, 0.18);
+  --card-danger-border: rgba(252, 129, 129, 0.4);
+  --card-danger-title: #feb2b2;
+  --card-danger-subtitle: #fc8181;
+  --card-danger-text: #fed7d7;
+
+  --card-info-bg: rgba(159, 122, 234, 0.12);
+  --card-info-header: rgba(159, 122, 234, 0.18);
+  --card-info-border: rgba(159, 122, 234, 0.4);
+  --card-info-title: #d6bcfa;
+  --card-info-subtitle: #b794f4;
+  --card-info-text: #e9d8fd;
+
+  --card-dark-bg: #111827;
+  --card-dark-header: #1f2937;
+  --card-dark-border: #374151;
+  --card-dark-title: #f7fafc;
+  --card-dark-subtitle: #a0aec0;
+  --card-dark-text: #e2e8f0;
+
+  /* Ícono del header */
+  --card-icon-bg: rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================================
+   TRANSICIONES SUAVES AL CAMBIAR DE TEMA
+   ============================================================ */
+*,
+*::before,
+*::after {
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+html,
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+html.dark ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #1a202c;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 5px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+html.dark input[type='date'] {
+  color-scheme: dark;
+}
+/* ============================================================
+   🎨 VARIABLES EXTRA: Acentos suaves para StatsCards
+   ============================================================ */
+
+:root {
+  --accent-blue-light: #ebf8ff;
+  --accent-green-light: #f0fff4;
+  --accent-orange-light: #fffaf0;
+  --accent-red-light: #fff5f5;
+  --accent-yellow-light: #fefcbf;
+
+  --stat-card-bg: #ffffff;
+  --stat-card-border: #e2e8f0;
+  --stat-card-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  --stat-card-shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.1);
+  --stat-card-text-muted: #718096;
+}
+
+html.dark {
+  --accent-blue-light: rgba(66, 153, 225, 0.15);
+  --accent-green-light: rgba(72, 187, 120, 0.15);
+  --accent-orange-light: rgba(237, 137, 54, 0.15);
+  --accent-red-light: rgba(252, 129, 129, 0.15);
+  --accent-yellow-light: rgba(214, 158, 46, 0.15);
+
+  --stat-card-bg: #2d3748;
+  --stat-card-border: #4a5568;
+  --stat-card-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --stat-card-shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.5);
+  --stat-card-text-muted: #a0aec0;
+}
+
+/* ============================================================
+   📊 VARIABLES EXTRA: Tabla
+   ============================================================ */
+
+:root {
+  --table-header-bg: #f8fafc;
+  --table-header-text: #4a5568;
+  --table-header-border: #e2e8f0;
+  --table-row-bg: #ffffff;
+  --table-row-bg-alt: #fafbfc;
+  --table-row-hover: #f0f7ff;
+  --table-row-border: #edf2f7;
+  --table-row-text: #2d3748;
+  --table-empty-text: #a0aec0;
+  --table-empty-bg: #ffffff;
+}
+
+html.dark {
+  --table-header-bg: #1f2937;
+  --table-header-text: #cbd5e0;
+  --table-header-border: #374151;
+  --table-row-bg: #2d3748;
+  --table-row-bg-alt: #283141;
+  --table-row-hover: #374151;
+  --table-row-border: #374151;
+  --table-row-text: #e2e8f0;
+  --table-empty-text: #718096;
+  --table-empty-bg: #2d3748;
+}
+
+/* ============================================================
+   🏷️ VARIABLES EXTRA: Badge
+   ============================================================ */
+
+:root {
+  --badge-default-bg: #edf2f7;
+  --badge-default-text: #4a5568;
+  --badge-default-dot: #4a5568;
+
+  --badge-success-bg: #c6f6d5;
+  --badge-success-text: #22543d;
+  --badge-success-dot: #38a169;
+
+  --badge-warning-bg: #feebc8;
+  --badge-warning-text: #744210;
+  --badge-warning-dot: #dd6b20;
+
+  --badge-danger-bg: #fed7d7;
+  --badge-danger-text: #9b2c2c;
+  --badge-danger-dot: #e53e3e;
+
+  --badge-info-bg: #bee3f8;
+  --badge-info-text: #2c5282;
+  --badge-info-dot: #3182ce;
+
+  --badge-dark-bg: #2d3748;
+  --badge-dark-text: #f7fafc;
+  --badge-dark-dot: #cbd5e0;
+
+  --badge-light-bg: #f7fafc;
+  --badge-light-text: #4a5568;
+  --badge-light-dot: #4a5568;
+}
+
+html.dark {
+  --badge-default-bg: rgba(113, 128, 150, 0.25);
+  --badge-default-text: #cbd5e0;
+  --badge-default-dot: #cbd5e0;
+
+  --badge-success-bg: rgba(72, 187, 120, 0.25);
+  --badge-success-text: #9ae6b4;
+  --badge-success-dot: #48bb78;
+
+  --badge-warning-bg: rgba(237, 137, 54, 0.25);
+  --badge-warning-text: #fbd38d;
+  --badge-warning-dot: #ed8936;
+
+  --badge-danger-bg: rgba(252, 129, 129, 0.25);
+  --badge-danger-text: #feb2b2;
+  --badge-danger-dot: #fc8181;
+
+  --badge-info-bg: rgba(66, 153, 225, 0.25);
+  --badge-info-text: #90cdf4;
+  --badge-info-dot: #4299e1;
+
+  --badge-dark-bg: #111827;
+  --badge-dark-text: #f7fafc;
+  --badge-dark-dot: #cbd5e0;
+
+  --badge-light-bg: rgba(255, 255, 255, 0.08);
+  --badge-light-text: #cbd5e0;
+  --badge-light-dot: #cbd5e0;
+}
+
+/* ============================================================
+   📊 VARIABLES EXTRA: ReglasStats, Gráficos y Tabs Reglas
+   ============================================================ */
+
+:root {
+  /* ReglasStats */
+  --accent-purple-light: #faf5ff;
+
+  /* Charts (Recharts) */
+  --chart-grid: #e2e8f0;
+  --chart-text: #4a5568;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e2e8f0;
+
+  /* Tabs Reglas */
+  --reglas-tab-bg: #ffffff;
+  --reglas-tab-text: #4a5568;
+  --reglas-tab-border: #cbd5e0;
+  --reglas-tab-hover-border: #805ad5;
+  --reglas-tab-hover-text: #805ad5;
+  --reglas-tab-hover-shadow: rgba(128, 90, 213, 0.15);
+}
+
+html.dark {
+  /* ReglasStats */
+  --accent-purple-light: rgba(159, 122, 234, 0.15);
+
+  /* Charts (Recharts) */
+  --chart-grid: #374151;
+  --chart-text: #cbd5e0;
+  --chart-tooltip-bg: #2d3748;
+  --chart-tooltip-border: #4a5568;
+
+  /* Tabs Reglas */
+  --reglas-tab-bg: #2d3748;
+  --reglas-tab-text: #cbd5e0;
+  --reglas-tab-border: #4a5568;
+  --reglas-tab-hover-border: #9f7aea;
+  --reglas-tab-hover-text: #d6bcfa;
+  --reglas-tab-hover-shadow: rgba(159, 122, 234, 0.25);
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "employeeId": "24765865",
+    "horarioId": "HORARIO_8_6_30"
+  },
+  {
+    "employeeId": "29789773",
+    "horarioId": "HORARIO_8_8"
+  },
+  {
+    "employeeId": "12345",
+    "horarioId": "HORARIO_8_5",
+    "diasLibresFijos": [
+      "sábado",
+      "domingo"
+    ]
+  },
+  {
+    "employeeId": "27280588",
+    "horarioId": "HORARIO_8_5_30"
+  },
+  {
+    "employeeId": "22652518",
+    "horarioId": "HORARIO_8_5"
+  },
+  {
+    "employeeId": "2",
+    "horarioId": "HORARIO_8_8"
+  },
+  {
+    "employeeId": "20901969",
+    "horarioId": "HORARIO_8_5_30"
+  },
+  {
+    "employeeId": "17654625",
+    "horarioId": "HORARIO_8_8"
+  },
+  {
+    "employeeId": "12345678",
+    "horarioId": "HORARIO_8_6_30"
+  }
+]

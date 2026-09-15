@@ -3,6 +3,11 @@ import { useState } from 'react';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Badge from '../UI/Badge';
+import Pagination from '../UI/Paginacion';
+import TableSkeleton from '../UI/EsqueletoTable';
+import StatsSkeleton from '../UI/StatsEsqueleto';
+import { usePagination } from '../../Hoosk/PaginacionHoosk';
+import { exportarReportePDF, imprimirReporte } from '../../utils/pdfExport';
 
 function separarNombreApellido(nombreCompleto) {
   if (!nombreCompleto) return { nombre: '', apellido: 'N/A' };
@@ -50,7 +55,7 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
       alert('Selecciona ambas fechas primero.');
       return;
     }
-    window.open(`http://localhost:3000/reglas/reporte-semanal?desde=${desde}&hasta=${hasta}&generarExcel=true`,'_blank');
+    window.open(`http://localhost:3000/reglas/reporte-semanal?desde=${desde}&hasta=${hasta}&generarExcel=true`, '_blank');
   };
 
   const esIdDePrueba = (employeeId) => {
@@ -92,6 +97,17 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
       .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
   })();
 
+  const pagination = usePagination(reporteLimpio, {
+    initialPageSize: 25,
+    pageSizeOptions: [10, 25, 50, 100, 250, 500],
+    resetKeys: [
+      reporte?.rango?.desde,
+      reporte?.rango?.hasta,
+      filtroTexto,
+      soloConActividad,
+    ],
+  });
+
   const stats = (() => {
     if (reporteLimpio.length === 0) return null;
     return {
@@ -106,6 +122,112 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
         ) / 100,
     };
   })();
+
+  const prepararDatosReporte = () => {
+    if (!reporteLimpio.length) return null;
+
+    const columnas = [
+      { key: 'employeeId', label: 'Cédula', width: 18 },
+      { key: 'nombre', label: 'Nombre' },
+      { key: 'apellido', label: 'Apellido' },
+      { key: 'diasTrabajados', label: 'Trab.', align: 'center' },
+      { key: 'ausentes', label: 'Ause.', align: 'center' },
+      { key: 'descansos', label: 'Libres', align: 'center' },
+      { key: 'noMarcoSalida', label: 'Sin Sal.', align: 'center' },
+      { key: 'asistenciaPct', label: 'Asist. %', align: 'center' },
+      { key: 'retardoLegible', label: 'Retardo' },
+      { key: 'salidaTempranaLegible', label: 'Sal. Temprana' },
+      { key: 'horasDiurnasLegible', label: 'H. Diurnas', align: 'right' },
+      { key: 'horasNocturnasLegible', label: 'H. Nocturnas', align: 'right' },
+      { key: 'horasExtraDiurnasLegible', label: 'Extra Diur.', align: 'right' },
+      { key: 'horasExtraNocturnasLegible', label: 'Extra Noct.', align: 'right' },
+      { key: 'totalHorasTrabajadasLegible', label: 'Total', align: 'right' },
+    ];
+
+    const filas = reporteLimpio.map((item) => {
+      const asistencia = calcularAsistencia(item);
+      const { nombre, apellido } = separarNombreApellido(item.nombre || '');
+
+      return {
+        employeeId: item.employeeId,
+        nombre,
+        apellido,
+        diasTrabajados: item.diasTrabajados ?? 0,
+        ausentes: item.ausentes ?? 0,
+        descansos: item.descansos ?? 0,
+        noMarcoSalida: item.noMarcoSalida ?? 0,
+        asistenciaPct: asistencia !== null ? `${asistencia}%` : '—',
+        retardoLegible: item.retardoLegible || '0m',
+        salidaTempranaLegible: item.salidaTempranaLegible || '0m',
+        horasDiurnasLegible: item.horasDiurnasLegible || '0h',
+        horasNocturnasLegible: item.horasNocturnasLegible || '0h',
+        horasExtraDiurnasLegible: item.horasExtraDiurnasLegible || '0h',
+        horasExtraNocturnasLegible: item.horasExtraNocturnasLegible || '0h',
+        totalHorasTrabajadasLegible: item.totalHorasTrabajadasLegible || '0h',
+      };
+    });
+
+    return {
+      titulo: 'Reporte Semanal Consolidado',
+      subtitulo: `Análisis de asistencia del ${reporte.rango?.desde} al ${reporte.rango?.hasta}`,
+      columnas,
+      filas,
+      nombreArchivo: `reporte_semanal_${reporte.rango?.desde}_a_${reporte.rango?.hasta}`,
+      metadata: {
+        Período: `${reporte.rango?.desde} → ${reporte.rango?.hasta}`,
+        Días: reporte.rango?.dias || '—',
+        Empleados: reporteLimpio.length,
+      },
+    };
+  };
+
+  const handleDescargarPDF = () => {
+    const datos = prepararDatosReporte();
+    if (!datos) {
+      alert('Genera el reporte primero.');
+      return;
+    }
+    exportarReportePDF(datos);
+  };
+
+  const handleImprimir = () => {
+    const datos = prepararDatosReporte();
+    if (!datos) {
+      alert('Genera el reporte primero.');
+      return;
+    }
+    imprimirReporte(datos);
+  };
+
+  const inputDateStyle = {
+    padding: '0 14px',
+    height: '42px',
+    border: '1px solid var(--input-border)',
+    borderRadius: '8px',
+    fontSize: '14px',
+    color: 'var(--input-text)',
+    background: 'var(--input-bg)',
+    outline: 'none',
+    fontFamily: 'inherit',
+  };
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '6px',
+    fontWeight: '600',
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
+  };
+
+  const thStyle = {
+    padding: '8px 10px',
+    textAlign: 'left',
+    fontSize: '10px',
+    color: 'var(--table-header-text)',
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    whiteSpace: 'nowrap',
+  };
 
   return (
     <Card
@@ -125,49 +247,23 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
         }}
       >
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '13px', color: '#4a5568' }}>
-            Desde
-          </label>
+          <label style={labelStyle}>Desde</label>
           <input
             type="date"
             value={desde}
             onChange={(e) => setDesde(e.target.value)}
-            style={{
-              padding: '0 14px',
-              height: '42px',
-              border: '1px solid #cbd5e0',
-              borderRadius: '8px',
-              fontSize: '14px',
-              color: '#2d3748',
-              background: '#fff',
-              colorScheme: 'light',
-              outline: 'none',
-              fontFamily: 'inherit',
-            }}
+            style={inputDateStyle}
             required
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '13px', color: '#4a5568' }}>
-            Hasta
-          </label>
+          <label style={labelStyle}>Hasta</label>
           <input
             type="date"
             value={hasta}
             onChange={(e) => setHasta(e.target.value)}
-            style={{
-              padding: '0 14px',
-              height: '42px',
-              border: '1px solid #cbd5e0',
-              borderRadius: '8px',
-              fontSize: '14px',
-              color: '#2d3748',
-              background: '#fff',
-              colorScheme: 'light',
-              outline: 'none',
-              fontFamily: 'inherit',
-            }}
+            style={inputDateStyle}
             required
           />
         </div>
@@ -183,19 +279,39 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
           disabled={!desde || !hasta}
           iconLeft="📥"
         >
-          Descargar Excel
+          Excel
+        </Button>
+
+        <Button
+          variant="danger"
+          size="md"
+          onClick={handleDescargarPDF}
+          disabled={!reporteLimpio.length}
+          iconLeft="📄"
+        >
+          PDF
+        </Button>
+
+        <Button
+          variant="dark"
+          size="md"
+          onClick={handleImprimir}
+          disabled={!reporteLimpio.length}
+          iconLeft="🖨️"
+        >
+          Imprimir
         </Button>
       </form>
 
-      {reporte?.rango?.esRangoEnCurso && (
+      {reporte?.rango?.esRangoEnCurso && !loading && (
         <div
           style={{
-            background: '#fffaf0',
-            border: '1px solid #feebc8',
+            background: 'var(--warning-soft)',
+            border: '1px solid var(--card-warning-border)',
             padding: '10px 16px',
             borderRadius: '8px',
             marginBottom: '16px',
-            color: '#744210',
+            color: 'var(--card-warning-title)',
             fontSize: '13px',
           }}
         >
@@ -203,7 +319,16 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
         </div>
       )}
 
-      {reporte && (
+      {/* 🦴 SKELETON mientras carga */}
+      {loading && (
+        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <StatsSkeleton count={4} />
+          <TableSkeleton columns={15} rows={10} />
+        </div>
+      )}
+
+      {/* ✅ Reporte listo */}
+      {!loading && reporte && (
         <div style={{ marginTop: '16px' }}>
           <div
             style={{
@@ -215,7 +340,7 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
               gap: '12px',
             }}
           >
-            <h4 style={{ margin: 0, fontSize: '15px', color: '#2d3748' }}>
+            <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)' }}>
               Reporte del {reporte.rango?.desde} al {reporte.rango?.hasta}
             </h4>
             <Badge variant="info" size="md">
@@ -232,26 +357,46 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
                 marginBottom: '20px',
               }}
             >
-              <div style={{ background: '#f0fff4', padding: '12px 16px', borderRadius: '10px', border: '1px solid #c6f6d5' }}>
-                <span style={{ fontSize: '11px', color: '#22543d', textTransform: 'uppercase', fontWeight: '600' }}>Días Trabajados</span>
-                <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color: '#22543d' }}>{stats.totalDiasTrabajados}</p>
-              </div>
-              <div style={{ background: '#fff5f5', padding: '12px 16px', borderRadius: '10px', border: '1px solid #fed7d7' }}>
-                <span style={{ fontSize: '11px', color: '#9b2c2c', textTransform: 'uppercase', fontWeight: '600' }}>Ausencias</span>
-                <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color: '#9b2c2c' }}>{stats.totalAusentes}</p>
-              </div>
-              <div style={{ background: '#fffaf0', padding: '12px 16px', borderRadius: '10px', border: '1px solid #feebc8' }}>
-                <span style={{ fontSize: '11px', color: '#744210', textTransform: 'uppercase', fontWeight: '600' }}>Sin Salida</span>
-                <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color: '#744210' }}>{stats.totalSinSalida}</p>
-              </div>
-              <div style={{ background: '#ebf8ff', padding: '12px 16px', borderRadius: '10px', border: '1px solid #bee3f8' }}>
-                <span style={{ fontSize: '11px', color: '#2b6cb0', textTransform: 'uppercase', fontWeight: '600' }}>Horas Extra</span>
-                <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color: '#2b6cb0' }}>{stats.totalHorasExtra}h</p>
-              </div>
+              <StatMini
+                label="Días Trabajados"
+                value={stats.totalDiasTrabajados}
+                bg="var(--card-success-bg)"
+                border="var(--card-success-border)"
+                color="var(--card-success-title)"
+              />
+              <StatMini
+                label="Ausencias"
+                value={stats.totalAusentes}
+                bg="var(--card-danger-bg)"
+                border="var(--card-danger-border)"
+                color="var(--card-danger-title)"
+              />
+              <StatMini
+                label="Sin Salida"
+                value={stats.totalSinSalida}
+                bg="var(--card-warning-bg)"
+                border="var(--card-warning-border)"
+                color="var(--card-warning-title)"
+              />
+              <StatMini
+                label="Horas Extra"
+                value={`${stats.totalHorasExtra}h`}
+                bg="var(--card-info-bg)"
+                border="var(--card-info-border)"
+                color="var(--card-info-title)"
+              />
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'center',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+            }}
+          >
             <input
               type="text"
               placeholder="🔍 Buscar por nombre o cédula..."
@@ -261,14 +406,24 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
                 flex: 1,
                 minWidth: '200px',
                 padding: '8px 12px',
-                border: '1px solid #cbd5e0',
+                border: '1px solid var(--input-border)',
                 borderRadius: '8px',
                 fontSize: '13px',
                 outline: 'none',
-                color: '#2d3748',
+                color: 'var(--input-text)',
+                background: 'var(--input-bg)',
               }}
             />
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#4a5568', cursor: 'pointer' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '13px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+              }}
+            >
               <input
                 type="checkbox"
                 checked={soloConActividad}
@@ -280,79 +435,166 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
           </div>
 
           {reporteLimpio.length > 0 ? (
-            <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                    {['Cédula', 'Nombre', 'Apellido', 'Trab.', 'Ause.', 'Libres', 'Sin Salida', 'Asist. %', 'Retardo', 'Sal. Temprana', 'H. Diurnas', 'H. Nocturnas', 'Extra Diur.', 'Extra Noct.', 'Total'].map((h, i) => (
-                      <th
-                        key={i}
-                        style={{
-                          padding: '8px 10px',
-                          textAlign: 'left',
-                          fontSize: '10px',
-                          color: '#4a5568',
-                          textTransform: 'uppercase',
-                          fontWeight: '700',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {reporteLimpio.map((item, idx) => {
-                    const asistencia = calcularAsistencia(item);
-                    const { nombre, apellido } = separarNombreApellido(item.nombre || '');
-                    return (
-                      <tr
-                        key={idx}
-                        style={{
-                          borderBottom: '1px solid #edf2f7',
-                          background: idx % 2 === 0 ? '#fff' : '#fafbfc',
-                        }}
-                      >
-                        <td style={{ padding: '8px 10px', fontWeight: '600', color: '#2b6cb0' }}>{item.employeeId}</td>
-                        <td style={{ padding: '8px 10px' }}>{nombre}</td>
-                        <td style={{ padding: '8px 10px', color: '#4a5568' }}>{apellido}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', color: item.diasTrabajados > 0 ? '#22543d' : 'inherit', fontWeight: '600' }}>
-                          {item.diasTrabajados}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', color: item.ausentes > 0 ? '#e53e3e' : 'inherit', fontWeight: item.ausentes > 0 ? '600' : '400' }}>
-                          {item.ausentes}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>{item.descansos}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', color: item.noMarcoSalida > 0 ? '#dd6b20' : 'inherit' }}>
-                          {item.noMarcoSalida}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                          {asistencia !== null ? (
-                            <Badge variant={getBadgeColor(asistencia)} size="sm">
-                              {asistencia}%
-                            </Badge>
-                          ) : (
-                            <span style={{ color: '#a0aec0' }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '8px 10px' }}>{item.retardoLegible}</td>
-                        <td style={{ padding: '8px 10px' }}>{item.salidaTempranaLegible}</td>
-                        <td style={{ padding: '8px 10px' }}>{item.horasDiurnasLegible}</td>
-                        <td style={{ padding: '8px 10px' }}>{item.horasNocturnasLegible}</td>
-                        <td style={{ padding: '8px 10px' }}>{item.horasExtraDiurnasLegible}</td>
-                        <td style={{ padding: '8px 10px' }}>{item.horasExtraNocturnasLegible}</td>
-                        <td style={{ padding: '8px 10px', fontWeight: '700', color: '#2b6cb0' }}>
-                          {item.totalHorasTrabajadasLegible}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div
+              style={{
+                borderRadius: '10px',
+                border: '1px solid var(--table-row-border)',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: '12px',
+                    background: 'var(--table-row-bg)',
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        background: 'var(--table-header-bg)',
+                        borderBottom: '2px solid var(--table-header-border)',
+                      }}
+                    >
+                      {['Cédula', 'Nombre', 'Apellido', 'Trab.', 'Ause.', 'Libres', 'Sin Salida', 'Asist. %', 'Retardo', 'Sal. Temprana', 'H. Diurnas', 'H. Nocturnas', 'Extra Diur.', 'Extra Noct.', 'Total'].map((h, i) => (
+                        <th key={i} style={thStyle}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagination.paginatedItems.map((item, idx) => {
+                      const asistencia = calcularAsistencia(item);
+                      const { nombre, apellido } = separarNombreApellido(item.nombre || '');
+                      return (
+                        <tr
+                          key={`${item.employeeId}-${idx}`}
+                          style={{
+                            borderBottom: '1px solid var(--table-row-border)',
+                            background:
+                              idx % 2 === 0
+                                ? 'var(--table-row-bg)'
+                                : 'var(--table-row-bg-alt)',
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              fontWeight: '600',
+                              color: 'var(--primary)',
+                            }}
+                          >
+                            {item.employeeId}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {nombre}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--text-secondary)' }}>
+                            {apellido}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              textAlign: 'center',
+                              color:
+                                item.diasTrabajados > 0
+                                  ? 'var(--success)'
+                                  : 'var(--table-row-text)',
+                              fontWeight: '600',
+                            }}
+                          >
+                            {item.diasTrabajados}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              textAlign: 'center',
+                              color:
+                                item.ausentes > 0
+                                  ? 'var(--danger)'
+                                  : 'var(--table-row-text)',
+                              fontWeight: item.ausentes > 0 ? '600' : '400',
+                            }}
+                          >
+                            {item.ausentes}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              textAlign: 'center',
+                              color: 'var(--table-row-text)',
+                            }}
+                          >
+                            {item.descansos}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              textAlign: 'center',
+                              color:
+                                item.noMarcoSalida > 0
+                                  ? 'var(--warning)'
+                                  : 'var(--table-row-text)',
+                            }}
+                          >
+                            {item.noMarcoSalida}
+                          </td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                            {asistencia !== null ? (
+                              <Badge variant={getBadgeColor(asistencia)} size="sm">
+                                {asistencia}%
+                              </Badge>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)' }}>—</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.retardoLegible}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.salidaTempranaLegible}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.horasDiurnasLegible}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.horasNocturnasLegible}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.horasExtraDiurnasLegible}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.horasExtraNocturnasLegible}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              fontWeight: '700',
+                              color: 'var(--primary)',
+                            }}
+                          >
+                            {item.totalHorasTrabajadasLegible}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <Pagination {...pagination} />
             </div>
           ) : (
-            <p style={{ color: '#a0aec0', textAlign: 'center', padding: '20px' }}>
+            <p
+              style={{
+                color: 'var(--text-muted)',
+                textAlign: 'center',
+                padding: '20px',
+              }}
+            >
               No hay datos que coincidan con los filtros.
             </p>
           )}
@@ -361,3 +603,35 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
     </Card>
   );
 }
+
+const StatMini = ({ label, value, bg, border, color }) => (
+  <div
+    style={{
+      background: bg,
+      padding: '12px 16px',
+      borderRadius: '10px',
+      border: `1px solid ${border}`,
+    }}
+  >
+    <span
+      style={{
+        fontSize: '11px',
+        color,
+        textTransform: 'uppercase',
+        fontWeight: '600',
+      }}
+    >
+      {label}
+    </span>
+    <p
+      style={{
+        margin: '4px 0 0 0',
+        fontSize: '22px',
+        fontWeight: 'bold',
+        color,
+      }}
+    >
+      {value}
+    </p>
+  </div>
+);

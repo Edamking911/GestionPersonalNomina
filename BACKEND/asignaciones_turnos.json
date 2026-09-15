@@ -38,5 +38,9 @@
   {
     "employeeId": "12345678",
     "horarioId": "HORARIO_8_6_30"
+  },
+  {
+    "employeeId": "29591045",
+    "horarioId": "HORARIO_8_7"
   }
 ]

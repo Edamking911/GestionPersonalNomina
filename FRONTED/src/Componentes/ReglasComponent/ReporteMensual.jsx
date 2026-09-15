@@ -3,6 +3,10 @@ import { useState } from 'react';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Badge from '../UI/Badge';
+import Pagination from '../UI/Paginacion';
+import TableSkeleton from '../UI/EsqueletoTable';
+import { usePagination } from '../../Hoosk/PaginacionHoosk';
+import { exportarReportePDF, imprimirReporte } from '../../utils/pdfExport';
 
 function separarNombreApellido(nombreCompleto) {
   if (!nombreCompleto) return { nombre: '', apellido: 'N/A' };
@@ -27,6 +31,12 @@ export default function ReporteMensual({ onGenerar, reporte }) {
   const [anioSeleccionado, setAnioSeleccionado] = useState(String(anioActual));
   const [loading, setLoading] = useState(false);
 
+  const pagination = usePagination(reporte?.reporte || [], {
+    initialPageSize: 25,
+    pageSizeOptions: [10, 25, 50, 100, 250, 500],
+    resetKeys: [reporte?.rango?.mes, reporte?.totalEmpleados],
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const mesFormateado = `${anioSeleccionado}-${mesSeleccionado}`;
@@ -42,21 +52,113 @@ export default function ReporteMensual({ onGenerar, reporte }) {
 
   const handleDescargarExcel = () => {
     const mesFormateado = `${anioSeleccionado}-${mesSeleccionado}`;
-    window.open(`http://localhost:3000/reglas/reporte-mensual?mes=${mesFormateado}&generarExcel=true`,'_blank');
+    window.open(`http://localhost:3000/reglas/reporte-mensual?mes=${mesFormateado}&generarExcel=true`, '_blank');
+  };
+
+  const prepararDatosReporte = () => {
+    if (!reporte?.reporte?.length) return null;
+
+    const columnas = [
+      { key: 'employeeId', label: 'Cédula', width: 18 },
+      { key: 'nombre', label: 'Nombre' },
+      { key: 'apellido', label: 'Apellido' },
+      { key: 'diasLaborables', label: 'D. Lab.', align: 'center' },
+      { key: 'diasTrabajados', label: 'Trab.', align: 'center' },
+      { key: 'ausentes', label: 'Ause.', align: 'center' },
+      { key: 'descansos', label: 'Libres', align: 'center' },
+      { key: 'noMarcoSalida', label: 'Sin Sal.', align: 'center' },
+      { key: 'horasNormalesDiurnasLegible', label: 'H.N. Diur.', align: 'right' },
+      { key: 'horasNormalesNocturnasLegible', label: 'H.N. Noct.', align: 'right' },
+      { key: 'horasExtraDiurnasLegible', label: 'Extra Diur.', align: 'right' },
+      { key: 'horasExtraNocturnasLegible', label: 'Extra Noct.', align: 'right' },
+      { key: 'retardoLegible', label: 'Retardo' },
+      { key: 'salidaTempranaLegible', label: 'Sal. Temprana' },
+      { key: 'totalHorasLegible', label: 'Total Horas', align: 'right' },
+    ];
+
+    const filas = reporte.reporte.map((item) => {
+      const { nombre, apellido } = separarNombreApellido(item.nombre || '');
+      return {
+        employeeId: item.employeeId,
+        nombre,
+        apellido,
+        diasLaborables: item.diasLaborables ?? 0,
+        diasTrabajados: item.diasTrabajados ?? 0,
+        ausentes: item.ausentes ?? 0,
+        descansos: item.descansos ?? 0,
+        noMarcoSalida: item.noMarcoSalida ?? 0,
+        horasNormalesDiurnasLegible: item.horasNormalesDiurnasLegible || '0h',
+        horasNormalesNocturnasLegible: item.horasNormalesNocturnasLegible || '0h',
+        horasExtraDiurnasLegible: item.horasExtraDiurnasLegible || '0h',
+        horasExtraNocturnasLegible: item.horasExtraNocturnasLegible || '0h',
+        retardoLegible: item.retardoLegible || '0m',
+        salidaTempranaLegible: item.salidaTempranaLegible || '0m',
+        totalHorasLegible: item.totalHorasLegible || '0h',
+      };
+    });
+
+    return {
+      titulo: 'Reporte Mensual de Nómina',
+      subtitulo: `Consolidado de asistencia y horas del mes ${reporte.rango?.nombreMes || ''}`,
+      columnas,
+      filas,
+      nombreArchivo: `nomina_${reporte.rango?.mes || 'mensual'}`,
+      metadata: {
+        Mes: reporte.rango?.nombreMes || '—',
+        Período: `${reporte.rango?.desde} → ${reporte.rango?.hasta}`,
+        Días: reporte.rango?.totalDias || '—',
+        Empleados: reporte.totalEmpleados || filas.length,
+      },
+    };
+  };
+
+  const handleDescargarPDF = () => {
+    const datos = prepararDatosReporte();
+    if (!datos) {
+      alert('Genera el reporte primero.');
+      return;
+    }
+    exportarReportePDF(datos);
+  };
+
+  const handleImprimir = () => {
+    const datos = prepararDatosReporte();
+    if (!datos) {
+      alert('Genera el reporte primero.');
+      return;
+    }
+    imprimirReporte(datos);
   };
 
   const selectStyle = {
     padding: '0 14px',
     height: '42px',
-    border: '1px solid #cbd5e0',
+    border: '1px solid var(--input-border)',
     borderRadius: '8px',
     fontSize: '14px',
-    background: '#fff',
+    background: 'var(--input-bg)',
     cursor: 'pointer',
     outline: 'none',
-    color: '#2d3748',
+    color: 'var(--input-text)',
     fontFamily: 'inherit',
-    colorScheme: 'light',
+  };
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '6px',
+    fontWeight: '600',
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
+  };
+
+  const thStyle = {
+    padding: '8px 10px',
+    textAlign: 'left',
+    fontSize: '10px',
+    color: 'var(--table-header-text)',
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    whiteSpace: 'nowrap',
   };
 
   return (
@@ -77,9 +179,7 @@ export default function ReporteMensual({ onGenerar, reporte }) {
         }}
       >
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '13px', color: '#4a5568' }}>
-            Mes
-          </label>
+          <label style={labelStyle}>Mes</label>
           <select
             value={mesSeleccionado}
             onChange={(e) => setMesSeleccionado(e.target.value)}
@@ -101,9 +201,7 @@ export default function ReporteMensual({ onGenerar, reporte }) {
         </div>
 
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '13px', color: '#4a5568' }}>
-            Año
-          </label>
+          <label style={labelStyle}>Año</label>
           <select
             value={anioSeleccionado}
             onChange={(e) => setAnioSeleccionado(e.target.value)}
@@ -120,19 +218,39 @@ export default function ReporteMensual({ onGenerar, reporte }) {
         </Button>
 
         <Button variant="success" size="md" onClick={handleDescargarExcel} iconLeft="📥">
-          Descargar Excel
+          Excel
+        </Button>
+
+        <Button
+          variant="danger"
+          size="md"
+          onClick={handleDescargarPDF}
+          disabled={!reporte?.reporte?.length}
+          iconLeft="📄"
+        >
+          PDF
+        </Button>
+
+        <Button
+          variant="dark"
+          size="md"
+          onClick={handleImprimir}
+          disabled={!reporte?.reporte?.length}
+          iconLeft="🖨️"
+        >
+          Imprimir
         </Button>
       </form>
 
-      {reporte?.rango?.esMesEnCurso && (
+      {reporte?.rango?.esMesEnCurso && !loading && (
         <div
           style={{
-            background: '#fffaf0',
-            border: '1px solid #feebc8',
+            background: 'var(--warning-soft)',
+            border: '1px solid var(--card-warning-border)',
             padding: '10px 16px',
             borderRadius: '8px',
             marginBottom: '16px',
-            color: '#744210',
+            color: 'var(--card-warning-title)',
             fontSize: '13px',
           }}
         >
@@ -140,7 +258,15 @@ export default function ReporteMensual({ onGenerar, reporte }) {
         </div>
       )}
 
-      {reporte && (
+      {/* 🦴 SKELETON mientras carga */}
+      {loading && (
+        <div style={{ marginTop: '16px' }}>
+          <TableSkeleton columns={15} rows={10} />
+        </div>
+      )}
+
+      {/* ✅ Reporte listo */}
+      {!loading && reporte && (
         <div style={{ marginTop: '16px' }}>
           <div
             style={{
@@ -152,7 +278,7 @@ export default function ReporteMensual({ onGenerar, reporte }) {
               gap: '12px',
             }}
           >
-            <h4 style={{ margin: 0, fontSize: '15px', color: '#2d3748' }}>
+            <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)' }}>
               📅 {reporte.rango?.nombreMes || 'Reporte Mensual'}
             </h4>
             <Badge variant="success" size="md">
@@ -161,70 +287,160 @@ export default function ReporteMensual({ onGenerar, reporte }) {
           </div>
 
           {reporte.reporte && reporte.reporte.length > 0 ? (
-            <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                    {['Cédula', 'Nombre', 'Apellido', 'Días Lab.', 'Trab.', 'Ause.', 'Libres', 'Sin Salida', 'H. Norm. Diur.', 'H. Norm. Noct.', 'Extra Diur.', 'Extra Noct.', 'Retardo', 'Sal. Temprana', 'Total Horas'].map((h, i) => (
-                      <th
-                        key={i}
-                        style={{
-                          padding: '8px 10px',
-                          textAlign: 'left',
-                          fontSize: '10px',
-                          color: '#4a5568',
-                          textTransform: 'uppercase',
-                          fontWeight: '700',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {reporte.reporte.map((item, idx) => {
-                    const { nombre, apellido } = separarNombreApellido(item.nombre || '');
-                    return (
-                      <tr
-                        key={idx}
-                        style={{
-                          borderBottom: '1px solid #edf2f7',
-                          background: idx % 2 === 0 ? '#fff' : '#fafbfc',
-                        }}
-                      >
-                        <td style={{ padding: '8px 10px', fontWeight: '600', color: '#2b6cb0' }}>{item.employeeId}</td>
-                        <td style={{ padding: '8px 10px' }}>{nombre}</td>
-                        <td style={{ padding: '8px 10px', color: '#4a5568' }}>{apellido}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>{item.diasLaborables}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', color: item.diasTrabajados > 0 ? '#22543d' : 'inherit', fontWeight: '600' }}>
-                          {item.diasTrabajados}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', color: item.ausentes > 0 ? '#e53e3e' : 'inherit', fontWeight: item.ausentes > 0 ? '600' : '400' }}>
-                          {item.ausentes}
-                        </td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center' }}>{item.descansos}</td>
-                        <td style={{ padding: '8px 10px', textAlign: 'center', color: item.noMarcoSalida > 0 ? '#dd6b20' : 'inherit' }}>
-                          {item.noMarcoSalida}
-                        </td>
-                        <td style={{ padding: '8px 10px' }}>{item.horasNormalesDiurnasLegible}</td>
-                        <td style={{ padding: '8px 10px' }}>{item.horasNormalesNocturnasLegible}</td>
-                        <td style={{ padding: '8px 10px' }}>{item.horasExtraDiurnasLegible}</td>
-                        <td style={{ padding: '8px 10px' }}>{item.horasExtraNocturnasLegible}</td>
-                        <td style={{ padding: '8px 10px' }}>{item.retardoLegible}</td>
-                        <td style={{ padding: '8px 10px' }}>{item.salidaTempranaLegible}</td>
-                        <td style={{ padding: '8px 10px', fontWeight: '700', color: '#2b6cb0', background: '#f0f9ff' }}>
-                          {item.totalHorasLegible}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div
+              style={{
+                borderRadius: '10px',
+                border: '1px solid var(--table-row-border)',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: '12px',
+                    background: 'var(--table-row-bg)',
+                  }}
+                >
+                  <thead>
+                    <tr
+                      style={{
+                        background: 'var(--table-header-bg)',
+                        borderBottom: '2px solid var(--table-header-border)',
+                      }}
+                    >
+                      {['Cédula', 'Nombre', 'Apellido', 'Días Lab.', 'Trab.', 'Ause.', 'Libres', 'Sin Salida', 'H. Norm. Diur.', 'H. Norm. Noct.', 'Extra Diur.', 'Extra Noct.', 'Retardo', 'Sal. Temprana', 'Total Horas'].map((h, i) => (
+                        <th key={i} style={thStyle}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagination.paginatedItems.map((item, idx) => {
+                      const { nombre, apellido } = separarNombreApellido(item.nombre || '');
+                      return (
+                        <tr
+                          key={`${item.employeeId}-${idx}`}
+                          style={{
+                            borderBottom: '1px solid var(--table-row-border)',
+                            background:
+                              idx % 2 === 0
+                                ? 'var(--table-row-bg)'
+                                : 'var(--table-row-bg-alt)',
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              fontWeight: '600',
+                              color: 'var(--primary)',
+                            }}
+                          >
+                            {item.employeeId}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {nombre}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--text-secondary)' }}>
+                            {apellido}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              textAlign: 'center',
+                              color: 'var(--table-row-text)',
+                            }}
+                          >
+                            {item.diasLaborables}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              textAlign: 'center',
+                              color:
+                                item.diasTrabajados > 0
+                                  ? 'var(--success)'
+                                  : 'var(--table-row-text)',
+                              fontWeight: '600',
+                            }}
+                          >
+                            {item.diasTrabajados}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              textAlign: 'center',
+                              color:
+                                item.ausentes > 0
+                                  ? 'var(--danger)'
+                                  : 'var(--table-row-text)',
+                              fontWeight: item.ausentes > 0 ? '600' : '400',
+                            }}
+                          >
+                            {item.ausentes}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              textAlign: 'center',
+                              color: 'var(--table-row-text)',
+                            }}
+                          >
+                            {item.descansos}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              textAlign: 'center',
+                              color:
+                                item.noMarcoSalida > 0
+                                  ? 'var(--warning)'
+                                  : 'var(--table-row-text)',
+                            }}
+                          >
+                            {item.noMarcoSalida}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.horasNormalesDiurnasLegible}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.horasNormalesNocturnasLegible}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.horasExtraDiurnasLegible}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.horasExtraNocturnasLegible}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.retardoLegible}
+                          </td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
+                            {item.salidaTempranaLegible}
+                          </td>
+                          <td
+                            style={{
+                              padding: '8px 10px',
+                              fontWeight: '700',
+                              color: 'var(--primary)',
+                              background: 'var(--primary-soft)',
+                            }}
+                          >
+                            {item.totalHorasLegible}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <Pagination {...pagination} />
             </div>
           ) : (
-            <p style={{ color: '#a0aec0', textAlign: 'center', padding: '20px' }}>
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
               No hay datos para mostrar.
             </p>
           )}

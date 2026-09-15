@@ -1,0 +1,53 @@
+/* ============================================================
+   🎬 TRANSICIONES Y ANIMACIONES
+   ============================================================
+   Animaciones SUTILES sin opacity para evitar el bug de
+   "componente a medio pintar" al remontar.
+   ============================================================ */
+
+/* ============================================================
+   🖼️ VISTAS PRINCIPALES (Biométrico ↔ Reglas)
+   ============================================================ */
+@keyframes viewEnter {
+  0% {
+    transform: translateY(6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.view-transition {
+  animation: viewEnter 0.25s cubic-bezier(0.34, 1.26, 0.64, 1);
+  /* 👆 SIN fill-mode 'both' → al terminar vuelve a su estado natural */
+  /* 👆 SIN opacity → nunca se queda "borroso" */
+}
+
+/* ============================================================
+   📑 TABS INTERNOS
+   ============================================================ */
+@keyframes tabEnter {
+  0% {
+    transform: translateY(4px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.tab-transition {
+  animation: tabEnter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 👆 SIN fill-mode 'both' → al terminar vuelve a su estado natural */
+  /* 👆 SIN opacity → nunca se queda "borroso" */
+}
+
+/* ============================================================
+   ♿ ACCESIBILIDAD
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .view-transition,
+  .tab-transition {
+    animation: none !important;
+    transform: none !important;
+  }
+}

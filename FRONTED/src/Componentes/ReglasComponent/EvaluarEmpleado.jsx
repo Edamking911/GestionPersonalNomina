@@ -85,7 +85,7 @@ export default function EvaluarEmpleado({ onEvaluar, evaluacion, onLimpiar, show
               marginBottom: '6px',
               fontWeight: '600',
               fontSize: '13px',
-              color: '#4a5568',
+              color: 'var(--text-secondary)',
             }}
           >
             Fecha
@@ -98,12 +98,11 @@ export default function EvaluarEmpleado({ onEvaluar, evaluacion, onLimpiar, show
               width: '100%',
               height: '42px',
               padding: '0 14px',
-              border: '1px solid #cbd5e0',
+              border: '1px solid var(--input-border)',
               borderRadius: '8px',
               fontSize: '14px',
-              color: '#2d3748',
-              background: '#fff',
-              colorScheme: 'light',
+              color: 'var(--input-text)',
+              background: 'var(--input-bg)',
               outline: 'none',
               fontFamily: 'inherit',
             }}
@@ -134,14 +133,26 @@ export default function EvaluarEmpleado({ onEvaluar, evaluacion, onLimpiar, show
               gap: '12px',
               marginBottom: '20px',
               paddingBottom: '16px',
-              borderBottom: '1px solid #e2e8f0',
+              borderBottom: '1px solid var(--border-light)',
             }}
           >
             <div>
-              <h4 style={{ margin: 0, fontSize: '20px', color: '#2d3748' }}>
+              <h4
+                style={{
+                  margin: 0,
+                  fontSize: '20px',
+                  color: 'var(--text-primary)',
+                }}
+              >
                 {evaluacion.nombre || 'Empleado'}
               </h4>
-              <p style={{ margin: '4px 0 0 0', color: '#718096', fontSize: '13px' }}>
+              <p
+                style={{
+                  margin: '4px 0 0 0',
+                  color: 'var(--text-muted)',
+                  fontSize: '13px',
+                }}
+              >
                 Cédula: {evaluacion.employeeId} &nbsp;|&nbsp; Fecha: {evaluacion.fecha}
               </p>
             </div>
@@ -151,6 +162,7 @@ export default function EvaluarEmpleado({ onEvaluar, evaluacion, onLimpiar, show
             })()}
           </div>
 
+          {/* Fila 1: Horario, Entrada, Salida */}
           <div
             style={{
               display: 'grid',
@@ -159,34 +171,12 @@ export default function EvaluarEmpleado({ onEvaluar, evaluacion, onLimpiar, show
               marginBottom: '20px',
             }}
           >
-            <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '11px', color: '#718096', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>
-                Horario
-              </span>
-              <p style={{ margin: '6px 0 0 0', fontSize: '15px', fontWeight: '600', color: '#2d3748' }}>
-                {evaluacion.horario || 'N/A'}
-              </p>
-            </div>
-
-            <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '11px', color: '#718096', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>
-                Entrada Real
-              </span>
-              <p style={{ margin: '6px 0 0 0', fontSize: '15px', fontWeight: '600', color: '#2d3748' }}>
-                {evaluacion.entradaReal || '—'}
-              </p>
-            </div>
-
-            <div style={{ background: '#f7fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <span style={{ fontSize: '11px', color: '#718096', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>
-                Salida Real
-              </span>
-              <p style={{ margin: '6px 0 0 0', fontSize: '15px', fontWeight: '600', color: '#2d3748' }}>
-                {evaluacion.salidaReal || '—'}
-              </p>
-            </div>
+            <InfoCard label="Horario" value={evaluacion.horario || 'N/A'} />
+            <InfoCard label="Entrada Real" value={evaluacion.entradaReal || '—'} />
+            <InfoCard label="Salida Real" value={evaluacion.salidaReal || '—'} />
           </div>
 
+          {/* Fila 2: Horas */}
           <div
             style={{
               display: 'grid',
@@ -195,43 +185,41 @@ export default function EvaluarEmpleado({ onEvaluar, evaluacion, onLimpiar, show
               marginBottom: '16px',
             }}
           >
-            <div style={{ background: '#ebf8ff', padding: '14px', borderRadius: '10px', border: '1px solid #bee3f8' }}>
-              <span style={{ fontSize: '11px', color: '#2b6cb0', textTransform: 'uppercase', fontWeight: '600' }}>
-                Horas Diurnas
-              </span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#2b6cb0' }}>
-                {evaluacion.horasDiurnasLegible || '0h'}
-              </p>
-            </div>
-
-            <div style={{ background: '#fefcbf', padding: '14px', borderRadius: '10px', border: '1px solid #f6e05e' }}>
-              <span style={{ fontSize: '11px', color: '#744210', textTransform: 'uppercase', fontWeight: '600' }}>
-                Horas Nocturnas
-              </span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#744210' }}>
-                {evaluacion.horasNocturnasLegible || '0h'}
-              </p>
-            </div>
-
-            <div style={{ background: '#f0fff4', padding: '14px', borderRadius: '10px', border: '1px solid #c6f6d5' }}>
-              <span style={{ fontSize: '11px', color: '#22543d', textTransform: 'uppercase', fontWeight: '600' }}>
-                Extra Diurnas
-              </span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#22543d' }}>
-                {evaluacion.horasExtraDiurnasLegible || '0h'}
-              </p>
-            </div>
-
-            <div style={{ background: '#fed7d7', padding: '14px', borderRadius: '10px', border: '1px solid #feb2b2' }}>
-              <span style={{ fontSize: '11px', color: '#9b2c2c', textTransform: 'uppercase', fontWeight: '600' }}>
-                Extra Nocturnas
-              </span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '20px', fontWeight: 'bold', color: '#9b2c2c' }}>
-                {evaluacion.horasExtraNocturnasLegible || '0h'}
-              </p>
-            </div>
+            <HourCard
+              label="Horas Diurnas"
+              value={evaluacion.horasDiurnasLegible || '0h'}
+              bg="var(--card-info-bg)"
+              border="var(--card-info-border)"
+              titleColor="var(--card-info-title)"
+              valueColor="var(--card-info-title)"
+            />
+            <HourCard
+              label="Horas Nocturnas"
+              value={evaluacion.horasNocturnasLegible || '0h'}
+              bg="var(--accent-yellow-light)"
+              border="var(--card-warning-border)"
+              titleColor="var(--card-warning-title)"
+              valueColor="var(--card-warning-title)"
+            />
+            <HourCard
+              label="Extra Diurnas"
+              value={evaluacion.horasExtraDiurnasLegible || '0h'}
+              bg="var(--card-success-bg)"
+              border="var(--card-success-border)"
+              titleColor="var(--card-success-title)"
+              valueColor="var(--card-success-title)"
+            />
+            <HourCard
+              label="Extra Nocturnas"
+              value={evaluacion.horasExtraNocturnasLegible || '0h'}
+              bg="var(--card-danger-bg)"
+              border="var(--card-danger-border)"
+              titleColor="var(--card-danger-title)"
+              valueColor="var(--card-danger-title)"
+            />
           </div>
 
+          {/* Fila 3: Retardo, Salida temprana, Minutos */}
           <div
             style={{
               display: 'grid',
@@ -239,32 +227,30 @@ export default function EvaluarEmpleado({ onEvaluar, evaluacion, onLimpiar, show
               gap: '12px',
             }}
           >
-            <div style={{ background: '#fff5f5', padding: '12px 16px', borderRadius: '10px', border: '1px solid #fed7d7' }}>
-              <span style={{ fontSize: '12px', color: '#9b2c2c', fontWeight: '600' }}>
-                ⏰ Retardo
-              </span>
-              <p style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: 'bold', color: '#e53e3e' }}>
-                {evaluacion.retardoLegible || '0m'}
-              </p>
-            </div>
-
-            <div style={{ background: '#fffbeb', padding: '12px 16px', borderRadius: '10px', border: '1px solid #f6e05e' }}>
-              <span style={{ fontSize: '12px', color: '#744210', fontWeight: '600' }}>
-                🏃 Salida Temprana
-              </span>
-              <p style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: 'bold', color: '#d69e2e' }}>
-                {evaluacion.salidaTempranaLegible || '0m'}
-              </p>
-            </div>
-
-            <div style={{ background: '#ebf8ff', padding: '12px 16px', borderRadius: '10px', border: '1px solid #bee3f8' }}>
-              <span style={{ fontSize: '12px', color: '#2b6cb0', fontWeight: '600' }}>
-                ⏱️ Minutos Retardo
-              </span>
-              <p style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: 'bold', color: '#2b6cb0' }}>
-                {evaluacion.minutosRetardo || 0}
-              </p>
-            </div>
+            <HourCard
+              label="⏰ Retardo"
+              value={evaluacion.retardoLegible || '0m'}
+              bg="var(--card-danger-bg)"
+              border="var(--card-danger-border)"
+              titleColor="var(--card-danger-title)"
+              valueColor="var(--danger)"
+            />
+            <HourCard
+              label="🏃 Salida Temprana"
+              value={evaluacion.salidaTempranaLegible || '0m'}
+              bg="var(--accent-yellow-light)"
+              border="var(--card-warning-border)"
+              titleColor="var(--card-warning-title)"
+              valueColor="var(--warning)"
+            />
+            <HourCard
+              label="⏱️ Minutos Retardo"
+              value={evaluacion.minutosRetardo || 0}
+              bg="var(--card-info-bg)"
+              border="var(--card-info-border)"
+              titleColor="var(--card-info-title)"
+              valueColor="var(--card-info-title)"
+            />
           </div>
 
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
@@ -277,3 +263,69 @@ export default function EvaluarEmpleado({ onEvaluar, evaluacion, onLimpiar, show
     </Card>
   );
 }
+
+// 🔧 Sub-componentes auxiliares
+const InfoCard = ({ label, value }) => (
+  <div
+    style={{
+      background: 'var(--bg-hover)',
+      padding: '16px',
+      borderRadius: '10px',
+      border: '1px solid var(--border-light)',
+    }}
+  >
+    <span
+      style={{
+        fontSize: '11px',
+        color: 'var(--text-muted)',
+        textTransform: 'uppercase',
+        fontWeight: '600',
+        letterSpacing: '0.5px',
+      }}
+    >
+      {label}
+    </span>
+    <p
+      style={{
+        margin: '6px 0 0 0',
+        fontSize: '15px',
+        fontWeight: '600',
+        color: 'var(--text-primary)',
+      }}
+    >
+      {value}
+    </p>
+  </div>
+);
+
+const HourCard = ({ label, value, bg, border, titleColor, valueColor }) => (
+  <div
+    style={{
+      background: bg,
+      padding: '14px',
+      borderRadius: '10px',
+      border: `1px solid ${border}`,
+    }}
+  >
+    <span
+      style={{
+        fontSize: '11px',
+        color: titleColor,
+        textTransform: 'uppercase',
+        fontWeight: '600',
+      }}
+    >
+      {label}
+    </span>
+    <p
+      style={{
+        margin: '4px 0 0 0',
+        fontSize: '20px',
+        fontWeight: 'bold',
+        color: valueColor,
+      }}
+    >
+      {value}
+    </p>
+  </div>
+);

@@ -2,6 +2,8 @@
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Badge from '../UI/Badge';
+import Pagination from '../UI/Paginacion';
+import { usePagination } from '../../Hoosk/PaginacionHoosk';
 
 export default function DateSearchView({
   fechaUnica,
@@ -10,6 +12,22 @@ export default function DateSearchView({
   onSearch,
   formatearHora,
 }) {
+  // 📄 Paginación de los marcajes
+  const pagination = usePagination(marcajesFechaUnica?.marcajes || [], {
+    initialPageSize: 25,
+    pageSizeOptions: [10, 25, 50, 100, 250, 500],
+    resetKeys: [marcajesFechaUnica?.fecha, marcajesFechaUnica?.totalMarcajes],
+  });
+
+  const thStyle = {
+    padding: '12px 16px',
+    fontSize: '11px',
+    color: 'var(--table-header-text)',
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    letterSpacing: '0.5px',
+  };
+
   return (
     <Card
       title="Consultar Marcajes por Día Exacto"
@@ -34,7 +52,7 @@ export default function DateSearchView({
               marginBottom: '6px',
               fontWeight: '600',
               fontSize: '13px',
-              color: '#4a5568',
+              color: 'var(--text-secondary)',
             }}
           >
             Fecha
@@ -46,12 +64,11 @@ export default function DateSearchView({
             style={{
               padding: '0 14px',
               height: '42px',
-              border: '1px solid #cbd5e0',
+              border: '1px solid var(--input-border)',
               borderRadius: '8px',
               fontSize: '14px',
-              color: '#2d3748',
-              background: '#fff',
-              colorScheme: 'light',
+              color: 'var(--input-text)',
+              background: 'var(--input-bg)',
               outline: 'none',
               fontFamily: 'inherit',
               minWidth: '180px',
@@ -73,9 +90,9 @@ export default function DateSearchView({
               alignItems: 'center',
               marginBottom: '16px',
               padding: '12px 18px',
-              background: '#f7fafc',
+              background: 'var(--bg-hover)',
               borderRadius: '10px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--border-light)',
               flexWrap: 'wrap',
               gap: '12px',
             }}
@@ -84,7 +101,7 @@ export default function DateSearchView({
               <span
                 style={{
                   fontSize: '11px',
-                  color: '#718096',
+                  color: 'var(--text-muted)',
                   textTransform: 'uppercase',
                   fontWeight: '700',
                   letterSpacing: '0.5px',
@@ -97,7 +114,7 @@ export default function DateSearchView({
                   margin: '2px 0 0 0',
                   fontSize: '16px',
                   fontWeight: '700',
-                  color: '#2b6cb0',
+                  color: 'var(--primary)',
                 }}
               >
                 {marcajesFechaUnica.fecha}
@@ -111,64 +128,103 @@ export default function DateSearchView({
           {marcajesFechaUnica.marcajes && marcajesFechaUnica.marcajes.length > 0 ? (
             <div
               style={{
-                overflowX: 'auto',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--table-row-border)',
                 borderRadius: '10px',
+                overflow: 'hidden',
               }}
             >
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', background: '#fff' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                    {['Cédula ID', 'Nombre Empleado', 'Fecha y Hora Exacta', 'Método', 'Dispositivo'].map((h, i) => (
-                      <th
-                        key={i}
-                        style={{
-                          padding: '12px 16px',
-                          fontSize: '11px',
-                          color: '#4a5568',
-                          textTransform: 'uppercase',
-                          fontWeight: '700',
-                          letterSpacing: '0.5px',
-                        }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {marcajesFechaUnica.marcajes.map((m, idx) => (
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    textAlign: 'left',
+                    background: 'var(--table-row-bg)',
+                  }}
+                >
+                  <thead>
                     <tr
-                      key={idx}
                       style={{
-                        borderBottom: '1px solid #edf2f7',
-                        background: idx % 2 === 0 ? '#fff' : '#fafbfc',
+                        background: 'var(--table-header-bg)',
+                        borderBottom: '2px solid var(--table-header-border)',
                       }}
                     >
-                      <td style={{ padding: '12px 16px', fontWeight: '600', color: '#2b6cb0' }}>
-                        {m.employeeId}
-                      </td>
-                      <td style={{ padding: '12px 16px', fontWeight: '500', color: '#2d3748' }}>
-                        {m.nombre}
-                      </td>
-                      <td style={{ padding: '12px 16px', color: '#38a169', fontWeight: '600' }}>
-                        {formatearHora(m.timestamp, m.hora)}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <Badge variant="light" size="sm">
-                          {m.metodoMarcaje}
-                        </Badge>
-                      </td>
-                      <td style={{ padding: '12px 16px', color: '#718096', fontSize: '12px' }}>
-                        {m.dispositivo}
-                      </td>
+                      {['Cédula ID', 'Nombre Empleado', 'Fecha y Hora Exacta', 'Método', 'Dispositivo'].map((h, i) => (
+                        <th key={i} style={thStyle}>
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {pagination.paginatedItems.map((m, idx) => (
+                      <tr
+                        key={`${m.employeeId}-${idx}`}
+                        style={{
+                          borderBottom: '1px solid var(--table-row-border)',
+                          background:
+                            idx % 2 === 0
+                              ? 'var(--table-row-bg)'
+                              : 'var(--table-row-bg-alt)',
+                        }}
+                      >
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            fontWeight: '600',
+                            color: 'var(--primary)',
+                          }}
+                        >
+                          {m.employeeId}
+                        </td>
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            fontWeight: '500',
+                            color: 'var(--table-row-text)',
+                          }}
+                        >
+                          {m.nombre}
+                        </td>
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            color: 'var(--success)',
+                            fontWeight: '600',
+                          }}
+                        >
+                          {formatearHora(m.timestamp, m.hora)}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <Badge variant="light" size="sm">
+                            {m.metodoMarcaje}
+                          </Badge>
+                        </td>
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            color: 'var(--text-muted)',
+                            fontSize: '12px',
+                          }}
+                        >
+                          {m.dispositivo}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <Pagination {...pagination} />
             </div>
           ) : (
-            <p style={{ textAlign: 'center', color: '#a0aec0', padding: '20px' }}>
+            <p
+              style={{
+                textAlign: 'center',
+                color: 'var(--text-muted)',
+                padding: '20px',
+              }}
+            >
               No hay marcajes registrados para esta fecha.
             </p>
           )}

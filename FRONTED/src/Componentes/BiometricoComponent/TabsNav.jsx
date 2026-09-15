@@ -11,6 +11,7 @@ const tabs = [
 export default function TabsNav({ activeTab, onTabChange }) {
   return (
     <div
+      className="tabs-scroll-mobile"
       style={{
         display: 'flex',
         gap: '8px',

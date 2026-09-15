@@ -62,6 +62,7 @@ export default function ActionBar({
   return (
     <>
       <div
+        className="action-bar-mobile"
         style={{
           background: 'var(--bg-card)',
           padding: '15px 20px',
@@ -218,7 +219,6 @@ export default function ActionBar({
               animation: 'slideDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
             }}
           >
-            {/* Header */}
             <div
               style={{
                 padding: '20px 24px',
@@ -265,7 +265,6 @@ export default function ActionBar({
               </div>
             </div>
 
-            {/* Contenido */}
             <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
               <p
                 style={{
@@ -278,7 +277,6 @@ export default function ActionBar({
                 usuarios se actualizarán según su contenido.
               </p>
 
-              {/* Info del archivo */}
               <div
                 style={{
                   background: 'var(--bg-hover)',
@@ -318,7 +316,6 @@ export default function ActionBar({
                 </div>
               </div>
 
-              {/* Formato esperado */}
               <div style={{ marginBottom: '20px' }}>
                 <h4
                   style={{
@@ -389,91 +386,11 @@ export default function ActionBar({
                           Empleado
                         </td>
                       </tr>
-                      <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
-                        <td
-                          style={{
-                            padding: '8px 12px',
-                            fontFamily: 'monospace',
-                            color: 'var(--primary)',
-                          }}
-                        >
-                          11111111
-                        </td>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>
-                          Admin
-                        </td>
-                        <td
-                          style={{
-                            padding: '8px 12px',
-                            color: 'var(--text-muted)',
-                            fontStyle: 'italic',
-                          }}
-                        >
-                          —
-                        </td>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>
-                          Admin
-                        </td>
-                      </tr>
-                      <tr>
-                        <td
-                          style={{
-                            padding: '8px 12px',
-                            fontFamily: 'monospace',
-                            color: 'var(--primary)',
-                          }}
-                        >
-                          22222222
-                        </td>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>
-                          MARIA GONZALEZ
-                        </td>
-                        <td
-                          style={{
-                            padding: '8px 12px',
-                            color: 'var(--text-muted)',
-                            fontStyle: 'italic',
-                          }}
-                        >
-                          —
-                        </td>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>
-                          Supervisor
-                        </td>
-                      </tr>
                     </tbody>
                   </table>
                 </div>
-
-                <div
-                  style={{
-                    marginTop: '8px',
-                    fontSize: '12px',
-                    color: 'var(--text-muted)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                  }}
-                >
-                  <span>
-                    • Las columnas <strong>Cédula</strong> y <strong>Nombre</strong>{' '}
-                    son obligatorias.
-                  </span>
-                  <span>
-                    • La columna <strong>Cargo</strong> es opcional (por defecto:
-                    "Empleado").
-                  </span>
-                  <span>
-                    • Si el <strong>Nombre</strong> ya trae apellido incluido, deja la
-                    columna <strong>Apellido</strong> vacía.
-                  </span>
-                  <span>
-                    • La cédula debe ser solo números (sin puntos ni guiones).
-                  </span>
-                </div>
               </div>
 
-              {/* Aviso */}
               <div
                 style={{
                   background: 'var(--warning-soft)',
@@ -496,7 +413,6 @@ export default function ActionBar({
               </div>
             </div>
 
-            {/* Footer */}
             <div
               style={{
                 padding: '16px 24px',

@@ -4,14 +4,13 @@ export default function Select({
   label,
   value,
   onChange,
-  options = [], // [{ value: '', label: '' }] o ['opcion1', 'opcion2']
+  options = [],
   placeholder = 'Selecciona...',
   error = '',
   hint = '',
   disabled = false,
   required = false,
   fullWidth = true,
-  theme = 'light',
   size = 'md',
   style = {},
   selectStyle = {},
@@ -23,54 +22,15 @@ export default function Select({
     lg: { height: '50px', padding: '0 16px', fontSize: '15px' },
   };
 
-  const themes = {
-    light: {
-      labelColor: '#4a5568',
-      bg: '#fff',
-      bgHover: '#f7fafc',
-      bgFocus: '#fff',
-      border: '#cbd5e0',
-      borderHover: '#a0aec0',
-      borderFocus: '#3182ce',
-      borderError: '#e53e3e',
-      text: '#2d3748',
-      hint: '#718096',
-      error: '#e53e3e',
-      focusShadow: 'rgba(49, 130, 206, 0.15)',
-      errorShadow: 'rgba(229, 62, 62, 0.15)',
-      optionBg: '#fff',
-      optionText: '#2d3748',
-      colorScheme: 'light',
-    },
-    dark: {
-      labelColor: '#a0aec0',
-      bg: '#2d3748',
-      bgHover: '#374151',
-      bgFocus: '#2d3748',
-      border: '#4a5568',
-      borderHover: '#718096',
-      borderFocus: '#3182ce',
-      borderError: '#e53e3e',
-      text: '#f7fafc',
-      hint: '#718096',
-      error: '#fc8181',
-      focusShadow: 'rgba(49, 130, 206, 0.25)',
-      errorShadow: 'rgba(229, 62, 62, 0.25)',
-      optionBg: '#2d3748',
-      optionText: '#f7fafc',
-      colorScheme: 'dark',
-    },
-  };
-
   const s = sizes[size] || sizes.md;
-  const t = themes[theme] || themes.light;
 
-  // Normalizar opciones (acepta strings o { value, label })
   const normalizedOptions = options.map((opt) =>
     typeof opt === 'string' ? { value: opt, label: opt } : opt
   );
 
-  const inputBorder = error ? t.borderError : t.border;
+  const inputBorder = error
+    ? 'var(--input-border-error)'
+    : 'var(--input-border)';
 
   const wrapperStyle = {
     display: 'flex',
@@ -86,14 +46,13 @@ export default function Select({
     padding: s.padding,
     fontSize: s.fontSize,
     fontFamily: 'inherit',
-    color: t.text,
-    background: t.bg,
+    color: 'var(--input-text)',
+    background: 'var(--input-bg)',
     border: `1px solid ${inputBorder}`,
     borderRadius: '8px',
     outline: 'none',
     cursor: disabled ? 'not-allowed' : 'pointer',
     transition: 'all 0.2s ease',
-    colorScheme: t.colorScheme,
     appearance: 'none',
     backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
     backgroundRepeat: 'no-repeat',
@@ -113,12 +72,14 @@ export default function Select({
             display: 'block',
             fontSize: '13px',
             fontWeight: '600',
-            color: t.labelColor,
+            color: 'var(--text-secondary)',
           }}
         >
           {label}
           {required && (
-            <span style={{ color: t.error, marginLeft: '4px' }}>*</span>
+            <span style={{ color: 'var(--input-error-text)', marginLeft: '4px' }}>
+              *
+            </span>
           )}
         </label>
       )}
@@ -130,19 +91,21 @@ export default function Select({
         style={selectBaseStyle}
         onMouseEnter={(e) => {
           if (disabled) return;
-          if (!error) e.currentTarget.style.borderColor = t.borderHover;
-          e.currentTarget.style.background = t.bgHover;
+          if (!error) e.currentTarget.style.borderColor = 'var(--input-border-hover)';
+          e.currentTarget.style.background = 'var(--input-bg-hover)';
         }}
         onMouseLeave={(e) => {
           if (disabled) return;
-          if (!error) e.currentTarget.style.borderColor = t.border;
-          e.currentTarget.style.background = t.bg;
+          if (!error) e.currentTarget.style.borderColor = 'var(--input-border)';
+          e.currentTarget.style.background = 'var(--input-bg)';
         }}
         onFocus={(e) => {
-          e.currentTarget.style.borderColor = error ? t.borderError : t.borderFocus;
+          e.currentTarget.style.borderColor = error
+            ? 'var(--input-border-error)'
+            : 'var(--input-border-focus)';
           e.currentTarget.style.boxShadow = error
-            ? `0 0 0 3px ${t.errorShadow}`
-            : `0 0 0 3px ${t.focusShadow}`;
+            ? '0 0 0 3px var(--input-error-shadow)'
+            : '0 0 0 3px var(--input-focus-shadow)';
         }}
         onBlur={(e) => {
           e.currentTarget.style.borderColor = inputBorder;
@@ -151,7 +114,14 @@ export default function Select({
         {...props}
       >
         {placeholder && (
-          <option value="" disabled style={{ background: t.optionBg, color: t.optionText }}>
+          <option
+            value=""
+            disabled
+            style={{
+              background: 'var(--input-option-bg)',
+              color: 'var(--input-option-text)',
+            }}
+          >
             {placeholder}
           </option>
         )}
@@ -159,7 +129,10 @@ export default function Select({
           <option
             key={opt.value}
             value={opt.value}
-            style={{ background: t.optionBg, color: t.optionText }}
+            style={{
+              background: 'var(--input-option-bg)',
+              color: 'var(--input-option-text)',
+            }}
           >
             {opt.label}
           </option>
@@ -170,7 +143,7 @@ export default function Select({
         <span
           style={{
             fontSize: '12px',
-            color: error ? t.error : t.hint,
+            color: error ? 'var(--input-error-text)' : 'var(--input-hint)',
             display: 'flex',
             alignItems: 'center',
             gap: '4px',

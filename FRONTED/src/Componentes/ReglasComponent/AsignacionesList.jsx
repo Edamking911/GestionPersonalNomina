@@ -5,13 +5,11 @@ import Table from '../UI/Table';
 import Button from '../UI/Button';
 import Badge from '../UI/Badge';
 
-// 🔧 Función auxiliar: separa nombre(s) y apellido(s)
+// Función auxiliar: separa nombre(s) y apellido(s)
 function separarNombreApellido(nombreCompleto) {
   if (!nombreCompleto) return { nombre: '', apellido: 'N/A' };
-
   const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
   const total = partes.length;
-
   if (total === 1) return { nombre: partes[0], apellido: 'N/A' };
   if (total === 2) return { nombre: partes[0], apellido: partes[1] };
   if (total === 3) return { nombre: partes[0], apellido: partes.slice(1).join(' ') };
@@ -21,7 +19,6 @@ function separarNombreApellido(nombreCompleto) {
       apellido: partes.slice(2).join(' '),
     };
   }
-
   const mitad = Math.ceil(total / 2);
   return {
     nombre: partes.slice(0, mitad).join(' '),
@@ -64,7 +61,7 @@ export default function AsignacionesList({ asignaciones, onRefresh }) {
       key: 'employeeId',
       label: 'Cédula',
       bold: true,
-      color: '#2b6cb0',
+      color: 'var(--primary)',
       width: '120px',
       nowrap: true,
     },
@@ -81,7 +78,7 @@ export default function AsignacionesList({ asignaciones, onRefresh }) {
       label: 'Apellido',
       render: (row) => {
         const { apellido } = separarNombreApellido(row.nombre || '');
-        return <span style={{ color: '#4a5568' }}>{apellido}</span>;
+        return <span style={{ color: 'var(--text-secondary)' }}>{apellido}</span>;
       },
     },
     {
@@ -90,8 +87,8 @@ export default function AsignacionesList({ asignaciones, onRefresh }) {
       render: (row) => (
         <span
           style={{
-            background: '#ebf8ff',
-            color: '#2b6cb0',
+            background: 'var(--primary-soft)',
+            color: 'var(--primary)',
             padding: '4px 10px',
             borderRadius: '6px',
             fontSize: '12px',
@@ -109,7 +106,13 @@ export default function AsignacionesList({ asignaciones, onRefresh }) {
       render: (row) => {
         if (!row.diasLibresFijos || row.diasLibresFijos.length === 0) {
           return (
-            <span style={{ color: '#a0aec0', fontStyle: 'italic', fontSize: '12px' }}>
+            <span
+              style={{
+                color: 'var(--text-muted)',
+                fontStyle: 'italic',
+                fontSize: '12px',
+              }}
+            >
               Sin fijos
             </span>
           );
@@ -131,7 +134,13 @@ export default function AsignacionesList({ asignaciones, onRefresh }) {
       render: (row) => {
         if (!row.diasLibresRotativos || row.diasLibresRotativos.length === 0) {
           return (
-            <span style={{ color: '#a0aec0', fontStyle: 'italic', fontSize: '12px' }}>
+            <span
+              style={{
+                color: 'var(--text-muted)',
+                fontStyle: 'italic',
+                fontSize: '12px',
+              }}
+            >
               Sin rotativos
             </span>
           );
@@ -162,16 +171,22 @@ export default function AsignacionesList({ asignaciones, onRefresh }) {
       <div
         style={{
           padding: '16px 20px',
-          borderBottom: '1px solid #e2e8f0',
+          borderBottom: '1px solid var(--border-light)',
           display: 'flex',
           justifyContent: 'flex-end',
           alignItems: 'center',
           gap: '12px',
           flexWrap: 'wrap',
-          background: '#f7fafc',
+          background: 'var(--bg-hover)',
         }}
       >
-        <label style={{ fontSize: '13px', color: '#4a5568', fontWeight: '600' }}>
+        <label
+          style={{
+            fontSize: '13px',
+            color: 'var(--text-secondary)',
+            fontWeight: '600',
+          }}
+        >
           Semana:
         </label>
         <input
@@ -181,23 +196,22 @@ export default function AsignacionesList({ asignaciones, onRefresh }) {
           style={{
             padding: '0 14px',
             height: '38px',
-            border: '1px solid #cbd5e0',
+            border: '1px solid var(--input-border)',
             borderRadius: '8px',
             fontSize: '13px',
             outline: 'none',
-            color: '#2d3748',
-            backgroundColor: '#ffffff',
-            colorScheme: 'light',
+            color: 'var(--input-text)',
+            backgroundColor: 'var(--input-bg)',
             fontFamily: 'inherit',
             transition: 'all 0.2s ease',
             minWidth: '160px',
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = '#3182ce';
-            e.target.style.boxShadow = '0 0 0 3px rgba(49, 130, 206, 0.15)';
+            e.target.style.borderColor = 'var(--input-border-focus)';
+            e.target.style.boxShadow = '0 0 0 3px var(--input-focus-shadow)';
           }}
           onBlur={(e) => {
-            e.target.style.borderColor = '#cbd5e0';
+            e.target.style.borderColor = 'var(--input-border)';
             e.target.style.boxShadow = 'none';
           }}
         />
@@ -209,7 +223,7 @@ export default function AsignacionesList({ asignaciones, onRefresh }) {
       <Table
         columns={columnas}
         data={asignaciones || []}
-        theme="light"
+        theme="auto"
         hoverable
         striped
         size="md"

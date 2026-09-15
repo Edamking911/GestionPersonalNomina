@@ -774,5 +774,45 @@
     "horaLocal": "13/09/2026, 08:28:51 a. m.",
     "deviceName": "DS-K1A8503MF",
     "rawType": "38"
+  },
+  {
+    "employeeId": "27280588",
+    "employeeName": "JONATHAN JOSE FARIAS RODRIGUEZ",
+    "timestamp": "2026-09-13T23:16:17.000Z",
+    "horaLocal": "13/09/2026, 07:16:17 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "27280588",
+    "employeeName": "JONATHAN JOSE FARIAS RODRIGUEZ",
+    "timestamp": "2026-09-14T23:46:46.000Z",
+    "horaLocal": "14/09/2026, 07:46:46 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "29789773",
+    "employeeName": "EMANUEL DAVID APONTE MARCANO",
+    "timestamp": "2026-09-15T14:01:25.000Z",
+    "horaLocal": "15/09/2026, 10:01:25 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "22652518",
+    "employeeName": "JORWINS MARCANO",
+    "timestamp": "2026-09-15T14:25:07.000Z",
+    "horaLocal": "15/09/2026, 10:25:07 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
+  },
+  {
+    "employeeId": "24765865",
+    "employeeName": "LUIS JOSE ROJAS MONTERO",
+    "timestamp": "2026-09-15T14:28:03.000Z",
+    "horaLocal": "15/09/2026, 10:28:03 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38"
   }
 ]

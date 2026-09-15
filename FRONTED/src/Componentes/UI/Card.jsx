@@ -5,8 +5,8 @@ export default function Card({
   title,
   subtitle,
   icon = null,
-  variant = 'default', // 'default' | 'success' | 'warning' | 'danger' | 'info' | 'dark'
-  padding = 'normal',   // 'none' | 'sm' | 'normal' | 'lg'
+  variant = 'default',
+  padding = 'normal',
   hoverable = false,
   fullWidth = false,
   style = {},
@@ -15,62 +15,62 @@ export default function Card({
   ...props
 }) {
   // =========================================================
-  // VARIANTES DE COLOR (usan variables CSS)
+  // 🎨 VARIANTES — usan SOLO variables CSS
+  // =========================================================
+  // Sin useTheme(). El navegador cambia los valores según la
+  // clase .dark del <html>. Cero bugs de re-render.
   // =========================================================
   const variants = {
     default: {
       bg: 'var(--card-default-bg)',
-      border: 'var(--card-default-border)',
       headerBg: 'var(--card-default-header)',
+      border: 'var(--card-default-border)',
       titleColor: 'var(--card-default-title)',
       subtitleColor: 'var(--card-default-subtitle)',
       textColor: 'var(--card-default-text)',
     },
     success: {
       bg: 'var(--card-success-bg)',
-      border: 'var(--card-success-border)',
       headerBg: 'var(--card-success-header)',
+      border: 'var(--card-success-border)',
       titleColor: 'var(--card-success-title)',
       subtitleColor: 'var(--card-success-subtitle)',
       textColor: 'var(--card-success-text)',
     },
     warning: {
       bg: 'var(--card-warning-bg)',
-      border: 'var(--card-warning-border)',
       headerBg: 'var(--card-warning-header)',
+      border: 'var(--card-warning-border)',
       titleColor: 'var(--card-warning-title)',
       subtitleColor: 'var(--card-warning-subtitle)',
       textColor: 'var(--card-warning-text)',
     },
     danger: {
       bg: 'var(--card-danger-bg)',
-      border: 'var(--card-danger-border)',
       headerBg: 'var(--card-danger-header)',
+      border: 'var(--card-danger-border)',
       titleColor: 'var(--card-danger-title)',
       subtitleColor: 'var(--card-danger-subtitle)',
       textColor: 'var(--card-danger-text)',
     },
     info: {
       bg: 'var(--card-info-bg)',
-      border: 'var(--card-info-border)',
       headerBg: 'var(--card-info-header)',
+      border: 'var(--card-info-border)',
       titleColor: 'var(--card-info-title)',
       subtitleColor: 'var(--card-info-subtitle)',
       textColor: 'var(--card-info-text)',
     },
     dark: {
       bg: 'var(--card-dark-bg)',
-      border: 'var(--card-dark-border)',
       headerBg: 'var(--card-dark-header)',
+      border: 'var(--card-dark-border)',
       titleColor: 'var(--card-dark-title)',
       subtitleColor: 'var(--card-dark-subtitle)',
       textColor: 'var(--card-dark-text)',
     },
   };
 
-  // =========================================================
-  // PADDINGS
-  // =========================================================
   const paddings = {
     none: '0',
     sm: '12px 16px',
@@ -87,9 +87,7 @@ export default function Card({
     background: v.bg,
     border: `1px solid ${v.border}`,
     borderRadius: '10px',
-    boxShadow: hoverable
-      ? 'var(--shadow-md)'
-      : 'var(--shadow-sm)',
+    boxShadow: 'var(--shadow-sm)',
     overflow: 'hidden',
     width: fullWidth ? '100%' : 'auto',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -98,12 +96,10 @@ export default function Card({
 
   return (
     <div style={cardStyle} {...props}>
-      {/* HEADER */}
       {hasHeader && (
         <div
           style={{
             padding: p,
-            borderBottom: `1px solid ${v.border}`,
             background: v.headerBg,
             display: 'flex',
             alignItems: 'center',
@@ -156,7 +152,6 @@ export default function Card({
         </div>
       )}
 
-      {/* BODY */}
       <div style={{ padding: p, color: v.textColor, ...bodyStyle }}>
         {children}
       </div>

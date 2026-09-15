@@ -53,13 +53,13 @@ export default function DiasLibresConfig({ onRefresh, onAsignar, showToast }) {
     >
       <div
         style={{
-          background: '#ebf8ff',
-          border: '1px solid #bee3f8',
+          background: 'var(--info-soft)',
+          border: '1px solid var(--card-info-border)',
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '20px',
           fontSize: '13px',
-          color: '#2c5282',
+          color: 'var(--card-info-title)',
           display: 'flex',
           gap: '10px',
           alignItems: 'flex-start',

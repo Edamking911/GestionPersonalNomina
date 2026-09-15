@@ -9,8 +9,8 @@ import UserTable from '../Componentes/BiometricoComponent/UserTable';
 import MarcajesHistory from '../Componentes/BiometricoComponent/MarcajeHistory';
 import DateSearchView from '../Componentes/BiometricoComponent/DateSearchView';
 import EmployeeSearchView from '../Componentes/BiometricoComponent/EmployeeSearchView';
-import ConfirmModal from '../Componentes/BiometricoComponent/ConfirmarModal'
-import Toast from '../Componentes/UI/Toast'
+import ConfirmModal from '../Componentes/BiometricoComponent/ConfirmarModal';
+import Toast from '../Componentes/UI/Toast';
 
 export default function Biometrico() {
   const {
@@ -51,6 +51,7 @@ export default function Biometrico() {
 
   const lastMsgRef = useRef({ texto: '', timestamp: 0 });
 
+  // 👇 useEffect para mostrar Toast con anti-duplicado y clasificación mejorada
   useEffect(() => {
     if (!mensaje) return;
 
@@ -68,21 +69,46 @@ export default function Biometrico() {
       const msg = mensaje.toLowerCase();
 
       let tipo = 'info';
-      if (msg.includes('error') || msg.includes('no se pudo') || msg.includes('fall')) {
-        tipo = 'error';
-      } else if (
+
+      const esExito =
+        msg.includes('✅') ||
         msg.includes('éxito') ||
+        msg.includes('exitos') ||
         msg.includes('correctamente') ||
         msg.includes('completada') ||
         msg.includes('cargad') ||
         msg.includes('activado') ||
         msg.includes('desactivado') ||
-        msg.includes('limpiad')
-      ) {
-        tipo = 'success';
-      } else if (msg.includes('atención') || msg.includes('⚠️')) {
-        tipo = 'warning';
-      }
+        msg.includes('generad') ||
+        msg.includes('importad') ||
+        msg.includes('restaurad') ||
+        msg.includes('asignad') ||
+        msg.includes('limpiad') ||
+        msg.includes('sincroniz');
+
+      const esWarning =
+        msg.includes('⚠️') ||
+        msg.includes('completa') ||
+        msg.includes('debes') ||
+        msg.includes('selecciona') ||
+        msg.includes('atención') ||
+        msg.includes('con problemas');
+
+      const esError =
+        !esExito &&
+        (msg.includes('❌') ||
+          msg.includes('error al') ||
+          msg.includes('error en') ||
+          msg.includes('no se pudo') ||
+          msg.includes('no se pudieron') ||
+          msg.includes('no existe') ||
+          msg.includes('no está activo') ||
+          msg.includes('desactivad') ||
+          msg.includes('falló'));
+
+      if (esError) tipo = 'error';
+      else if (esWarning) tipo = 'warning';
+      else if (esExito) tipo = 'success';
 
       showToast(mensaje, tipo);
       setMensaje('');
@@ -91,6 +117,7 @@ export default function Biometrico() {
     return () => clearTimeout(timeoutId);
   }, [mensaje, showToast, setMensaje]);
 
+  // Estados para el modal de confirmación
   const [modalConfirm, setModalConfirm] = useState({
     isOpen: false,
     type: 'danger',
@@ -156,6 +183,7 @@ export default function Biometrico() {
             <UserTable
               title="✅ Empleados que Ya Marcaron Hoy"
               users={usuariosMarcados}
+              loading={loading && usuarios.length === 0}
               emptyMessage="Ningún empleado ha marcado todavía el día de hoy."
               variant="success"
               onDelete={handleSolicitarDesactivar}
@@ -165,6 +193,7 @@ export default function Biometrico() {
             <UserTable
               title="⏳ Empleados Pendientes por Marcar Hoy"
               users={usuariosPendientes}
+              loading={loading && usuarios.length === 0}
               emptyMessage="¡Excelente! Todos los usuarios activos ya han marcado hoy."
               variant="warning"
               onDelete={handleSolicitarDesactivar}
@@ -173,11 +202,13 @@ export default function Biometrico() {
             />
           </div>
         );
+
       case 'todos':
         return (
           <UserTable
             title="Lista Completa de Empleados Registrados"
             users={usuarios}
+            loading={loading && usuarios.length === 0}
             emptyMessage="No hay usuarios cargados actualmente."
             variant="default"
             onDelete={handleSolicitarDesactivar}
@@ -185,8 +216,10 @@ export default function Biometrico() {
             showStatus={true}
           />
         );
+
       case 'marcajes':
         return <MarcajesHistory registrosFecha={registrosFecha} />;
+
       case 'fechaEspecifica':
         return (
           <DateSearchView
@@ -197,6 +230,7 @@ export default function Biometrico() {
             formatearHora={formatearHoraDesdeTimestamp}
           />
         );
+
       case 'eventos':
         return (
           <EmployeeSearchView
@@ -207,6 +241,7 @@ export default function Biometrico() {
             formatearHora={formatearHoraDesdeTimestamp}
           />
         );
+
       default:
         return null;
     }
@@ -214,6 +249,7 @@ export default function Biometrico() {
 
   return (
     <div
+      className="content-padding-mobile"
       style={{
         padding: '24px',
         fontFamily: 'Inter, system-ui, sans-serif',
@@ -293,13 +329,16 @@ export default function Biometrico() {
         onSyncYesterday={handleSincronizarAyer}
         onCleanDuplicates={handleLimpiarDuplicados}
         onClearCache={handleLimpiarCache}
-        onRefresh={cargarDatos}
+        onRefresh={() => cargarDatos(true)}
         archivoExcel={archivoExcel}
         setArchivoExcel={setArchivoExcel}
         onImportExcel={handleSubirExcel}
       />
 
-      {renderVista()}
+      {/* ============ VISTA DEL TAB (con transición) ============ */}
+      <div key={vistaActiva} className="tab-transition">
+        {renderVista()}
+      </div>
 
       {toast.message && (
         <Toast

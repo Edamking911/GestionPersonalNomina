@@ -15,9 +15,11 @@ import {
 } from 'recharts';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
+import StatsSkeleton from '../UI/StatsEsqueleto';
+import ChartSkeleton from '../UI/ChardEsqueleto';
 
 // =========================================================
-// 🎨 COLORES (fuertes, funcionan en ambos temas)
+// 🎨 COLORES
 // =========================================================
 const COLORS = {
   primary: '#3182ce',
@@ -39,7 +41,7 @@ const ESTADO_COLORS = {
 };
 
 // =========================================================
-// 🔧 HELPERS DE FORMATO
+// 🔧 HELPERS
 // =========================================================
 const formatearMinutos = (minutos) => {
   if (!minutos || minutos <= 0) return '0m';
@@ -60,96 +62,7 @@ const formatearHoras = (horas) => {
 };
 
 // =========================================================
-// 🎨 SKELETON LOADERS
-// =========================================================
-const SkeletonCard = () => (
-  <>
-    <style>{`
-      @keyframes skeletonPulse {
-        0%, 100% { opacity: 0.4; }
-        50% { opacity: 0.8; }
-      }
-    `}</style>
-    <div
-      style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-light)',
-        padding: '18px 22px',
-        borderRadius: '10px',
-      }}
-    >
-      <div
-        style={{
-          background:
-            'linear-gradient(90deg, var(--skeleton-base) 0%, var(--skeleton-shine) 50%, var(--skeleton-base) 100%)',
-          backgroundSize: '200% 100%',
-          animation: 'skeletonPulse 1.5s ease-in-out infinite',
-          borderRadius: '6px',
-          width: '60%',
-          height: '12px',
-          marginBottom: '12px',
-        }}
-      ></div>
-      <div
-        style={{
-          background:
-            'linear-gradient(90deg, var(--skeleton-base) 0%, var(--skeleton-shine) 50%, var(--skeleton-base) 100%)',
-          backgroundSize: '200% 100%',
-          animation: 'skeletonPulse 1.5s ease-in-out infinite',
-          borderRadius: '6px',
-          width: '40%',
-          height: '28px',
-        }}
-      ></div>
-    </div>
-  </>
-);
-
-const SkeletonChart = ({ height = 320 }) => (
-  <>
-    <style>{`
-      @keyframes skeletonPulseChart {
-        0%, 100% { opacity: 0.4; }
-        50% { opacity: 0.8; }
-      }
-    `}</style>
-    <div
-      style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border-light)',
-        padding: '20px',
-        borderRadius: '10px',
-      }}
-    >
-      <div
-        style={{
-          background:
-            'linear-gradient(90deg, var(--skeleton-base) 0%, var(--skeleton-shine) 50%, var(--skeleton-base) 100%)',
-          backgroundSize: '200% 100%',
-          animation: 'skeletonPulseChart 1.5s ease-in-out infinite',
-          borderRadius: '8px',
-          width: '50%',
-          height: '20px',
-          marginBottom: '16px',
-        }}
-      ></div>
-      <div
-        style={{
-          background:
-            'linear-gradient(90deg, var(--skeleton-base) 0%, var(--skeleton-shine) 50%, var(--skeleton-base) 100%)',
-          backgroundSize: '200% 100%',
-          animation: 'skeletonPulseChart 1.5s ease-in-out infinite',
-          borderRadius: '8px',
-          width: '100%',
-          height: `${height}px`,
-        }}
-      ></div>
-    </div>
-  </>
-);
-
-// =========================================================
-// 🎨 ESTILOS COMPARTIDOS PARA INPUTS DE FECHA
+// 🎨 ESTILOS COMPARTIDOS
 // =========================================================
 const inputDateStyle = {
   padding: '0 14px',
@@ -177,8 +90,22 @@ const labelStyle = {
   color: 'var(--text-secondary)',
 };
 
+const statLabelStyle = {
+  fontSize: '11px',
+  color: 'var(--stat-card-text-muted)',
+  textTransform: 'uppercase',
+  fontWeight: '600',
+  letterSpacing: '0.5px',
+};
+
+const statValueStyle = {
+  margin: '6px 0 0 0',
+  fontSize: '26px',
+  fontWeight: 'bold',
+};
+
 // =========================================================
-// 🎨 TOOLTIP / GRID / TICKS (colores adaptables)
+// 🎨 TOOLTIP / GRID / TICKS
 // =========================================================
 const tooltipStyle = {
   borderRadius: '8px',
@@ -234,7 +161,7 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
   };
 
   // =========================================================
-  // ESTADO: CARGANDO
+  // ESTADO: CARGANDO (con nuevos skeletons)
   // =========================================================
   if (loading) {
     return (
@@ -282,23 +209,13 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
           </div>
         </Card>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '16px',
-          }}
-        >
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
+        {/* 🦴 Stats skeleton (6 tarjetas) */}
+        <StatsSkeleton count={6} />
 
-        <SkeletonChart height={350} />
+        {/* 🦴 Gráfico grande */}
+        <ChartSkeleton height={350} />
 
+        {/* 🦴 2 gráficos medianos */}
         <div
           style={{
             display: 'grid',
@@ -306,11 +223,12 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
             gap: '20px',
           }}
         >
-          <SkeletonChart height={300} />
-          <SkeletonChart height={300} />
+          <ChartSkeleton height={300} />
+          <ChartSkeleton height={300} />
         </div>
 
-        <SkeletonChart height={300} />
+        {/* 🦴 1 gráfico más */}
+        <ChartSkeleton height={300} />
       </div>
     );
   }
@@ -796,20 +714,3 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
     </div>
   );
 }
-
-// =========================================================
-// 🎨 ESTILOS COMPARTIDOS DE STAT CARDS
-// =========================================================
-const statLabelStyle = {
-  fontSize: '11px',
-  color: 'var(--stat-card-text-muted)',
-  textTransform: 'uppercase',
-  fontWeight: '600',
-  letterSpacing: '0.5px',
-};
-
-const statValueStyle = {
-  margin: '6px 0 0 0',
-  fontSize: '26px',
-  fontWeight: 'bold',
-};

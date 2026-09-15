@@ -1,6 +1,6 @@
 // src/Componentes/BiometricoComponent/StatsCards.jsx
 
-// 🎨 Íconos SVG inline (no dependen de fuentes externas)
+// 🎨 Íconos SVG inline
 const IconoUsuarios = ({ color }) => (
   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -79,7 +79,6 @@ export default function StatsCards({
           padding: 18px 22px;
           border-radius: 10px;
           min-width: 160px;
-          flex: 1;
           box-shadow: var(--stat-card-shadow);
           position: relative;
           overflow: hidden;
@@ -146,7 +145,15 @@ export default function StatsCards({
         .stat-punto.loading { background: #d69e2e; color: #d69e2e; animation: pulsoPunto 1s ease-in-out infinite; }
       `}</style>
 
-      <div style={{ display: 'flex', gap: '15px', margin: '20px 0', flexWrap: 'wrap' }}>
+      <div
+        className="stats-grid-mobile"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '15px',
+          margin: '20px 0',
+        }}
+      >
         {/* Total Usuarios */}
         <div
           className="stat-card"

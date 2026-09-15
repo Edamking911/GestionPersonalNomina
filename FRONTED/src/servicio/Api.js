@@ -1,8 +1,32 @@
 // src/servicio/Api.js
 import axios from 'axios';
 
+// =========================================================
+// 🔍 Detectar automáticamente el host del backend
+// =========================================================
+// - En PC: localhost:5173 → llama a localhost:3000
+// - En móvil: 192.168.x.x:5173 → llama a 192.168.x.x:3000
+// - Si hay VITE_API_URL en .env → la usa siempre
+// =========================================================
+const getBaseURL = () => {
+  // 1. Variable de entorno (opcional, prioridad alta)
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // 2. Detectar automáticamente el host actual
+  if (typeof window !== 'undefined' && window.location) {
+    const { protocol, hostname } = window.location;
+    // El backend corre en el puerto 3000
+    return `${protocol}//${hostname}:3000`;
+  }
+
+  // 3. Fallback
+  return 'http://localhost:3000';
+};
+
 const api = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: getBaseURL(),
   withCredentials: true,
   timeout: 60000,
 });
@@ -30,22 +54,15 @@ api.interceptors.response.use(
     // 🔑 Caso 1: Respuesta envuelta con { success, data, message, error }
     if ('success' in res && 'data' in res) {
       if (res.success) {
-        // Guardar el mensaje en la respuesta por si se necesita después
         response.envelopeMessage = res.message;
-        // Desenvolver: response.data = res.data
         response.data = res.data;
       } else {
-        // Es un error envuelto
         const error = new Error(res.message || 'Error desconocido');
         error.response = { data: res, status: res.error || 500 };
         error.isEnvelopeError = true;
         return Promise.reject(error);
       }
     }
-
-    // 🔑 Caso 2: Respuesta con success pero SIN data (ej. { success, message })
-    // Se deja tal cual (el hook lo maneja como res.data.success)
-    // No hay nada que hacer aquí
 
     return response;
   },
@@ -58,8 +75,15 @@ api.interceptors.response.use(
         error.statusCode = res.error || error.response.status;
       }
     }
+
+    // 🔍 Log útil para debug
+    console.error(
+      `❌ API Error [${error.config?.method?.toUpperCase()} ${error.config?.url}]:`,
+      error.message,
+    );
+
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

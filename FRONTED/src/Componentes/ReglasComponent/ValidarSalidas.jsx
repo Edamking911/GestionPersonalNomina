@@ -56,7 +56,7 @@ export default function ValidarSalidas({ onValidar, resultado, showToast }) {
               marginBottom: '6px',
               fontWeight: '600',
               fontSize: '13px',
-              color: '#4a5568',
+              color: 'var(--text-secondary)',
             }}
           >
             Fecha (opcional)
@@ -69,12 +69,11 @@ export default function ValidarSalidas({ onValidar, resultado, showToast }) {
               width: '100%',
               height: '42px',
               padding: '0 14px',
-              border: '1px solid #cbd5e0',
+              border: '1px solid var(--input-border)',
               borderRadius: '8px',
               fontSize: '14px',
-              color: '#2d3748',
-              background: '#fff',
-              colorScheme: 'light',
+              color: 'var(--input-text)',
+              background: 'var(--input-bg)',
               outline: 'none',
               fontFamily: 'inherit',
             }}
@@ -105,7 +104,13 @@ export default function ValidarSalidas({ onValidar, resultado, showToast }) {
               gap: '12px',
             }}
           >
-            <h4 style={{ margin: 0, fontSize: '15px', color: '#2d3748' }}>
+            <h4
+              style={{
+                margin: 0,
+                fontSize: '15px',
+                color: 'var(--text-primary)',
+              }}
+            >
               Resultados para {resultado.fecha || 'hoy'}
             </h4>
             <Badge variant="info" size="md">
@@ -118,7 +123,7 @@ export default function ValidarSalidas({ onValidar, resultado, showToast }) {
               style={{
                 overflowX: 'auto',
                 borderRadius: '10px',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--table-row-border)',
               }}
             >
               <table
@@ -126,22 +131,20 @@ export default function ValidarSalidas({ onValidar, resultado, showToast }) {
                   width: '100%',
                   borderCollapse: 'collapse',
                   fontSize: '13px',
+                  background: 'var(--table-row-bg)',
                 }}
               >
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>
-                      Empleado
-                    </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>
-                      Horario
-                    </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>
-                      Entrada Real
-                    </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>
-                      Estado
-                    </th>
+                  <tr
+                    style={{
+                      background: 'var(--table-header-bg)',
+                      borderBottom: '2px solid var(--table-header-border)',
+                    }}
+                  >
+                    <th style={thStyle}>Empleado</th>
+                    <th style={thStyle}>Horario</th>
+                    <th style={thStyle}>Entrada Real</th>
+                    <th style={thStyle}>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -151,20 +154,45 @@ export default function ValidarSalidas({ onValidar, resultado, showToast }) {
                       <tr
                         key={idx}
                         style={{
-                          borderBottom: '1px solid #edf2f7',
-                          background: idx % 2 === 0 ? '#fff' : '#fafbfc',
+                          borderBottom: '1px solid var(--table-row-border)',
+                          background:
+                            idx % 2 === 0
+                              ? 'var(--table-row-bg)'
+                              : 'var(--table-row-bg-alt)',
                         }}
                       >
-                        <td style={{ padding: '12px 16px', fontWeight: '600', color: '#2d3748' }}>
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            fontWeight: '600',
+                            color: 'var(--table-row-text)',
+                          }}
+                        >
                           {item.nombre}
-                          <span style={{ color: '#718096', fontSize: '11px', marginLeft: '6px' }}>
+                          <span
+                            style={{
+                              color: 'var(--text-muted)',
+                              fontSize: '11px',
+                              marginLeft: '6px',
+                            }}
+                          >
                             ({item.employeeId})
                           </span>
                         </td>
-                        <td style={{ padding: '12px 16px', color: '#4a5568' }}>
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            color: 'var(--table-row-text)',
+                          }}
+                        >
                           {item.horario || 'N/A'}
                         </td>
-                        <td style={{ padding: '12px 16px', color: '#4a5568' }}>
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            color: 'var(--table-row-text)',
+                          }}
+                        >
                           {item.entradaReal || '—'}
                         </td>
                         <td style={{ padding: '12px 16px' }}>
@@ -183,13 +211,20 @@ export default function ValidarSalidas({ onValidar, resultado, showToast }) {
               style={{
                 textAlign: 'center',
                 padding: '40px 20px',
-                background: '#f7fafc',
+                background: 'var(--bg-hover)',
                 borderRadius: '10px',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--border-light)',
               }}
             >
               <div style={{ fontSize: '40px', marginBottom: '8px' }}>🎉</div>
-              <p style={{ margin: 0, color: '#38a169', fontSize: '14px', fontWeight: '600' }}>
+              <p
+                style={{
+                  margin: 0,
+                  color: 'var(--success)',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                }}
+              >
                 ¡Todos los empleados han marcado su salida!
               </p>
             </div>
@@ -199,3 +234,13 @@ export default function ValidarSalidas({ onValidar, resultado, showToast }) {
     </Card>
   );
 }
+
+const thStyle = {
+  padding: '12px 16px',
+  textAlign: 'left',
+  fontSize: '11px',
+  color: 'var(--table-header-text)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  fontWeight: '700',
+};

@@ -15,6 +15,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import * as path from 'path';
+import { BiometricDeviceFactory } from './Factory/Biometrico-device.factory';
 
 
 
@@ -314,4 +315,29 @@ export class BiometricoController {
       true, // incluirInactivos = true
     );
   }
+
+@Get('test-adapter')
+async testAdapter() {
+  const factory = new BiometricDeviceFactory();
+  const device = factory.crearDesdeEnv();
+
+  const info = await device.getDeviceInfo();
+  const users = await device.listUsers();
+  const time = await device.getDeviceTime();
+
+  return {
+    deviceType: device.deviceType,
+    info,
+    totalUsuarios: users.length,
+    primerosUsuarios: users.slice(0, 3),
+    deviceTime: time,
+  };
+}
+
+@Post('refresh-names')
+async refreshNames() {
+  return await this.biometricoService.refreshEmployeeNames();
+}
+
+
 }

@@ -774,8 +774,6 @@
     "horaLocal": "13/09/2026, 08:28:51 a. m.",
     "deviceName": "DS-K1A8503MF",
     "rawType": "38"
-<<<<<<< Updated upstream
-=======
   },
   {
     "employeeId": "27280588",
@@ -864,6 +862,5 @@
     "deviceName": "DS-K1A8503MF",
     "rawType": "38",
     "employeeName": "ADRIANA SUBERO"
->>>>>>> Stashed changes
   }
 ]

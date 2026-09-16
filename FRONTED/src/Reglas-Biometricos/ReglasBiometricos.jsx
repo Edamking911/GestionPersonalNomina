@@ -74,26 +74,10 @@ export default function ReglasBiometrico() {
 
       let tipo = 'info';
 
-      if (
-        msg.includes('error') ||
-        msg.includes('no se pudo') ||
-        msg.includes('no se pudieron') ||
-        msg.includes('fall') ||
-        msg.includes('desactivad') ||
-        msg.includes('no existe') ||
-        msg.includes('no está activo')
-      ) {
-        tipo = 'error';
-      } else if (
-        msg.includes('completa') ||
-        msg.includes('debes') ||
-        msg.includes('selecciona') ||
-        msg.includes('atención') ||
-        msg.includes('⚠️')
-      ) {
-        tipo = 'warning';
-      } else if (
+      const esExito =
+        msg.includes('✅') ||
         msg.includes('éxito') ||
+        msg.includes('exitos') ||
         msg.includes('correctamente') ||
         msg.includes('completada') ||
         msg.includes('cargad') ||
@@ -102,10 +86,32 @@ export default function ReglasBiometrico() {
         msg.includes('generad') ||
         msg.includes('importad') ||
         msg.includes('restaurad') ||
-        msg.includes('asignad')
-      ) {
-        tipo = 'success';
-      }
+        msg.includes('asignad') ||
+        msg.includes('validación exitosa');
+
+      const esWarning =
+        msg.includes('⚠️') ||
+        msg.includes('completa') ||
+        msg.includes('debes') ||
+        msg.includes('selecciona') ||
+        msg.includes('atención') ||
+        msg.includes('con problemas');
+
+      const esError =
+        !esExito &&
+        (msg.includes('❌') ||
+          msg.includes('error al') ||
+          msg.includes('error en') ||
+          msg.includes('no se pudo') ||
+          msg.includes('no se pudieron') ||
+          msg.includes('no existe') ||
+          msg.includes('no está activo') ||
+          msg.includes('desactivad') ||
+          msg.includes('falló'));
+
+      if (esError) tipo = 'error';
+      else if (esWarning) tipo = 'warning';
+      else if (esExito) tipo = 'success';
 
       showToast(mensaje, tipo);
       setMensaje('');
@@ -125,6 +131,7 @@ export default function ReglasBiometrico() {
   const tabs = [
     { id: 'dashboard', label: '📊 Resumen' },
     { id: 'graficos', label: '📈 Gráficos' },
+    { id: 'evolucion', label: '📉 Evolución' },
     { id: 'asignaciones', label: '📅 Asignaciones' },
     { id: 'asignar', label: '➕ Asignar Horario' },
     { id: 'dias-libres', label: '🗓️ Días Libres' },
@@ -154,6 +161,9 @@ export default function ReglasBiometrico() {
             onGenerarSemanal={obtenerReporteSemanal}
           />
         );
+
+      case 'evolucion':
+        return <EvolucionMensual />;
 
       case 'asignaciones':
         return (
@@ -238,6 +248,7 @@ export default function ReglasBiometrico() {
 
   return (
     <div
+      className="content-padding-mobile"
       style={{
         padding: '24px',
         fontFamily: 'Inter, system-ui, sans-serif',
@@ -251,7 +262,6 @@ export default function ReglasBiometrico() {
           0% { background-position: -200% center; }
           100% { background-position: 200% center; }
         }
-
         @keyframes girarEngranaje {
           0%, 100% {
             transform: rotate(0deg) scale(1);
@@ -262,17 +272,14 @@ export default function ReglasBiometrico() {
             filter: drop-shadow(0 0 12px #805ad5);
           }
         }
-
         @keyframes entradaTitulo {
           0% { opacity: 0; transform: translateY(-10px); }
           100% { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes entradaTab {
           0% { opacity: 0; transform: translateY(8px); }
           100% { opacity: 1; transform: translateY(0); }
         }
-
         .titulo-reglas {
           margin: 0 0 20px 0;
           font-size: 24px;
@@ -295,14 +302,12 @@ export default function ReglasBiometrico() {
           justify-content: center;
           gap: 10px;
         }
-
         .titulo-reglas .engranaje {
           display: inline-block;
           font-size: 26px;
           -webkit-text-fill-color: initial;
           animation: girarEngranaje 3s ease-in-out infinite;
         }
-
         .reglas-tab {
           padding: 10px 18px;
           cursor: pointer;
@@ -318,26 +323,22 @@ export default function ReglasBiometrico() {
           overflow: hidden;
           font-family: inherit;
         }
-
         .reglas-tab:hover {
           transform: translateY(-2px);
           border-color: var(--reglas-tab-hover-border);
           color: var(--reglas-tab-hover-text);
           box-shadow: 0 4px 10px var(--reglas-tab-hover-shadow);
         }
-
         .reglas-tab.activa {
           background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%);
           color: #fff;
           border-color: #805ad5;
           box-shadow: 0 4px 12px rgba(128, 90, 213, 0.4);
         }
-
         .reglas-tab.activa:hover {
           transform: translateY(-2px);
           box-shadow: 0 6px 16px rgba(128, 90, 213, 0.5);
         }
-
         .reglas-tab:nth-child(1) { animation-delay: 0.0s; }
         .reglas-tab:nth-child(2) { animation-delay: 0.05s; }
         .reglas-tab:nth-child(3) { animation-delay: 0.10s; }
@@ -349,6 +350,7 @@ export default function ReglasBiometrico() {
         .reglas-tab:nth-child(9) { animation-delay: 0.40s; }
         .reglas-tab:nth-child(10) { animation-delay: 0.45s; }
         .reglas-tab:nth-child(11) { animation-delay: 0.50s; }
+        .reglas-tab:nth-child(12) { animation-delay: 0.55s; }
       `}</style>
 
       <h2 className="titulo-reglas">
@@ -357,6 +359,7 @@ export default function ReglasBiometrico() {
       </h2>
 
       <div
+        className="tabs-scroll-mobile"
         style={{
           display: 'flex',
           gap: '8px',
@@ -377,7 +380,9 @@ export default function ReglasBiometrico() {
         ))}
       </div>
 
-      {renderVista()}
+      <div key={vistaActiva} className="tab-transition">
+        {renderVista()}
+      </div>
 
       {toast.message && (
         <Toast

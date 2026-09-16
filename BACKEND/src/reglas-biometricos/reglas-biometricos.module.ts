@@ -12,12 +12,7 @@ import {BiometricoModule} from '../biometrico/biometrico.module'
 @Module({
   imports: [BiometricoModule],
   controllers: [ReglasBiometricosController],
-<<<<<<< Updated upstream
-  providers: [ReglasBiometricosService, BiometricoService],
-  exports: [ReglasBiometricosService],
-=======
   providers: [ReglasBiometricosService,BiometricoService,ReglasConfigService,CacheEmpleadosService,EvaluacionService,ReportesService,AsignacionesService,BackupsService],
   exports: [ReglasBiometricosService]
->>>>>>> Stashed changes
 })
 export class ReglasBiometricosModule {}

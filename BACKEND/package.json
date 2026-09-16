@@ -81,12 +81,6 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
-    "transformIgnorePatterns": [
-      "node_modules/(?!(@nestjs|swagger-ui-express)/)"
-    ],
-    "moduleNameMapper": {
-      "^@nestjs/swagger$": "<rootDir>/__mocks__/@nestjs/swagger"
-    },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],

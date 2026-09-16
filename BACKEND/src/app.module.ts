@@ -1,17 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import {TypeOrmModule} from '@nestjs/typeorm'
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { BiometricoModule } from './biometrico/biometrico.module';
 import { DepartamentosModule } from './departamentos/departamentos.module';
 import { CargosModule } from './cargos/cargos.module';
-import { EgresosPersonalesModule } from './egresos-personales/egresos-personales.module';
+import {EgresosPersonalesModule} from './egresos-personales/egresos-personales.module';
 import { MonedaModule } from './moneda/moneda.module';
 import { TasaCambioModule } from './tasa_cambio/tasa_cambio.module';
-//import { BiometricoModule } from './biometrico/biometrico.module';
-//import { ReglasBiometricosModule } from './reglas-biometricos/reglas-biometricos.module';
-import { CuentasBancariasModule } from './cuentas-bancarias/cuentas-bancarias.module';
-import { EmpleadosModule } from './empleados/empleados.module';
+import { ReglasBiometricosModule } from './reglas-biometricos/reglas-biometricos.module';
 
 @Module({
   imports: [
@@ -26,17 +24,18 @@ import { EmpleadosModule } from './empleados/empleados.module';
       synchronize: false,
     }),
     ScheduleModule.forRoot(),
-    CuentasBancariasModule,
+    BiometricoModule,
     DepartamentosModule,
     CargosModule,
     MonedaModule,
     TasaCambioModule,
-    //ReglasBiometricosModule,
-    //BiometricoModule,
+    ReglasBiometricosModule,
+    BiometricoModule,
+    ReglasBiometricosModule,
     EgresosPersonalesModule,
-    EmpleadosModule,
+    //EmpleadosModule,
   ],
-
+  
   controllers: [AppController],
   providers: [AppService],
 })

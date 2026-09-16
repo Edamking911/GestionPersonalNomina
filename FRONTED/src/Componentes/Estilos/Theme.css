@@ -2,8 +2,11 @@
    🎨 SISTEMA DE TEMAS - VARIABLES CSS
    ============================================================ */
 
+/* ============================================================
+   🌞 MODO CLARO
+   ============================================================ */
 :root {
-  /* 🌞 MODO CLARO */
+  /* FONDOS */
   --bg-app: #f8f9fa;
   --bg-card: #ffffff;
   --bg-elevated: #ffffff;
@@ -12,19 +15,23 @@
   --bg-navbar: #2d3748;
   --bg-navbar-hover: #4a5568;
 
+  /* TEXTOS */
   --text-primary: #1a202c;
   --text-secondary: #4a5568;
   --text-muted: #718096;
   --text-inverse: #ffffff;
 
+  /* BORDES */
   --border-color: #cbd5e0;
   --border-light: #e2e8f0;
   --border-strong: #a0aec0;
 
+  /* SOMBRAS */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
 
+  /* COLORES SEMÁNTICOS */
   --primary: #3182ce;
   --primary-hover: #2c5282;
   --success: #38a169;
@@ -36,18 +43,120 @@
   --info: #805ad5;
   --info-hover: #6b46c1;
 
+  /* ACENTOS SUAVES */
   --primary-soft: #ebf8ff;
   --success-soft: #f0fff4;
   --warning-soft: #fffaf0;
   --danger-soft: #fff5f5;
   --info-soft: #faf5ff;
 
+  /* SKELETON */
   --skeleton-base: #e2e8f0;
   --skeleton-shine: #edf2f7;
 
-  /* ============================================================
-     🃏 VARIABLES DEL CARD (MODO CLARO)
-     ============================================================ */
+  /* ACENTOS STAT CARDS */
+  --accent-blue-light: #ebf8ff;
+  --accent-green-light: #f0fff4;
+  --accent-orange-light: #fffaf0;
+  --accent-red-light: #fff5f5;
+  --accent-yellow-light: #fefcbf;
+  --accent-purple-light: #faf5ff;
+
+  /* STAT CARDS */
+  --stat-card-bg: #ffffff;
+  --stat-card-border: #e2e8f0;
+  --stat-card-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  --stat-card-shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.1);
+  --stat-card-text-muted: #718096;
+
+  /* TABLA */
+  --table-header-bg: #f8fafc;
+  --table-header-text: #4a5568;
+  --table-header-border: #e2e8f0;
+  --table-row-bg: #ffffff;
+  --table-row-bg-alt: #fafbfc;
+  --table-row-hover: #f0f7ff;
+  --table-row-border: #edf2f7;
+  --table-row-text: #2d3748;
+  --table-empty-text: #a0aec0;
+  --table-empty-bg: #ffffff;
+
+  /* BADGES */
+  --badge-default-bg: #edf2f7;
+  --badge-default-text: #4a5568;
+  --badge-default-dot: #4a5568;
+  --badge-success-bg: #c6f6d5;
+  --badge-success-text: #22543d;
+  --badge-success-dot: #38a169;
+  --badge-warning-bg: #feebc8;
+  --badge-warning-text: #744210;
+  --badge-warning-dot: #dd6b20;
+  --badge-danger-bg: #fed7d7;
+  --badge-danger-text: #9b2c2c;
+  --badge-danger-dot: #e53e3e;
+  --badge-info-bg: #bee3f8;
+  --badge-info-text: #2c5282;
+  --badge-info-dot: #3182ce;
+  --badge-dark-bg: #2d3748;
+  --badge-dark-text: #f7fafc;
+  --badge-dark-dot: #cbd5e0;
+  --badge-light-bg: #f7fafc;
+  --badge-light-text: #4a5568;
+  --badge-light-dot: #4a5568;
+
+  /* INPUTS */
+  --input-bg: #ffffff;
+  --input-bg-hover: #f7fafc;
+  --input-bg-focus: #ffffff;
+  --input-border: #cbd5e0;
+  --input-border-hover: #a0aec0;
+  --input-border-focus: #3182ce;
+  --input-border-error: #e53e3e;
+  --input-text: #2d3748;
+  --input-placeholder: #a0aec0;
+  --input-hint: #718096;
+  --input-error-text: #e53e3e;
+  --input-focus-shadow: rgba(49, 130, 206, 0.15);
+  --input-error-shadow: rgba(229, 62, 62, 0.15);
+  --input-icon-color: #a0aec0;
+  --input-option-bg: #ffffff;
+  --input-option-text: #2d3748;
+
+  /* MODAL */
+  --modal-bg: #ffffff;
+  --modal-header-border: #e2e8f0;
+  --modal-title-text: #1a202c;
+  --modal-subtitle-text: #718096;
+  --modal-close-bg: #f7fafc;
+  --modal-close-color: #4a5568;
+  --modal-close-bg-hover: #fed7d7;
+  --modal-close-color-hover: #e53e3e;
+  --modal-footer-bg: #f7fafc;
+  --modal-footer-border: #e2e8f0;
+  --modal-icon-default-bg: #ebf8ff;
+  --modal-icon-success-bg: #c6f6d5;
+  --modal-icon-warning-bg: #feebc8;
+  --modal-icon-danger-bg: #fed7d7;
+  --modal-icon-info-bg: #e9d8fd;
+
+  /* TOAST */
+  --toast-bg: #ffffff;
+  --toast-shadow: 0 12px 40px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  --toast-message-text: #4a5568;
+  --toast-close-color: #a0aec0;
+  --toast-close-bg-hover: #f7fafc;
+  --toast-close-color-hover: #4a5568;
+
+  /* TABS REGLAS */
+  --reglas-tab-bg: #ffffff;
+  --reglas-tab-text: #4a5568;
+  --reglas-tab-border: #cbd5e0;
+  --reglas-tab-hover-border: #805ad5;
+  --reglas-tab-hover-text: #805ad5;
+  --reglas-tab-hover-shadow: rgba(128, 90, 213, 0.15);
+
+  /* CARDS */
   --card-default-bg: #ffffff;
   --card-default-header: #f7fafc;
   --card-default-border: #e2e8f0;
@@ -90,12 +199,25 @@
   --card-dark-subtitle: #a0aec0;
   --card-dark-text: #e2e8f0;
 
-  /* Ícono del header */
   --card-icon-bg: rgba(255, 255, 255, 0.6);
+
+  /* CHART */
+  --chart-grid: #e2e8f0;
+  --chart-text: #4a5568;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e2e8f0;
+
+  /* BASE */
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  color-scheme: light;
 }
 
+/* ============================================================
+   🌙 MODO OSCURO - ORIGINAL (el que te gustaba)
+   ============================================================ */
 html.dark {
-  /* 🌙 MODO OSCURO */
+  /* FONDOS */
   --bg-app: #1a202c;
   --bg-card: #2d3748;
   --bg-elevated: #374151;
@@ -104,19 +226,23 @@ html.dark {
   --bg-navbar: #111827;
   --bg-navbar-hover: #1f2937;
 
+  /* TEXTOS */
   --text-primary: #f7fafc;
   --text-secondary: #cbd5e0;
   --text-muted: #a0aec0;
   --text-inverse: #1a202c;
 
+  /* BORDES */
   --border-color: #4a5568;
   --border-light: #374151;
   --border-strong: #718096;
 
+  /* SOMBRAS */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
 
+  /* COLORES SEMÁNTICOS */
   --primary: #4299e1;
   --primary-hover: #63b3ed;
   --success: #48bb78;
@@ -128,18 +254,120 @@ html.dark {
   --info: #9f7aea;
   --info-hover: #b794f4;
 
+  /* ACENTOS SUAVES */
   --primary-soft: rgba(66, 153, 225, 0.15);
   --success-soft: rgba(72, 187, 120, 0.15);
   --warning-soft: rgba(237, 137, 54, 0.15);
   --danger-soft: rgba(252, 129, 129, 0.15);
   --info-soft: rgba(159, 122, 234, 0.15);
 
+  /* SKELETON */
   --skeleton-base: #4a5568;
   --skeleton-shine: #718096;
 
-  /* ============================================================
-     🃏 VARIABLES DEL CARD (MODO OSCURO)
-     ============================================================ */
+  /* ACENTOS STAT CARDS */
+  --accent-blue-light: rgba(66, 153, 225, 0.15);
+  --accent-green-light: rgba(72, 187, 120, 0.15);
+  --accent-orange-light: rgba(237, 137, 54, 0.15);
+  --accent-red-light: rgba(252, 129, 129, 0.15);
+  --accent-yellow-light: rgba(214, 158, 46, 0.15);
+  --accent-purple-light: rgba(159, 122, 234, 0.15);
+
+  /* STAT CARDS */
+  --stat-card-bg: #2d3748;
+  --stat-card-border: #4a5568;
+  --stat-card-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --stat-card-shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.5);
+  --stat-card-text-muted: #a0aec0;
+
+  /* TABLA */
+  --table-header-bg: #1f2937;
+  --table-header-text: #cbd5e0;
+  --table-header-border: #374151;
+  --table-row-bg: #2d3748;
+  --table-row-bg-alt: #283141;
+  --table-row-hover: #374151;
+  --table-row-border: #374151;
+  --table-row-text: #e2e8f0;
+  --table-empty-text: #718096;
+  --table-empty-bg: #2d3748;
+
+  /* BADGES */
+  --badge-default-bg: rgba(113, 128, 150, 0.25);
+  --badge-default-text: #cbd5e0;
+  --badge-default-dot: #cbd5e0;
+  --badge-success-bg: rgba(72, 187, 120, 0.25);
+  --badge-success-text: #9ae6b4;
+  --badge-success-dot: #48bb78;
+  --badge-warning-bg: rgba(237, 137, 54, 0.25);
+  --badge-warning-text: #fbd38d;
+  --badge-warning-dot: #ed8936;
+  --badge-danger-bg: rgba(252, 129, 129, 0.25);
+  --badge-danger-text: #feb2b2;
+  --badge-danger-dot: #fc8181;
+  --badge-info-bg: rgba(66, 153, 225, 0.25);
+  --badge-info-text: #90cdf4;
+  --badge-info-dot: #4299e1;
+  --badge-dark-bg: #111827;
+  --badge-dark-text: #f7fafc;
+  --badge-dark-dot: #cbd5e0;
+  --badge-light-bg: rgba(255, 255, 255, 0.08);
+  --badge-light-text: #cbd5e0;
+  --badge-light-dot: #cbd5e0;
+
+  /* INPUTS */
+  --input-bg: #1f2937;
+  --input-bg-hover: #374151;
+  --input-bg-focus: #1f2937;
+  --input-border: #4a5568;
+  --input-border-hover: #718096;
+  --input-border-focus: #4299e1;
+  --input-border-error: #fc8181;
+  --input-text: #f7fafc;
+  --input-placeholder: #718096;
+  --input-hint: #a0aec0;
+  --input-error-text: #fc8181;
+  --input-focus-shadow: rgba(66, 153, 225, 0.25);
+  --input-error-shadow: rgba(252, 129, 129, 0.25);
+  --input-icon-color: #718096;
+  --input-option-bg: #2d3748;
+  --input-option-text: #f7fafc;
+
+  /* MODAL */
+  --modal-bg: #2d3748;
+  --modal-header-border: #4a5568;
+  --modal-title-text: #f7fafc;
+  --modal-subtitle-text: #a0aec0;
+  --modal-close-bg: #374151;
+  --modal-close-color: #cbd5e0;
+  --modal-close-bg-hover: rgba(229, 62, 62, 0.25);
+  --modal-close-color-hover: #fc8181;
+  --modal-footer-bg: #1f2937;
+  --modal-footer-border: #4a5568;
+  --modal-icon-default-bg: rgba(66, 153, 225, 0.15);
+  --modal-icon-success-bg: rgba(72, 187, 120, 0.15);
+  --modal-icon-warning-bg: rgba(237, 137, 54, 0.15);
+  --modal-icon-danger-bg: rgba(252, 129, 129, 0.15);
+  --modal-icon-info-bg: rgba(159, 122, 234, 0.15);
+
+  /* TOAST */
+  --toast-bg: #2d3748;
+  --toast-shadow: 0 12px 40px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  --toast-message-text: #cbd5e0;
+  --toast-close-color: #718096;
+  --toast-close-bg-hover: #374151;
+  --toast-close-color-hover: #cbd5e0;
+
+  /* TABS REGLAS */
+  --reglas-tab-bg: #2d3748;
+  --reglas-tab-text: #cbd5e0;
+  --reglas-tab-border: #4a5568;
+  --reglas-tab-hover-border: #9f7aea;
+  --reglas-tab-hover-text: #d6bcfa;
+  --reglas-tab-hover-shadow: rgba(159, 122, 234, 0.25);
+
+   /* CARDS */
   --card-default-bg: #2d3748;
   --card-default-header: #374151;
   --card-default-border: #4a5568;
@@ -147,33 +375,33 @@ html.dark {
   --card-default-subtitle: #a0aec0;
   --card-default-text: #e2e8f0;
 
-  --card-success-bg: rgba(72, 187, 120, 0.12);
-  --card-success-header: rgba(72, 187, 120, 0.18);
-  --card-success-border: rgba(72, 187, 120, 0.4);
-  --card-success-title: #9ae6b4;
-  --card-success-subtitle: #68d391;
-  --card-success-text: #c6f6d5;
+  --card-success-bg: #1e3a2e;
+  --card-success-header: #2f5c45;
+  --card-success-border: #38a169;
+  --card-success-title: #c6f6d5;
+  --card-success-subtitle: #9ae6b4;
+  --card-success-text: #e2e8f0;
 
-  --card-warning-bg: rgba(237, 137, 54, 0.12);
-  --card-warning-header: rgba(237, 137, 54, 0.18);
-  --card-warning-border: rgba(237, 137, 54, 0.4);
-  --card-warning-title: #fbd38d;
-  --card-warning-subtitle: #f6ad55;
-  --card-warning-text: #feebc8;
+  --card-warning-bg: #3a2a15;
+  --card-warning-header: #5c3f1f;
+  --card-warning-border: #dd6b20;
+  --card-warning-title: #feebc8;
+  --card-warning-subtitle: #fbd38d;
+  --card-warning-text: #e2e8f0;
 
-  --card-danger-bg: rgba(252, 129, 129, 0.12);
-  --card-danger-header: rgba(252, 129, 129, 0.18);
-  --card-danger-border: rgba(252, 129, 129, 0.4);
-  --card-danger-title: #feb2b2;
-  --card-danger-subtitle: #fc8181;
-  --card-danger-text: #fed7d7;
+  --card-danger-bg: #3a1f1f;
+  --card-danger-header: #5c2f2f;
+  --card-danger-border: #e53e3e;
+  --card-danger-title: #fed7d7;
+  --card-danger-subtitle: #feb2b2;
+  --card-danger-text: #e2e8f0;
 
-  --card-info-bg: rgba(159, 122, 234, 0.12);
-  --card-info-header: rgba(159, 122, 234, 0.18);
-  --card-info-border: rgba(159, 122, 234, 0.4);
-  --card-info-title: #d6bcfa;
-  --card-info-subtitle: #b794f4;
-  --card-info-text: #e9d8fd;
+  --card-info-bg: #2a1f3d;
+  --card-info-header: #3f2f5c;
+  --card-info-border: #805ad5;
+  --card-info-title: #e9d8fd;
+  --card-info-subtitle: #d6bcfa;
+  --card-info-text: #e2e8f0;
 
   --card-dark-bg: #111827;
   --card-dark-header: #1f2937;
@@ -182,20 +410,28 @@ html.dark {
   --card-dark-subtitle: #a0aec0;
   --card-dark-text: #e2e8f0;
 
-  /* Ícono del header */
-  --card-icon-bg: rgba(255, 255, 255, 0.08);
+  --card-icon-bg: rgba(255, 255, 255, 0.1);
+
+  /* CHART */
+  --chart-grid: #374151;
+  --chart-text: #cbd5e0;
+  --chart-tooltip-bg: #2d3748;
+  --chart-tooltip-border: #4a5568;
+
+  /* BASE */
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  color-scheme: dark;
 }
 
 /* ============================================================
    TRANSICIONES SUAVES AL CAMBIAR DE TEMA
    ============================================================ */
-*,
-*::before,
-*::after {
+html,
+body {
   transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease,
-    color 0.25s ease;
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 /* ============================================================
@@ -211,6 +447,9 @@ body {
   min-height: 100vh;
 }
 
+/* ============================================================
+   SCROLLBAR OSCURO
+   ============================================================ */
 html.dark ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -226,173 +465,18 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   background: #718096;
 }
 
+/* ============================================================
+   INPUTS NATIVOS - color-scheme
+   ============================================================ */
+input,
+textarea,
+select {
+  color-scheme: light;
+}
+
+html.dark input,
+html.dark textarea,
+html.dark select,
 html.dark input[type='date'] {
   color-scheme: dark;
-}
-/* ============================================================
-   🎨 VARIABLES EXTRA: Acentos suaves para StatsCards
-   ============================================================ */
-
-:root {
-  --accent-blue-light: #ebf8ff;
-  --accent-green-light: #f0fff4;
-  --accent-orange-light: #fffaf0;
-  --accent-red-light: #fff5f5;
-  --accent-yellow-light: #fefcbf;
-
-  --stat-card-bg: #ffffff;
-  --stat-card-border: #e2e8f0;
-  --stat-card-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-  --stat-card-shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.1);
-  --stat-card-text-muted: #718096;
-}
-
-html.dark {
-  --accent-blue-light: rgba(66, 153, 225, 0.15);
-  --accent-green-light: rgba(72, 187, 120, 0.15);
-  --accent-orange-light: rgba(237, 137, 54, 0.15);
-  --accent-red-light: rgba(252, 129, 129, 0.15);
-  --accent-yellow-light: rgba(214, 158, 46, 0.15);
-
-  --stat-card-bg: #2d3748;
-  --stat-card-border: #4a5568;
-  --stat-card-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  --stat-card-shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.5);
-  --stat-card-text-muted: #a0aec0;
-}
-
-/* ============================================================
-   📊 VARIABLES EXTRA: Tabla
-   ============================================================ */
-
-:root {
-  --table-header-bg: #f8fafc;
-  --table-header-text: #4a5568;
-  --table-header-border: #e2e8f0;
-  --table-row-bg: #ffffff;
-  --table-row-bg-alt: #fafbfc;
-  --table-row-hover: #f0f7ff;
-  --table-row-border: #edf2f7;
-  --table-row-text: #2d3748;
-  --table-empty-text: #a0aec0;
-  --table-empty-bg: #ffffff;
-}
-
-html.dark {
-  --table-header-bg: #1f2937;
-  --table-header-text: #cbd5e0;
-  --table-header-border: #374151;
-  --table-row-bg: #2d3748;
-  --table-row-bg-alt: #283141;
-  --table-row-hover: #374151;
-  --table-row-border: #374151;
-  --table-row-text: #e2e8f0;
-  --table-empty-text: #718096;
-  --table-empty-bg: #2d3748;
-}
-
-/* ============================================================
-   🏷️ VARIABLES EXTRA: Badge
-   ============================================================ */
-
-:root {
-  --badge-default-bg: #edf2f7;
-  --badge-default-text: #4a5568;
-  --badge-default-dot: #4a5568;
-
-  --badge-success-bg: #c6f6d5;
-  --badge-success-text: #22543d;
-  --badge-success-dot: #38a169;
-
-  --badge-warning-bg: #feebc8;
-  --badge-warning-text: #744210;
-  --badge-warning-dot: #dd6b20;
-
-  --badge-danger-bg: #fed7d7;
-  --badge-danger-text: #9b2c2c;
-  --badge-danger-dot: #e53e3e;
-
-  --badge-info-bg: #bee3f8;
-  --badge-info-text: #2c5282;
-  --badge-info-dot: #3182ce;
-
-  --badge-dark-bg: #2d3748;
-  --badge-dark-text: #f7fafc;
-  --badge-dark-dot: #cbd5e0;
-
-  --badge-light-bg: #f7fafc;
-  --badge-light-text: #4a5568;
-  --badge-light-dot: #4a5568;
-}
-
-html.dark {
-  --badge-default-bg: rgba(113, 128, 150, 0.25);
-  --badge-default-text: #cbd5e0;
-  --badge-default-dot: #cbd5e0;
-
-  --badge-success-bg: rgba(72, 187, 120, 0.25);
-  --badge-success-text: #9ae6b4;
-  --badge-success-dot: #48bb78;
-
-  --badge-warning-bg: rgba(237, 137, 54, 0.25);
-  --badge-warning-text: #fbd38d;
-  --badge-warning-dot: #ed8936;
-
-  --badge-danger-bg: rgba(252, 129, 129, 0.25);
-  --badge-danger-text: #feb2b2;
-  --badge-danger-dot: #fc8181;
-
-  --badge-info-bg: rgba(66, 153, 225, 0.25);
-  --badge-info-text: #90cdf4;
-  --badge-info-dot: #4299e1;
-
-  --badge-dark-bg: #111827;
-  --badge-dark-text: #f7fafc;
-  --badge-dark-dot: #cbd5e0;
-
-  --badge-light-bg: rgba(255, 255, 255, 0.08);
-  --badge-light-text: #cbd5e0;
-  --badge-light-dot: #cbd5e0;
-}
-
-/* ============================================================
-   📊 VARIABLES EXTRA: ReglasStats, Gráficos y Tabs Reglas
-   ============================================================ */
-
-:root {
-  /* ReglasStats */
-  --accent-purple-light: #faf5ff;
-
-  /* Charts (Recharts) */
-  --chart-grid: #e2e8f0;
-  --chart-text: #4a5568;
-  --chart-tooltip-bg: #ffffff;
-  --chart-tooltip-border: #e2e8f0;
-
-  /* Tabs Reglas */
-  --reglas-tab-bg: #ffffff;
-  --reglas-tab-text: #4a5568;
-  --reglas-tab-border: #cbd5e0;
-  --reglas-tab-hover-border: #805ad5;
-  --reglas-tab-hover-text: #805ad5;
-  --reglas-tab-hover-shadow: rgba(128, 90, 213, 0.15);
-}
-
-html.dark {
-  /* ReglasStats */
-  --accent-purple-light: rgba(159, 122, 234, 0.15);
-
-  /* Charts (Recharts) */
-  --chart-grid: #374151;
-  --chart-text: #cbd5e0;
-  --chart-tooltip-bg: #2d3748;
-  --chart-tooltip-border: #4a5568;
-
-  /* Tabs Reglas */
-  --reglas-tab-bg: #2d3748;
-  --reglas-tab-text: #cbd5e0;
-  --reglas-tab-border: #4a5568;
-  --reglas-tab-hover-border: #9f7aea;
-  --reglas-tab-hover-text: #d6bcfa;
-  --reglas-tab-hover-shadow: rgba(159, 122, 234, 0.25);
 }

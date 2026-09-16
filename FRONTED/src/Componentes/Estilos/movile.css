@@ -1,0 +1,282 @@
+/* src/styles/mobile.css */
+/* ============================================================
+   📱 RESPONSIVE MOBILE
+   ============================================================
+   Todos los estilos están dentro de @media (max-width: 768px)
+   → En PC NO afecta nada
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* ============================================================
+     🧭 NAVBAR
+     ============================================================ */
+  .navbar-app {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .navbar-left,
+  .navbar-right {
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* Botones de vista (Biométrico / Reglas) */
+  .nav-btn {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+  .nav-btn .nav-icon {
+    font-size: 15px !important;
+  }
+
+  /* 🔍 Botón Buscar: círculo perfecto */
+  .nav-search-hint {
+    padding: 0 !important;
+    font-size: 0 !important;
+    gap: 0 !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .nav-search-hint::before {
+    content: '🔍';
+    font-size: 16px;
+    line-height: 1;
+  }
+  .nav-search-hint .nav-kbd {
+    display: none !important;
+  }
+
+  /* 🎨 Botones circulares del navbar (mismo tamaño y forma) */
+  .nav-help-btn,
+  .nav-density-btn,
+  .theme-toggle-navbar,
+  .ipwa-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    font-size: 16px !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  /* Ocultar texto "Instalar" del botón PWA */
+  .ipwa-btn .ipwa-btn-text {
+    display: none !important;
+  }
+
+  /* 🎨 Colores específicos por botón */
+  .nav-help-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #cbd5e0 !important;
+  }
+  .nav-density-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #cbd5e0 !important;
+  }
+  .theme-toggle-navbar {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #cbd5e0 !important;
+  }
+  .ipwa-btn {
+    background: linear-gradient(135deg, #38a169 0%, #2f855a 100%) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(56, 161, 105, 0.5) !important;
+  }
+
+  /* ✨ Efectos hover/tap */
+  .ipwa-btn:hover,
+  .nav-help-btn:hover,
+  .nav-density-btn:hover,
+  .theme-toggle-navbar:hover {
+    transform: scale(1.05) !important;
+  }
+
+  .ipwa-btn:active,
+  .nav-help-btn:active,
+  .nav-density-btn:active,
+  .theme-toggle-navbar:active {
+    transform: scale(0.95) !important;
+  }
+
+  /* ============================================================
+     📑 TABS (TabsNav, reglas-tab)
+     ============================================================ */
+  .tabs-scroll-mobile {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 8px !important;
+  }
+  .tabs-scroll-mobile::-webkit-scrollbar {
+    display: none;
+  }
+  .tabs-scroll-mobile > * {
+    flex-shrink: 0;
+  }
+
+  .reglas-tab {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* ============================================================
+     📊 STATS / CARDS
+     ============================================================ */
+  .stats-grid-mobile {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .stat-card {
+    padding: 12px 14px !important;
+    min-width: 0 !important;
+    gap: 10px !important;
+  }
+  .stat-icono-wrapper {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .stat-numero {
+    font-size: 20px !important;
+  }
+
+  /* ============================================================
+     🎛️ BOTONES DE ACCIÓN (ActionBar)
+     ============================================================ */
+  .action-bar-mobile {
+    padding: 12px !important;
+    gap: 8px !important;
+  }
+  .action-bar-mobile button {
+    flex: 1 1 calc(50% - 4px) !important;
+    min-width: 0 !important;
+    font-size: 11px !important;
+    padding: 0 10px !important;
+    height: 36px !important;
+  }
+
+  /* ============================================================
+     📄 CONTENEDOR PRINCIPAL
+     ============================================================ */
+  .content-padding-mobile {
+    padding: 16px 12px !important;
+  }
+
+  /* Títulos */
+  .titulo-biometrico,
+  .titulo-reglas {
+    font-size: 18px !important;
+    text-align: center;
+    flex-wrap: wrap;
+  }
+  .titulo-biometrico .rayo,
+  .titulo-reglas .engranaje {
+    font-size: 20px !important;
+  }
+
+  /* ============================================================
+     📊 TABLAS
+     ============================================================ */
+  .table-wrapper-mobile {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-wrapper-mobile table {
+    min-width: 640px;
+  }
+
+  /* ============================================================
+     📄 PAGINACIÓN
+     ============================================================ */
+  .pgn-wrapper {
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+  }
+  .pgn-nav {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+  }
+  .pgn-btn {
+    min-width: 28px !important;
+    height: 28px !important;
+    font-size: 11px !important;
+  }
+  .pgn-info,
+  .pgn-goto {
+    justify-content: center !important;
+    font-size: 12px !important;
+  }
+
+  /* ============================================================
+     🪟 MODALES
+     ============================================================ */
+  .rim-backdrop,
+  .gs-backdrop,
+  .sk-backdrop {
+    padding: 20px 10px 10px !important;
+  }
+  .rim-modal,
+  .gs-modal,
+  .sk-modal {
+    max-height: calc(100vh - 40px) !important;
+  }
+  .rim-body,
+  .gs-body {
+    padding: 16px 14px !important;
+  }
+
+  .rim-range {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .rim-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ============================================================
+   🖥️ PANTALLAS MUY PEQUEÑAS (< 480px)
+   ============================================================ */
+@media (max-width: 480px) {
+  .navbar-app {
+    padding: 8px !important;
+  }
+
+  .nav-btn {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+
+  .stats-grid-mobile {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .content-padding-mobile {
+    padding: 12px 8px !important;
+  }
+
+  .titulo-biometrico,
+  .titulo-reglas {
+    font-size: 16px !important;
+  }
+
+  .rim-stats {
+    grid-template-columns: 1fr !important;
+  }
+}

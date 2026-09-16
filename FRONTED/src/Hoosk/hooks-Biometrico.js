@@ -1,8 +1,12 @@
 // src/hooks/useBiometrico.js
 import { useState, useEffect, useCallback } from 'react';
 import api from '../servicio/Api';
+import { useNotificaciones } from '../Componentes/Context/Notificaciones';
 
 export function useBiometrico() {
+  // 🔔 Notificaciones
+  const { agregarNotificacion } = useNotificaciones();
+
   // Estados
   const [usuarios, setUsuarios] = useState([]);
   const [stats, setStats] = useState(null);
@@ -82,215 +86,338 @@ export function useBiometrico() {
 
       console.log('✅ [cargarMarcajesHoy] Marcajes extraídos:', marcajes);
       setMarcajesHoy(marcajes);
+      return marcajes;
     } catch (error) {
       console.error('❌ [cargarMarcajesHoy] Error:', error);
       setMarcajesHoy([]);
+      return [];
     }
   }, []);
 
-  // ⭐ Cargar todos los datos
-  const cargarDatos = useCallback(async () => {
-    try {
-      setLoading(true);
-      console.log('🔄 [cargarDatos] Iniciando carga...');
+  // ⭐ Cargar todos los datos (con parámetro manual para notificar)
+  const cargarDatos = useCallback(
+    async (manual = false) => {
+      try {
+        setLoading(true);
+        console.log('🔄 [cargarDatos] Iniciando carga...');
 
-      const [resUsers, resStats] = await Promise.all([
-        api.get('/biometrico/list-all-users'),
-        api.get('/biometrico/stats'),
-      ]);
+        const [resUsers, resStats] = await Promise.all([
+          api.get('/biometrico/list-all-users'),
+          api.get('/biometrico/stats'),
+        ]);
 
-      console.log('📦 [cargarDatos] resUsers.data:', resUsers.data);
+        console.log('📦 [cargarDatos] resUsers.data:', resUsers.data);
 
-      let usuariosData = [];
-      if (resUsers.data) {
-        if (Array.isArray(resUsers.data.usuarios)) {
-          usuariosData = resUsers.data.usuarios;
-        } else if (Array.isArray(resUsers.data)) {
-          usuariosData = resUsers.data;
-        } else {
-          for (let key in resUsers.data) {
-            if (Array.isArray(resUsers.data[key])) {
-              console.log(`🔍 [cargarDatos] Encontrado arreglo en "${key}"`);
-              usuariosData = resUsers.data[key];
-              break;
+        let usuariosData = [];
+        if (resUsers.data) {
+          if (Array.isArray(resUsers.data.usuarios)) {
+            usuariosData = resUsers.data.usuarios;
+          } else if (Array.isArray(resUsers.data)) {
+            usuariosData = resUsers.data;
+          } else {
+            for (let key in resUsers.data) {
+              if (Array.isArray(resUsers.data[key])) {
+                console.log(`🔍 [cargarDatos] Encontrado arreglo en "${key}"`);
+                usuariosData = resUsers.data[key];
+                break;
+              }
             }
           }
         }
+
+        console.log('👥 [cargarDatos] Usuarios crudos:', usuariosData);
+
+        const usuariosConEstado = usuariosData.map((u) => ({
+          ...u,
+          activo: u.activo !== undefined ? u.activo : true,
+        }));
+
+        setUsuarios(usuariosConEstado);
+        setStats(resStats.data || null);
+
+        await cargarMarcajesHoy();
+
+        setIsOnline(true);
+        console.log('✅ [cargarDatos] Carga completada exitosamente');
+
+        // 🔔 Notificación SOLO si es refresco manual
+        if (manual) {
+          agregarNotificacion({
+            tipo: 'info',
+            titulo: 'Datos actualizados',
+            mensaje: `${usuariosConEstado.length} empleados cargados correctamente.`,
+          });
+        }
+      } catch (error) {
+        console.error('❌ [cargarDatos] Error:', error);
+        setMensaje('Error al cargar los datos del biométrico.');
+        setIsOnline(false);
+        setUsuarios([]);
+
+        if (manual) {
+          agregarNotificacion({
+            tipo: 'error',
+            titulo: 'Error al refrescar',
+            mensaje: 'No se pudieron cargar los datos del biométrico.',
+          });
+        }
+      } finally {
+        setLoading(false);
       }
-
-      console.log('👥 [cargarDatos] Usuarios crudos:', usuariosData);
-
-      const usuariosConEstado = usuariosData.map((u) => ({
-        ...u,
-        activo: u.activo !== undefined ? u.activo : true,
-      }));
-
-      setUsuarios(usuariosConEstado);
-      setStats(resStats.data || null);
-
-      await cargarMarcajesHoy();
-
-      setIsOnline(true);
-      console.log('✅ [cargarDatos] Carga completada exitosamente');
-    } catch (error) {
-      console.error('❌ [cargarDatos] Error:', error);
-      setMensaje('Error al cargar los datos del biométrico.');
-      setIsOnline(false);
-      setUsuarios([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [cargarMarcajesHoy]);
+    },
+    [cargarMarcajesHoy, agregarNotificacion],
+  );
 
   // ---------- FUNCIONES DE ACCIONES ----------
   const handleSincronizarHoy = useCallback(async () => {
     try {
       setMensaje('Sincronizando marcajes de hoy...');
-      await cargarMarcajesHoy();
+      const marcajes = await cargarMarcajesHoy();
       setMensaje('Sincronización de hoy completada.');
       setIsOnline(true);
+
+      agregarNotificacion({
+        tipo: 'success',
+        titulo: 'Sincronización completada',
+        mensaje: `Se sincronizaron ${marcajes.length} marcajes de hoy.`,
+      });
     } catch {
       setMensaje('Error sincronizando hoy.');
       setIsOnline(false);
+
+      agregarNotificacion({
+        tipo: 'error',
+        titulo: 'Error al sincronizar',
+        mensaje: 'No se pudieron obtener los marcajes de hoy.',
+      });
     }
-  }, [cargarMarcajesHoy]);
+  }, [cargarMarcajesHoy, agregarNotificacion]);
 
   const handleSincronizarAyer = useCallback(async () => {
     try {
       setMensaje('Sincronizando marcajes de ayer...');
-      await api.post('/biometrico/sync-yesterday');
+      const res = await api.post('/biometrico/sync-yesterday');
       setMensaje('Sincronización de ayer completada con éxito.');
       setIsOnline(true);
       cargarDatos();
+
+      const cantidad = res.data?.total || res.data?.cantidad || 0;
+      agregarNotificacion({
+        tipo: 'success',
+        titulo: 'Sincronización de ayer',
+        mensaje: cantidad
+          ? `Se sincronizaron ${cantidad} marcajes de ayer.`
+          : 'Marcajes de ayer sincronizados correctamente.',
+      });
     } catch {
       setMensaje('Error sincronizando ayer.');
       setIsOnline(false);
+
+      agregarNotificacion({
+        tipo: 'error',
+        titulo: 'Error al sincronizar',
+        mensaje: 'No se pudieron obtener los marcajes de ayer.',
+      });
     }
-  }, [cargarDatos]);
+  }, [cargarDatos, agregarNotificacion]);
 
   const handleLimpiarDuplicados = useCallback(async () => {
     try {
       setMensaje('Limpiando registros duplicados...');
       const res = await api.get('/biometrico/clean-duplicates');
-      setMensaje(res.data.message || 'Duplicados limpiados con éxito.');
+      const msg = res.data.message || 'Duplicados limpiados con éxito.';
+      setMensaje(msg);
       cargarDatos();
+
+      agregarNotificacion({
+        tipo: 'success',
+        titulo: 'Limpieza de duplicados',
+        mensaje: msg,
+      });
     } catch {
       setMensaje('Error al limpiar duplicados.');
+
+      agregarNotificacion({
+        tipo: 'error',
+        titulo: 'Error al limpiar',
+        mensaje: 'No se pudieron limpiar los duplicados.',
+      });
     }
-  }, [cargarDatos]);
+  }, [cargarDatos, agregarNotificacion]);
 
   const handleLimpiarCache = useCallback(async () => {
     try {
       setMensaje('Limpiando caché...');
       const res = await api.get('/biometrico/clear-cache');
-      setMensaje(res.data.message || 'Caché limpiada exitosamente.');
+      const msg = res.data.message || 'Caché limpiada exitosamente.';
+      setMensaje(msg);
+
+      agregarNotificacion({
+        tipo: 'info',
+        titulo: 'Caché limpiada',
+        mensaje: msg,
+      });
     } catch {
       setMensaje('Error al limpiar la caché.');
+
+      agregarNotificacion({
+        tipo: 'error',
+        titulo: 'Error al limpiar caché',
+        mensaje: 'No se pudo limpiar la caché del biométrico.',
+      });
     }
-  }, []);
+  }, [agregarNotificacion]);
 
   // 🔴 Desactivar usuario
-  const handleEliminarUsuario = useCallback(async (employeeNo) => {
-    if (
-      !window.confirm(
-        `¿Seguro que deseas desactivar al usuario con cédula ${employeeNo}?`
+  const handleEliminarUsuario = useCallback(
+    async (employeeNo) => {
+      if (
+        !window.confirm(
+          `¿Seguro que deseas desactivar al usuario con cédula ${employeeNo}?`,
+        )
       )
-    )
-      return;
-    try {
-      setMensaje(`Desactivando usuario ${employeeNo}...`);
-      await api.delete(`/biometrico/delete-user/${employeeNo}`);
-      setMensaje('Usuario desactivado con éxito.');
-      setUsuarios((prevUsuarios) =>
-        prevUsuarios.map((u) =>
-          String(u.employeeNo || u.cedula) === String(employeeNo)
-            ? { ...u, activo: false }
-            : u
-        )
-      );
-      setMarcajesHoy((prev) =>
-        prev.filter(
-          (m) => String(m.employeeId || m.empleadoId) !== String(employeeNo)
-        )
-      );
-    } catch (error) {
-      console.error(error);
-      setMensaje('Error al intentar desactivar el usuario.');
-    }
-  }, []);
+        return;
+      try {
+        setMensaje(`Desactivando usuario ${employeeNo}...`);
+        await api.delete(`/biometrico/delete-user/${employeeNo}`);
+        setMensaje('Usuario desactivado con éxito.');
+        setUsuarios((prevUsuarios) =>
+          prevUsuarios.map((u) =>
+            String(u.employeeNo || u.cedula) === String(employeeNo)
+              ? { ...u, activo: false }
+              : u,
+          ),
+        );
+        setMarcajesHoy((prev) =>
+          prev.filter(
+            (m) => String(m.employeeId || m.empleadoId) !== String(employeeNo),
+          ),
+        );
 
-  // 🟢 NUEVO: Activar usuario
-  const handleActivarUsuario = useCallback(async (employeeNo) => {
-    if (
-      !window.confirm(
-        `¿Reactivar al usuario con cédula ${employeeNo}? Podrá volver a marcar en el biométrico.`
+        agregarNotificacion({
+          tipo: 'warning',
+          titulo: 'Empleado desactivado',
+          mensaje: `El empleado ${employeeNo} fue desactivado del biométrico.`,
+        });
+      } catch (error) {
+        console.error(error);
+        setMensaje('Error al intentar desactivar el usuario.');
+
+        agregarNotificacion({
+          tipo: 'error',
+          titulo: 'Error al desactivar',
+          mensaje: `No se pudo desactivar al empleado ${employeeNo}.`,
+        });
+      }
+    },
+    [agregarNotificacion],
+  );
+
+  // 🟢 Activar usuario
+  const handleActivarUsuario = useCallback(
+    async (employeeNo) => {
+      if (
+        !window.confirm(
+          `¿Reactivar al usuario con cédula ${employeeNo}? Podrá volver a marcar en el biométrico.`,
+        )
       )
-    )
-      return;
+        return;
 
-    try {
-      setMensaje(`Activando usuario ${employeeNo}...`);
-      await api.post(`/biometrico/activate-user/${employeeNo}`);
-      setMensaje('Usuario activado con éxito.');
+      try {
+        setMensaje(`Activando usuario ${employeeNo}...`);
+        await api.post(`/biometrico/activate-user/${employeeNo}`);
+        setMensaje('Usuario activado con éxito.');
 
-      setUsuarios((prevUsuarios) =>
-        prevUsuarios.map((u) =>
-          String(u.employeeNo || u.cedula) === String(employeeNo)
-            ? { ...u, activo: true }
-            : u
-        )
-      );
+        setUsuarios((prevUsuarios) =>
+          prevUsuarios.map((u) =>
+            String(u.employeeNo || u.cedula) === String(employeeNo)
+              ? { ...u, activo: true }
+              : u,
+          ),
+        );
 
-      // Refrescar para sincronizar con el backend
-      cargarDatos();
-    } catch (error) {
-      console.error(error);
-      setMensaje('Error al intentar activar el usuario.');
-    }
-  }, [cargarDatos]);
+        cargarDatos();
 
-  const handleSubirExcel = useCallback(async (e) => {
-    e.preventDefault();
-    if (!archivoExcel) {
-      setMensaje('Por favor selecciona un archivo Excel primero.');
-      return;
-    }
-    const formData = new FormData();
-    formData.append('file', archivoExcel);
-    try {
-      setMensaje('Procesando carga masiva...');
-      const res = await api.post('/biometrico/import-users', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setMensaje(
-        `Carga exitosa: ${res.data.creados || 0} creados, ${
-          res.data.actualizados || 0
-        } actualizados.`
-      );
-      setArchivoExcel(null);
-      cargarDatos();
-    } catch {
-      setMensaje('Error al procesar el archivo Excel.');
-    }
-  }, [archivoExcel, cargarDatos]);
+        agregarNotificacion({
+          tipo: 'success',
+          titulo: 'Empleado activado',
+          mensaje: `El empleado ${employeeNo} fue reactivado correctamente.`,
+        });
+      } catch (error) {
+        console.error(error);
+        setMensaje('Error al intentar activar el usuario.');
 
-  const buscarEventosPorCedula = useCallback(async (e) => {
-    e.preventDefault();
-    if (!cedulaBusqueda) return;
-    try {
-      setLoading(true);
-      const res = await api.get(
-        `/biometrico/events?employeeId=${cedulaBusqueda}`
-      );
-      setEventosEmpleado(res.data);
-      setMensaje(`Resultados cargados para la cédula: ${cedulaBusqueda}`);
-    } catch {
-      setMensaje('No se encontraron eventos para esta cédula.');
-      setEventosEmpleado(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [cedulaBusqueda]);
+        agregarNotificacion({
+          tipo: 'error',
+          titulo: 'Error al activar',
+          mensaje: `No se pudo activar al empleado ${employeeNo}.`,
+        });
+      }
+    },
+    [cargarDatos, agregarNotificacion],
+  );
+
+  const handleSubirExcel = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!archivoExcel) {
+        setMensaje('Por favor selecciona un archivo Excel primero.');
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', archivoExcel);
+      try {
+        setMensaje('Procesando carga masiva...');
+        const res = await api.post('/biometrico/import-users', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        const creados = res.data.creados || 0;
+        const actualizados = res.data.actualizados || 0;
+        setMensaje(
+          `Carga exitosa: ${creados} creados, ${actualizados} actualizados.`,
+        );
+        setArchivoExcel(null);
+        cargarDatos();
+
+        agregarNotificacion({
+          tipo: 'success',
+          titulo: 'Importación completada',
+          mensaje: `${creados} empleados creados · ${actualizados} actualizados.`,
+        });
+      } catch {
+        setMensaje('Error al procesar el archivo Excel.');
+
+        agregarNotificacion({
+          tipo: 'error',
+          titulo: 'Error al importar Excel',
+          mensaje: 'No se pudo procesar el archivo. Revisa el formato.',
+        });
+      }
+    },
+    [archivoExcel, cargarDatos, agregarNotificacion],
+  );
+
+  const buscarEventosPorCedula = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!cedulaBusqueda) return;
+      try {
+        setLoading(true);
+        const res = await api.get(
+          `/biometrico/events?employeeId=${cedulaBusqueda}`,
+        );
+        setEventosEmpleado(res.data);
+        setMensaje(`Resultados cargados para la cédula: ${cedulaBusqueda}`);
+      } catch {
+        setMensaje('No se encontraron eventos para esta cédula.');
+        setEventosEmpleado(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [cedulaBusqueda],
+  );
 
   const cargarRegistrosPorFecha = useCallback(async () => {
     try {
@@ -305,24 +432,27 @@ export function useBiometrico() {
     }
   }, []);
 
-  const buscarPorFechaEspecifica = useCallback(async (e) => {
-    e.preventDefault();
-    if (!fechaUnica) {
-      setMensaje('Por favor selecciona una fecha.');
-      return;
-    }
-    try {
-      setLoading(true);
-      const res = await api.get(`/biometrico/marcajes/${fechaUnica}`);
-      setMarcajesFechaUnica(res.data);
-      setMensaje(`Marcajes cargados para la fecha: ${fechaUnica}`);
-    } catch {
-      setMensaje('Error al consultar marcajes para esta fecha.');
-      setMarcajesFechaUnica(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [fechaUnica]);
+  const buscarPorFechaEspecifica = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!fechaUnica) {
+        setMensaje('Por favor selecciona una fecha.');
+        return;
+      }
+      try {
+        setLoading(true);
+        const res = await api.get(`/biometrico/marcajes/${fechaUnica}`);
+        setMarcajesFechaUnica(res.data);
+        setMensaje(`Marcajes cargados para la fecha: ${fechaUnica}`);
+      } catch {
+        setMensaje('Error al consultar marcajes para esta fecha.');
+        setMarcajesFechaUnica(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fechaUnica],
+  );
 
   // ---------- EFECTOS ----------
   useEffect(() => {
@@ -390,7 +520,7 @@ export function useBiometrico() {
     handleLimpiarDuplicados,
     handleLimpiarCache,
     handleEliminarUsuario,
-    handleActivarUsuario,   // 👈 NUEVO
+    handleActivarUsuario,
     handleSubirExcel,
     buscarEventosPorCedula,
     cargarRegistrosPorFecha,

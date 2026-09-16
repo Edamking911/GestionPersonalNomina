@@ -31,15 +31,22 @@ export default function ImportarExcel({
   const selectStyle = {
     padding: '0 14px',
     height: '42px',
-    border: '1px solid #cbd5e0',
+    border: '1px solid var(--input-border)',
     borderRadius: '8px',
     fontSize: '14px',
-    background: '#fff',
+    background: 'var(--input-bg)',
     cursor: 'pointer',
     outline: 'none',
-    color: '#2d3748',
+    color: 'var(--input-text)',
     fontFamily: 'inherit',
-    colorScheme: 'light',
+  };
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '6px',
+    fontWeight: '600',
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
   };
 
   const handleDescargarPlantilla = async () => {
@@ -140,14 +147,32 @@ export default function ImportarExcel({
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
+  const thStyle = {
+    padding: '10px 12px',
+    textAlign: 'left',
+    fontSize: '11px',
+    color: 'var(--table-header-text)',
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* ============ 1. DESCARGAR PLANTILLA ============ */}
-      <Card title="1. Descargar Plantilla Mensual" subtitle="Descarga el Excel con todos los empleados" icon="📥" variant="info">
+      <Card
+        title="1. Descargar Plantilla Mensual"
+        subtitle="Descarga el Excel con todos los empleados"
+        icon="📥"
+        variant="info"
+      >
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '13px', color: '#4a5568' }}>Mes</label>
-            <select value={mesSeleccionado} onChange={(e) => setMesSeleccionado(e.target.value)} style={{ ...selectStyle, minWidth: '150px' }}>
+            <label style={labelStyle}>Mes</label>
+            <select
+              value={mesSeleccionado}
+              onChange={(e) => setMesSeleccionado(e.target.value)}
+              style={{ ...selectStyle, minWidth: '150px' }}
+            >
               <option value="01">Enero</option>
               <option value="02">Febrero</option>
               <option value="03">Marzo</option>
@@ -163,8 +188,12 @@ export default function ImportarExcel({
             </select>
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '13px', color: '#4a5568' }}>Año</label>
-            <select value={anioSeleccionado} onChange={(e) => setAnioSeleccionado(e.target.value)} style={{ ...selectStyle, minWidth: '110px' }}>
+            <label style={labelStyle}>Año</label>
+            <select
+              value={anioSeleccionado}
+              onChange={(e) => setAnioSeleccionado(e.target.value)}
+              style={{ ...selectStyle, minWidth: '110px' }}
+            >
               {[anioActual - 1, anioActual, anioActual + 1].map((a) => (
                 <option key={a} value={String(a)}>{a}</option>
               ))}
@@ -177,7 +206,12 @@ export default function ImportarExcel({
       </Card>
 
       {/* ============ 2. SUBIR EXCEL ============ */}
-      <Card title="2. Subir Excel Editado" subtitle="Arrastra el archivo o haz clic para seleccionarlo" icon="📤" variant="warning">
+      <Card
+        title="2. Subir Excel Editado"
+        subtitle="Arrastra el archivo o haz clic para seleccionarlo"
+        icon="📤"
+        variant="warning"
+      >
         <div
           onDragEnter={handleDrag}
           onDragOver={handleDrag}
@@ -185,8 +219,10 @@ export default function ImportarExcel({
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
           style={{
-            border: `2px dashed ${dragActive ? '#3182ce' : '#cbd5e0'}`,
-            background: dragActive ? '#ebf8ff' : '#f7fafc',
+            border: `2px dashed ${
+              dragActive ? 'var(--primary)' : 'var(--border-color)'
+            }`,
+            background: dragActive ? 'var(--primary-soft)' : 'var(--bg-hover)',
             borderRadius: '10px',
             padding: '40px 20px',
             textAlign: 'center',
@@ -195,10 +231,22 @@ export default function ImportarExcel({
           }}
         >
           <div style={{ fontSize: '40px', marginBottom: '8px' }}>📄</div>
-          <p style={{ margin: 0, fontWeight: '600', color: '#2d3748' }}>
+          <p
+            style={{
+              margin: 0,
+              fontWeight: '600',
+              color: 'var(--text-primary)',
+            }}
+          >
             {archivo ? archivo.name : 'Arrastra tu Excel aquí o haz clic para buscar'}
           </p>
-          <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#718096' }}>
+          <p
+            style={{
+              margin: '4px 0 0 0',
+              fontSize: '12px',
+              color: 'var(--text-muted)',
+            }}
+          >
             {archivo ? formatSize(archivo.size) : 'Formatos: .xlsx, .xls'}
           </p>
           <input
@@ -211,7 +259,14 @@ export default function ImportarExcel({
         </div>
 
         <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
-          <Button variant="info" size="md" onClick={handleValidar} disabled={!archivo} loading={loadingValidar} iconLeft="🔍">
+          <Button
+            variant="info"
+            size="md"
+            onClick={handleValidar}
+            disabled={!archivo}
+            loading={loadingValidar}
+            iconLeft="🔍"
+          >
             {loadingValidar ? 'Validando...' : 'Validar Excel'}
           </Button>
           {archivo && (
@@ -224,52 +279,145 @@ export default function ImportarExcel({
 
       {/* ============ 3. PREVIEW ============ */}
       {previewExcel && (
-        <Card title="3. Preview de Cambios" subtitle="Revisa los cambios antes de aplicar" icon="🔍" variant="info">
+        <Card
+          title="3. Preview de Cambios"
+          subtitle="Revisa los cambios antes de aplicar"
+          icon="🔍"
+          variant="info"
+        >
           <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-            <div style={{ background: '#ebf8ff', padding: '12px 18px', borderRadius: '10px', flex: 1, minWidth: '140px' }}>
-              <span style={{ fontSize: '11px', color: '#2b6cb0', textTransform: 'uppercase', fontWeight: '600' }}>Total Filas</span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color: '#2b6cb0' }}>{previewExcel.totalFilas}</p>
-            </div>
-            <div style={{ background: '#f0fff4', padding: '12px 18px', borderRadius: '10px', flex: 1, minWidth: '140px' }}>
-              <span style={{ fontSize: '11px', color: '#22543d', textTransform: 'uppercase', fontWeight: '600' }}>Válidas</span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color: '#22543d' }}>{previewExcel.filasValidas}</p>
-            </div>
-            <div style={{ background: previewExcel.filasConError > 0 ? '#fed7d7' : '#f0fff4', padding: '12px 18px', borderRadius: '10px', flex: 1, minWidth: '140px' }}>
-              <span style={{ fontSize: '11px', color: previewExcel.filasConError > 0 ? '#9b2c2c' : '#22543d', textTransform: 'uppercase', fontWeight: '600' }}>Con Error</span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color: previewExcel.filasConError > 0 ? '#9b2c2c' : '#22543d' }}>{previewExcel.filasConError}</p>
-            </div>
+            <StatMini
+              label="Total Filas"
+              value={previewExcel.totalFilas}
+              bg="var(--card-info-bg)"
+              color="var(--card-info-title)"
+            />
+            <StatMini
+              label="Válidas"
+              value={previewExcel.filasValidas}
+              bg="var(--card-success-bg)"
+              color="var(--card-success-title)"
+            />
+            <StatMini
+              label="Con Error"
+              value={previewExcel.filasConError}
+              bg={
+                previewExcel.filasConError > 0
+                  ? 'var(--card-danger-bg)'
+                  : 'var(--card-success-bg)'
+              }
+              color={
+                previewExcel.filasConError > 0
+                  ? 'var(--card-danger-title)'
+                  : 'var(--card-success-title)'
+              }
+            />
           </div>
 
           {previewExcel.errores && previewExcel.errores.length > 0 && (
-            <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#9b2c2c' }}>⚠️ Errores encontrados</h4>
-              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#9b2c2c' }}>
+            <div
+              style={{
+                background: 'var(--card-danger-bg)',
+                border: '1px solid var(--card-danger-border)',
+                padding: '16px',
+                borderRadius: '8px',
+                marginBottom: '20px',
+              }}
+            >
+              <h4
+                style={{
+                  margin: '0 0 12px 0',
+                  fontSize: '14px',
+                  color: 'var(--card-danger-title)',
+                }}
+              >
+                ⚠️ Errores encontrados
+              </h4>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: '20px',
+                  fontSize: '13px',
+                  color: 'var(--card-danger-title)',
+                }}
+              >
                 {previewExcel.errores.map((err, i) => (
-                  <li key={i}><strong>Fila {err.fila}:</strong> {err.error}</li>
+                  <li key={i}>
+                    <strong>Fila {err.fila}:</strong> {err.error}
+                  </li>
                 ))}
               </ul>
             </div>
           )}
 
           {previewExcel.preview && previewExcel.preview.length > 0 && (
-            <div style={{ overflowX: 'auto', marginBottom: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <div
+              style={{
+                overflowX: 'auto',
+                marginBottom: '20px',
+                borderRadius: '10px',
+                border: '1px solid var(--table-row-border)',
+              }}
+            >
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '13px',
+                  background: 'var(--table-row-bg)',
+                }}
+              >
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  <tr
+                    style={{
+                      background: 'var(--table-header-bg)',
+                      borderBottom: '2px solid var(--table-header-border)',
+                    }}
+                  >
                     {['Fila', 'Cédula', 'Nombre', 'Cambios'].map((h, i) => (
-                      <th key={i} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', color: '#4a5568', textTransform: 'uppercase', fontWeight: '700' }}>{h}</th>
+                      <th key={i} style={thStyle}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {previewExcel.preview.map((p, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #edf2f7', background: i % 2 === 0 ? '#fff' : '#fafbfc' }}>
-                      <td style={{ padding: '10px 12px' }}>{p.fila}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: '600', color: '#2b6cb0' }}>{p.employeeId}</td>
-                      <td style={{ padding: '10px 12px' }}>{p.nombre}</td>
+                    <tr
+                      key={i}
+                      style={{
+                        borderBottom: '1px solid var(--table-row-border)',
+                        background:
+                          i % 2 === 0
+                            ? 'var(--table-row-bg)'
+                            : 'var(--table-row-bg-alt)',
+                      }}
+                    >
+                      <td style={{ padding: '10px 12px', color: 'var(--table-row-text)' }}>
+                        {p.fila}
+                      </td>
+                      <td
+                        style={{
+                          padding: '10px 12px',
+                          fontWeight: '600',
+                          color: 'var(--primary)',
+                        }}
+                      >
+                        {p.employeeId}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--table-row-text)' }}>
+                        {p.nombre}
+                      </td>
                       <td style={{ padding: '10px 12px' }}>
                         {p.cambios.map((c, j) => (
-                          <div key={j} style={{ fontSize: '12px', color: c === 'Sin cambios' ? '#a0aec0' : '#2d3748' }}>
+                          <div
+                            key={j}
+                            style={{
+                              fontSize: '12px',
+                              color:
+                                c === 'Sin cambios'
+                                  ? 'var(--text-muted)'
+                                  : 'var(--table-row-text)',
+                            }}
+                          >
                             {c === 'Sin cambios' ? c : `• ${c}`}
                           </div>
                         ))}
@@ -300,24 +448,38 @@ export default function ImportarExcel({
       {resultadoImportacion && (
         <Card variant="success" title="Importación Exitosa" icon="✅">
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ background: '#fff', padding: '12px 18px', borderRadius: '10px', flex: 1, minWidth: '140px' }}>
-              <span style={{ fontSize: '11px', color: '#718096', textTransform: 'uppercase', fontWeight: '600' }}>Horarios Actualizados</span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color: '#38a169' }}>{resultadoImportacion.horariosActualizados || 0}</p>
-            </div>
-            <div style={{ background: '#fff', padding: '12px 18px', borderRadius: '10px', flex: 1, minWidth: '140px' }}>
-              <span style={{ fontSize: '11px', color: '#718096', textTransform: 'uppercase', fontWeight: '600' }}>Días Libres Actualizados</span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color: '#38a169' }}>{resultadoImportacion.diasLibresActualizados || 0}</p>
-            </div>
-            <div style={{ background: '#fff', padding: '12px 18px', borderRadius: '10px', flex: 1, minWidth: '140px' }}>
-              <span style={{ fontSize: '11px', color: '#718096', textTransform: 'uppercase', fontWeight: '600' }}>Días Libres Eliminados</span>
-              <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color: '#dd6b20' }}>{resultadoImportacion.diasLibresEliminados || 0}</p>
-            </div>
+            <StatMini
+              label="Horarios Actualizados"
+              value={resultadoImportacion.horariosActualizados || 0}
+              bg="var(--bg-card)"
+              color="var(--success)"
+              border="1px solid var(--border-light)"
+            />
+            <StatMini
+              label="Días Libres Actualizados"
+              value={resultadoImportacion.diasLibresActualizados || 0}
+              bg="var(--bg-card)"
+              color="var(--success)"
+              border="1px solid var(--border-light)"
+            />
+            <StatMini
+              label="Días Libres Eliminados"
+              value={resultadoImportacion.diasLibresEliminados || 0}
+              bg="var(--bg-card)"
+              color="var(--warning)"
+              border="1px solid var(--border-light)"
+            />
           </div>
         </Card>
       )}
 
       {/* ============ 5. BACKUPS ============ */}
-      <Card title="Historial de Backups" subtitle="Restaure versiones anteriores si algo sale mal" icon="📋" variant="default">
+      <Card
+        title="Historial de Backups"
+        subtitle="Restaure versiones anteriores si algo sale mal"
+        icon="📋"
+        variant="default"
+      >
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
           <Button variant="primary" size="sm" onClick={onListarBackups} iconLeft="🔄">
             Cargar Backups
@@ -328,23 +490,76 @@ export default function ImportarExcel({
         </div>
 
         {backups && backups.length > 0 ? (
-          <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <div
+            style={{
+              overflowX: 'auto',
+              borderRadius: '10px',
+              border: '1px solid var(--table-row-border)',
+            }}
+          >
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: '13px',
+                background: 'var(--table-row-bg)',
+              }}
+            >
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                <tr
+                  style={{
+                    background: 'var(--table-header-bg)',
+                    borderBottom: '2px solid var(--table-header-border)',
+                  }}
+                >
                   {['Archivo', 'Fecha', 'Tamaño', 'Acciones'].map((h, i) => (
-                    <th key={i} style={{ padding: '10px 12px', textAlign: i === 3 ? 'right' : 'left', fontSize: '11px', color: '#4a5568', textTransform: 'uppercase', fontWeight: '700' }}>{h}</th>
+                    <th
+                      key={i}
+                      style={{
+                        ...thStyle,
+                        textAlign: i === 3 ? 'right' : 'left',
+                      }}
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {backups.map((b, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #edf2f7', background: i % 2 === 0 ? '#fff' : '#fafbfc' }}>
-                    <td style={{ padding: '10px 12px', fontSize: '12px', fontFamily: 'monospace' }}>{b.nombre}</td>
-                    <td style={{ padding: '10px 12px' }}>{new Date(b.fecha).toLocaleString('es-VE')}</td>
-                    <td style={{ padding: '10px 12px' }}>{b.tamanoKB} KB</td>
+                  <tr
+                    key={i}
+                    style={{
+                      borderBottom: '1px solid var(--table-row-border)',
+                      background:
+                        i % 2 === 0
+                          ? 'var(--table-row-bg)'
+                          : 'var(--table-row-bg-alt)',
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: '10px 12px',
+                        fontSize: '12px',
+                        fontFamily: 'monospace',
+                        color: 'var(--table-row-text)',
+                      }}
+                    >
+                      {b.nombre}
+                    </td>
+                    <td style={{ padding: '10px 12px', color: 'var(--table-row-text)' }}>
+                      {new Date(b.fecha).toLocaleString('es-VE')}
+                    </td>
+                    <td style={{ padding: '10px 12px', color: 'var(--table-row-text)' }}>
+                      {b.tamanoKB} KB
+                    </td>
                     <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                      <Button variant="warning" size="sm" onClick={() => handleRestaurarBackup(b.nombre)} iconLeft="🔄">
+                      <Button
+                        variant="warning"
+                        size="sm"
+                        onClick={() => handleRestaurarBackup(b.nombre)}
+                        iconLeft="🔄"
+                      >
                         Restaurar
                       </Button>
                     </td>
@@ -354,7 +569,13 @@ export default function ImportarExcel({
             </table>
           </div>
         ) : (
-          <p style={{ color: '#a0aec0', textAlign: 'center', padding: '20px' }}>
+          <p
+            style={{
+              color: 'var(--text-muted)',
+              textAlign: 'center',
+              padding: '20px',
+            }}
+          >
             Haz clic en "Cargar Backups" para ver el historial.
           </p>
         )}
@@ -362,3 +583,38 @@ export default function ImportarExcel({
     </div>
   );
 }
+
+// 🎯 Mini stat card adaptable al tema
+const StatMini = ({ label, value, bg, color, border }) => (
+  <div
+    style={{
+      background: bg,
+      padding: '12px 18px',
+      borderRadius: '10px',
+      flex: 1,
+      minWidth: '140px',
+      border: border || 'none',
+    }}
+  >
+    <span
+      style={{
+        fontSize: '11px',
+        color,
+        textTransform: 'uppercase',
+        fontWeight: '600',
+      }}
+    >
+      {label}
+    </span>
+    <p
+      style={{
+        margin: '4px 0 0 0',
+        fontSize: '22px',
+        fontWeight: 'bold',
+        color,
+      }}
+    >
+      {value}
+    </p>
+  </div>
+);

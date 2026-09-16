@@ -13,7 +13,6 @@ export default function ConfirmModal({
   type = 'danger',
   loading = false,
 }) {
-  // Mapeo del tipo al variant del Modal
   const variantMap = {
     danger: 'danger',
     success: 'success',
@@ -22,7 +21,6 @@ export default function ConfirmModal({
     default: 'default',
   };
 
-  // Íconos por tipo
   const iconMap = {
     danger: '🗑️',
     success: '🔁',
@@ -65,7 +63,7 @@ export default function ConfirmModal({
         style={{
           margin: 0,
           fontSize: '14px',
-          color: '#4a5568',
+          color: 'var(--text-secondary)',   // 👈 único cambio
           lineHeight: 1.6,
           textAlign: 'center',
           padding: '8px 0 16px 0',

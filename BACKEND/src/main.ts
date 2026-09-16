@@ -39,20 +39,6 @@ async function bootstrap() {
     }),
   );
 
-<<<<<<< Updated upstream
-  // 🔑 CORS para el frontend
-  app.enableCors({
-    origin: [
-      'http://localhost:5173',  // Vite
-      'http://localhost:3001',  // Alternativo
-      'http://localhost:4200',  // Angular
-      'http://localhost:8080',  // Vue
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:3001',
-      'http://127.0.0.1:4200',
-      'http://127.0.0.1:8080',
-    ],
-=======
   // =========================================================
   // 🔓 CORS — Acepta HTTP + HTTPS + LAN + localhost
   // =========================================================
@@ -102,7 +88,6 @@ async function bootstrap() {
       console.warn(`🚫 CORS bloqueado para: ${origin}`);
       return callback(new Error('Not allowed by CORS'), false);
     },
->>>>>>> Stashed changes
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
@@ -122,16 +107,24 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   // 🔑 Escuchar en todas las interfaces
-  const port = 3000;
+  const port = 3001;
   await app.listen(port, '0.0.0.0');
 
+  // 📡 Mostrar todas las IPs disponibles al arrancar
+  const os = await import('os');
+  const nets = os.networkInterfaces();
+  const ips: string[] = [];
+
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      // Filtrar IPv4, no internos
+      if (net.family === 'IPv4' && !net.internal) {
+        ips.push(net.address);
+      }
+    }
+  }
+
   console.log('');
-<<<<<<< Updated upstream
-  console.log('🚀 ============================================');
-  console.log(`🚀  Backend corriendo en: http://localhost:${port}`);
-  console.log(`🚀  Swagger docs: http://localhost:${port}/api/docs`);
-  console.log('🚀 ============================================');
-=======
   console.log('🔒 ============================================');
   console.log(`🔒  Backend HTTPS en: https://localhost:${port}`);
   console.log(`🔒  Swagger docs: https://localhost:${port}/api/docs`);
@@ -141,7 +134,6 @@ async function bootstrap() {
     console.log(`      👉 https://${ip}:${port}`);
   });
   console.log('🔒 ============================================');
->>>>>>> Stashed changes
   console.log('');
 }
 

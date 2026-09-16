@@ -9,13 +9,12 @@ export default function Modal({
   icon,
   children,
   footer,
-  size = 'md',         // 'sm' | 'md' | 'lg' | 'xl'
-  variant = 'default', // 'default' | 'success' | 'warning' | 'danger' | 'info'
+  size = 'md',
+  variant = 'default',
   closeOnBackdrop = true,
   closeOnEsc = true,
   hideCloseBtn = false,
 }) {
-  // Cerrar con ESC
   useEffect(() => {
     if (!isOpen || !closeOnEsc) return;
     const handleEsc = (e) => {
@@ -25,7 +24,6 @@ export default function Modal({
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose, closeOnEsc]);
 
-  // Bloquear scroll del body
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -39,15 +37,27 @@ export default function Modal({
 
   if (!isOpen) return null;
 
-  // =========================================================
-  // VARIANTES
-  // =========================================================
   const variants = {
-    default: { accent: 'linear-gradient(90deg, #3182ce, #2b6cb0)', iconBg: '#ebf8ff', iconColor: '#3182ce' },
-    success: { accent: 'linear-gradient(90deg, #38a169, #2f855a)', iconBg: '#c6f6d5', iconColor: '#38a169' },
-    warning: { accent: 'linear-gradient(90deg, #dd6b20, #c05621)', iconBg: '#feebc8', iconColor: '#dd6b20' },
-    danger: { accent: 'linear-gradient(90deg, #e53e3e, #c53030)', iconBg: '#fed7d7', iconColor: '#e53e3e' },
-    info: { accent: 'linear-gradient(90deg, #805ad5, #6b46c1)', iconBg: '#e9d8fd', iconColor: '#805ad5' },
+    default: {
+      accent: 'linear-gradient(90deg, #3182ce, #2b6cb0)',
+      iconBg: 'var(--modal-icon-default-bg)',
+    },
+    success: {
+      accent: 'linear-gradient(90deg, #38a169, #2f855a)',
+      iconBg: 'var(--modal-icon-success-bg)',
+    },
+    warning: {
+      accent: 'linear-gradient(90deg, #dd6b20, #c05621)',
+      iconBg: 'var(--modal-icon-warning-bg)',
+    },
+    danger: {
+      accent: 'linear-gradient(90deg, #e53e3e, #c53030)',
+      iconBg: 'var(--modal-icon-danger-bg)',
+    },
+    info: {
+      accent: 'linear-gradient(90deg, #805ad5, #6b46c1)',
+      iconBg: 'var(--modal-icon-info-bg)',
+    },
   };
 
   const sizes = {
@@ -79,7 +89,7 @@ export default function Modal({
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.55)',
+          background: 'rgba(0, 0, 0, 0.6)',
           backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
@@ -92,19 +102,18 @@ export default function Modal({
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
-            background: '#fff',
+            background: 'var(--modal-bg)',
             borderRadius: '14px',
             maxWidth,
             width: '100%',
             maxHeight: '90vh',
-            boxShadow: '0 25px 70px rgba(0, 0, 0, 0.35)',
+            boxShadow: 'var(--shadow-lg)',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             animation: 'modalSlideDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
           }}
         >
-          {/* BARRA SUPERIOR ANIMADA */}
           <div
             style={{
               height: '4px',
@@ -114,12 +123,11 @@ export default function Modal({
             }}
           ></div>
 
-          {/* HEADER */}
           {(title || !hideCloseBtn) && (
             <div
               style={{
                 padding: '20px 24px',
-                borderBottom: '1px solid #e2e8f0',
+                borderBottom: '1px solid var(--modal-header-border)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
@@ -144,12 +152,25 @@ export default function Modal({
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 {title && (
-                  <h3 style={{ margin: 0, fontSize: '17px', color: '#1a202c', fontWeight: '700' }}>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: '17px',
+                      color: 'var(--modal-title-text)',
+                      fontWeight: '700',
+                    }}
+                  >
                     {title}
                   </h3>
                 )}
                 {subtitle && (
-                  <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#718096' }}>
+                  <p
+                    style={{
+                      margin: '2px 0 0 0',
+                      fontSize: '13px',
+                      color: 'var(--modal-subtitle-text)',
+                    }}
+                  >
                     {subtitle}
                   </p>
                 )}
@@ -161,8 +182,8 @@ export default function Modal({
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    background: '#f7fafc',
-                    color: '#4a5568',
+                    background: 'var(--modal-close-bg)',
+                    color: 'var(--modal-close-color)',
                     border: 'none',
                     cursor: 'pointer',
                     fontSize: '18px',
@@ -172,12 +193,12 @@ export default function Modal({
                     transition: 'all 0.2s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.background = '#fed7d7';
-                    e.target.style.color = '#e53e3e';
+                    e.target.style.background = 'var(--modal-close-bg-hover)';
+                    e.target.style.color = 'var(--modal-close-color-hover)';
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.background = '#f7fafc';
-                    e.target.style.color = '#4a5568';
+                    e.target.style.background = 'var(--modal-close-bg)';
+                    e.target.style.color = 'var(--modal-close-color)';
                   }}
                   title="Cerrar"
                 >
@@ -187,18 +208,16 @@ export default function Modal({
             </div>
           )}
 
-          {/* BODY */}
           <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
             {children}
           </div>
 
-          {/* FOOTER */}
           {footer && (
             <div
               style={{
                 padding: '16px 24px',
-                background: '#f7fafc',
-                borderTop: '1px solid #e2e8f0',
+                background: 'var(--modal-footer-bg)',
+                borderTop: '1px solid var(--modal-footer-border)',
                 display: 'flex',
                 justifyContent: 'flex-end',
                 gap: '12px',

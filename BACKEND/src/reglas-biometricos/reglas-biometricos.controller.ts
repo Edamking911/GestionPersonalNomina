@@ -1,15 +1,39 @@
-import {Controller, Get, Post, Body, Param, Query,UploadedFile, UseInterceptors, BadRequestException} from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ReglasBiometricosService } from './reglas-biometricos.service';
 import 'multer';
+
 @Controller('reglas')
 export class ReglasBiometricosController {
   constructor(private readonly reglasService: ReglasBiometricosService) {}
+
+  // =========================================================
+  // REGLAS Y CONFIGURACIÓN
+  // =========================================================
 
   @Get()
   getReglas() {
     return this.reglasService.getReglas();
   }
+
+  @Get('dias-libres')
+  getDiasLibres() {
+    return this.reglasService.getDiasLibres();
+  }
+
+  // =========================================================
+  // ASIGNACIONES
+  // =========================================================
 
   @Get('asignaciones')
   async getAsignaciones(
@@ -20,13 +44,11 @@ export class ReglasBiometricosController {
     return await this.reglasService.getAsignaciones(semana, conExcel);
   }
 
-  @Get('dias-libres')
-  getDiasLibres() {
-    return this.reglasService.getDiasLibres();
-  }
-
   @Post('asignar')
-  async asignarHorario(@Body() body: { employeeId: string; horarioId: string; diasLibresFijos?: string[] }) {
+  async asignarHorario(
+    @Body()
+    body: { employeeId: string; horarioId: string; diasLibresFijos?: string[] },
+  ) {
     return await this.reglasService.asignarHorario(
       body.employeeId,
       body.horarioId,
@@ -45,13 +67,9 @@ export class ReglasBiometricosController {
     );
   }
 
-  @Post('validar-salidas')
-  async validarSalidas(@Body() body: { fecha?: string; generarExcel?: boolean }) {
-    const fechaStr = body.fecha || new Date().toISOString().slice(0, 10);
-    const [year, month, day] = fechaStr.split('-').map(Number);
-    const fecha = new Date(year, month - 1, day);
-    return await this.reglasService.validarSalidasPendientes(fecha, body.generarExcel);
-  }
+  // =========================================================
+  // EVALUACIÓN
+  // =========================================================
 
   @Get('evaluar/:employeeId/:fecha')
   async evaluarEmpleado(
@@ -70,6 +88,10 @@ export class ReglasBiometricosController {
     }
   }
 
+  // =========================================================
+  // REPORTES
+  // =========================================================
+
   @Get('reporte/:fecha')
   async reporteDiario(
     @Param('fecha') fecha: string,
@@ -80,70 +102,7 @@ export class ReglasBiometricosController {
     const conExcel = generarExcel === 'true';
     return await this.reglasService.generarReporteDiario(fechaLocal, conExcel);
   }
-  // GENERA PLANTILLA PARA LAS ASIGNACIONES 
-  @Get('plantilla-asignaciones')
-  async plantillaAsignaciones(@Query('mes') mes?: string) {
-    return await this.reglasService.generarPlantillaAsignaciones(mes);
-  }
 
-  @Post('validar-excel-asignaciones')
-  @UseInterceptors(FileInterceptor('file'))
-  async validarExcelAsignaciones(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No se subió ningún archivo');
-    }
-    return await this.reglasService.validarExcelAsignaciones(file.buffer);
-  }
-  /**
-   * ✅ Importa un Excel de asignaciones y aplica cambios
-   * POST /reglas/importar-excel-asignaciones
-   */
-  @Post('importar-excel-asignaciones')
-  @UseInterceptors(FileInterceptor('file'))
-  async importarExcelAsignaciones(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No se subió ningún archivo');
-    }
-    return await this.reglasService.importarExcelAsignaciones(file.buffer);
-  }
-
-
-    /**
-   * 📋 Listar backups disponibles
-   * GET /reglas/backups
-   */
-  @Get('backups')
-  listarBackups() {
-    return this.reglasService.listarBackups();
-  }
-
-    /**
-   * 🔄 Restaurar un backup específico
-   * POST /reglas/rollback
-   * Body: { "nombre": "backup_2026-09-11T15-44-11-391Z.json" }
-   */
-  @Post('rollback')
-  restaurarBackup(@Body() body: { nombre: string }) {
-    if (!body?.nombre) {
-      throw new BadRequestException('Debes enviar el nombre del backup');
-    }
-    return this.reglasService.restaurarBackup(body.nombre);
-  }
-
-    /**
-   * 🔄 Restaurar el último backup automáticamente
-   * POST /reglas/rollback-ultimo
-   */
-  @Post('rollback-ultimo')
-  restaurarUltimoBackup() {
-    return this.reglasService.restaurarUltimoBackup();
-  }
-
-    /**
-   * 📊 Reporte semanal/mensual consolidado entre dos fechas
-   * GET /reglas/reporte-semanal?desde=2026-09-08&hasta=2026-09-14
-   * GET /reglas/reporte-semanal?desde=2026-09-08&hasta=2026-09-14&generarExcel=true
-   */
   @Get('reporte-semanal')
   async reporteSemanal(
     @Query('desde') desde: string,
@@ -169,35 +128,125 @@ export class ReglasBiometricosController {
       conExcel,
     );
   }
-    /**
-   * Limpieza manual de backups viejos
-   * GET /reglas/limpiar-backups
-   * GET /reglas/limpiar-backups?dias=15
-   */
-  @Get('limpiar-backups')
-  limpiarBackups(@Query('dias') dias?: string) {
-    const diasAntiguedad = dias ? parseInt(dias, 10) : 30;
-    return this.reglasService.limpiarBackupsViejos(diasAntiguedad);
-  }
 
-  /**
-   * Reporte mensual para nómina
-   * GET /reglas/reporte-mensual?mes=2026-09
-   * GET /reglas/reporte-mensual?mes=2026-09&generarExcel=true
-   */
   @Get('reporte-mensual')
-  async reporteMensual(@Query('mes') mes?: string,@Query('generarExcel') generarExcel?: string){
+  async reporteMensual(
+    @Query('mes') mes?: string,
+    @Query('generarExcel') generarExcel?: string,
+  ) {
     const conExcel = generarExcel === 'true';
     return await this.reglasService.generarReporteMensualNomina(mes, conExcel);
   }
 
-    /**
-   *  Limpiar cache de reportes (forzar recálculo)
-   * GET /reglas/clear-report-cache
-   */
+  @Post('validar-salidas')
+  async validarSalidas(
+    @Body() body: { fecha?: string; generarExcel?: boolean },
+  ) {
+    const fechaStr = body.fecha || new Date().toISOString().slice(0, 10);
+    const [year, month, day] = fechaStr.split('-').map(Number);
+    const fecha = new Date(year, month - 1, day);
+    return await this.reglasService.validarSalidasPendientes(
+      fecha,
+      body.generarExcel,
+    );
+  }
+
+  // =========================================================
+  // PLANTILLA EXCEL
+  // =========================================================
+
+  @Get('plantilla-asignaciones')
+  async plantillaAsignaciones(@Query('mes') mes?: string) {
+    return await this.reglasService.generarPlantillaAsignaciones(mes);
+  }
+
+  @Post('validar-excel-asignaciones')
+  @UseInterceptors(FileInterceptor('file'))
+  async validarExcelAsignaciones(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No se subió ningún archivo');
+    }
+    return await this.reglasService.validarExcelAsignaciones(file.buffer);
+  }
+
+  @Post('importar-excel-asignaciones')
+  @UseInterceptors(FileInterceptor('file'))
+  async importarExcelAsignaciones(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No se subió ningún archivo');
+    }
+    return await this.reglasService.importarExcelAsignaciones(file.buffer);
+  }
+
+  // =========================================================
+  // CACHE
+  // =========================================================
+
   @Get('clear-report-cache')
   async clearReportCache() {
-    return (this.reglasService as any).limpiarCachesReportes();
+    return this.reglasService.limpiarCachesReportes();
+  }
+
+// =========================================================
+// SINCRONIZACIÓN DE EMPLEADOS
+// =========================================================
+
+/**
+ * POST /reglas/sync-empleados
+ * Lee los empleados del biométrico y los sincroniza con la BD.
+ * - Ignora cédulas inválidas
+ * - Ignora el admin del equipo
+ * - No duplica
+ * - Actualiza nombres si cambiaron
+ */
+  @Post('sync-empleados') //Uso solo por Desarrolladores o este caso Los administradores del sistema   curl -k -X POST https://localhost:3001/reglas/sync-empleados
+  async sincronizarEmpleados() {
+    return await this.reglasService.sincronizarEmpleadosDesdeBiometrico();
+  }
+
+
+ // Usos Solo por los Desarrolladores
+  // =========================================================
+// MIGRACIÓN JSON → BD
+// =========================================================
+
+/**
+ * POST /reglas/migrar-asignaciones
+ * Lee asignaciones_turnos.json y las migra a la tabla asignaciones_horarios.
+ * ⚠️ Solo usar UNA VEZ. No duplica las que ya existen.
+ */
+  @Post('migrar-asignaciones')
+  async migrarAsignaciones() {
+    return await this.reglasService.migrarAsignaciones();
+  }
+
+  /**
+   * POST /reglas/migrar-dias-libres
+   * Lee dias_libres.json y los migra a la tabla dias_libres.
+   * ⚠️ Solo usar UNA VEZ. Borra los días previos de cada empleado.
+   */
+  @Post('migrar-dias-libres')
+  async migrarDiasLibres() {
+    return await this.reglasService.migrarDiasLibres();
+  }
+
+  /**
+   * POST /reglas/migrar-todo
+   * Migra asignaciones + días libres de una sola vez.
+   * ⚠️ Solo usar UNA VEZ.
+   */
+  @Post('migrar-todo')
+  async migrarTodo() {
+    return await this.reglasService.migrarTodo();
+  }
+
+  /**
+   * GET /reglas/estado-migracion
+   * Verifica qué está migrado y qué falta.
+   */
+  @Get('estado-migracion')
+  async estadoMigracion() {
+    return await this.reglasService.estadoMigracion();
   }
 
 }

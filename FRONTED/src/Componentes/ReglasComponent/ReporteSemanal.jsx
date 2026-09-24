@@ -8,6 +8,7 @@ import TableSkeleton from '../UI/EsqueletoTable';
 import StatsSkeleton from '../UI/StatsEsqueleto';
 import { usePagination } from '../../Hoosk/PaginacionHoosk';
 import { exportarReportePDF, imprimirReporte } from '../../utils/pdfExport';
+import { API_BASE } from '../../servicio/Api'; // ✅ NUEVO
 
 function separarNombreApellido(nombreCompleto) {
   if (!nombreCompleto) return { nombre: '', apellido: 'N/A' };
@@ -29,6 +30,7 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
   const [loading, setLoading] = useState(false);
   const [filtroTexto, setFiltroTexto] = useState('');
   const [soloConActividad, setSoloConActividad] = useState(false);
+  const [mostrarAvanzado, setMostrarAvanzado] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,12 +52,16 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
     }
   };
 
+  // ✅ FIX: usa API_BASE
   const handleDescargarExcel = () => {
     if (!desde || !hasta) {
       alert('Selecciona ambas fechas primero.');
       return;
     }
-    window.open(`http://localhost:3000/reglas/reporte-semanal?desde=${desde}&hasta=${hasta}&generarExcel=true`, '_blank');
+    window.open(
+      `${API_BASE}/reglas/reporte-semanal?desde=${desde}&hasta=${hasta}&generarExcel=true`,
+      '_blank'
+    );
   };
 
   const esIdDePrueba = (employeeId) => {
@@ -120,13 +126,16 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
             reporteLimpio.reduce((s, i) => s + (i.horasExtraNocturnas || 0), 0)) *
             100
         ) / 100,
+      totalVacaciones: reporteLimpio.reduce((s, i) => s + (i.diasVacaciones || 0), 0),
+      totalReposo: reporteLimpio.reduce((s, i) => s + (i.diasReposoMedico || 0), 0),
+      totalFaltas: reporteLimpio.reduce((s, i) => s + (i.diasFaltaJustificada || 0) + (i.diasFaltaInjustificada || 0), 0),
     };
   })();
 
   const prepararDatosReporte = () => {
     if (!reporteLimpio.length) return null;
 
-    const columnas = [
+    const columnasBase = [
       { key: 'employeeId', label: 'Cédula', width: 18 },
       { key: 'nombre', label: 'Nombre' },
       { key: 'apellido', label: 'Apellido' },
@@ -135,6 +144,22 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
       { key: 'descansos', label: 'Libres', align: 'center' },
       { key: 'noMarcoSalida', label: 'Sin Sal.', align: 'center' },
       { key: 'asistenciaPct', label: 'Asist. %', align: 'center' },
+    ];
+
+    const columnasAvanzadas = [
+      { key: 'diasVacaciones', label: 'Vacac.', align: 'center' },
+      { key: 'diasReposoMedico', label: 'Reposo', align: 'center' },
+      { key: 'diasPermisoRemunerado', label: 'P. Rem.', align: 'center' },
+      { key: 'diasPermisoNoRemunerado', label: 'P. No Rem.', align: 'center' },
+      { key: 'diasFaltaJustificada', label: 'F. Just.', align: 'center' },
+      { key: 'diasFaltaInjustificada', label: 'F. Injust.', align: 'center' },
+      { key: 'diasBreakCorrecto', label: 'Break OK', align: 'center' },
+      { key: 'diasBreakExceso', label: 'Break Exc.', align: 'center' },
+      { key: 'diasBreakCorto', label: 'Break Corto', align: 'center' },
+      { key: 'breakExcesoLegible', label: 'Exceso Break' },
+    ];
+
+    const columnasResto = [
       { key: 'retardoLegible', label: 'Retardo' },
       { key: 'salidaTempranaLegible', label: 'Sal. Temprana' },
       { key: 'horasDiurnasLegible', label: 'H. Diurnas', align: 'right' },
@@ -144,11 +169,15 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
       { key: 'totalHorasTrabajadasLegible', label: 'Total', align: 'right' },
     ];
 
+    const columnas = mostrarAvanzado
+      ? [...columnasBase, ...columnasAvanzadas, ...columnasResto]
+      : [...columnasBase, ...columnasResto];
+
     const filas = reporteLimpio.map((item) => {
       const asistencia = calcularAsistencia(item);
       const { nombre, apellido } = separarNombreApellido(item.nombre || '');
 
-      return {
+      const base = {
         employeeId: item.employeeId,
         nombre,
         apellido,
@@ -157,6 +186,24 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
         descansos: item.descansos ?? 0,
         noMarcoSalida: item.noMarcoSalida ?? 0,
         asistenciaPct: asistencia !== null ? `${asistencia}%` : '—',
+      };
+
+      const avanzado = mostrarAvanzado
+        ? {
+            diasVacaciones: item.diasVacaciones ?? 0,
+            diasReposoMedico: item.diasReposoMedico ?? 0,
+            diasPermisoRemunerado: item.diasPermisoRemunerado ?? 0,
+            diasPermisoNoRemunerado: item.diasPermisoNoRemunerado ?? 0,
+            diasFaltaJustificada: item.diasFaltaJustificada ?? 0,
+            diasFaltaInjustificada: item.diasFaltaInjustificada ?? 0,
+            diasBreakCorrecto: item.diasBreakCorrecto ?? 0,
+            diasBreakExceso: item.diasBreakExceso ?? 0,
+            diasBreakCorto: item.diasBreakCorto ?? 0,
+            breakExcesoLegible: item.breakExcesoLegible || '0m',
+          }
+        : {};
+
+      const resto = {
         retardoLegible: item.retardoLegible || '0m',
         salidaTempranaLegible: item.salidaTempranaLegible || '0m',
         horasDiurnasLegible: item.horasDiurnasLegible || '0h',
@@ -165,6 +212,8 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
         horasExtraNocturnasLegible: item.horasExtraNocturnasLegible || '0h',
         totalHorasTrabajadasLegible: item.totalHorasTrabajadasLegible || '0h',
       };
+
+      return { ...base, ...avanzado, ...resto };
     });
 
     return {
@@ -228,6 +277,13 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
     fontWeight: '700',
     whiteSpace: 'nowrap',
   };
+
+  const headersBase = ['Cédula', 'Nombre', 'Apellido', 'Trab.', 'Ause.', 'Libres', 'Sin Salida', 'Asist. %'];
+  const headersAvanzado = ['Vacac.', 'Reposo', 'P. Rem.', 'P. No Rem.', 'F. Just.', 'F. Injust.', 'Break OK', 'Break Exc.', 'Break Corto', 'Exceso Break'];
+  const headersResto = ['Retardo', 'Sal. Temprana', 'H. Diurnas', 'H. Nocturnas', 'Extra Diur.', 'Extra Noct.', 'Total'];
+  const headers = mostrarAvanzado
+    ? [...headersBase, ...headersAvanzado, ...headersResto]
+    : [...headersBase, ...headersResto];
 
   return (
     <Card
@@ -319,7 +375,6 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
         </div>
       )}
 
-      {/* 🦴 SKELETON mientras carga */}
       {loading && (
         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <StatsSkeleton count={4} />
@@ -327,7 +382,6 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
         </div>
       )}
 
-      {/* ✅ Reporte listo */}
       {!loading && reporte && (
         <div style={{ marginTop: '16px' }}>
           <div
@@ -385,6 +439,27 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
                 border="var(--card-info-border)"
                 color="var(--card-info-title)"
               />
+              <StatMini
+                label="🏖️ Vacaciones"
+                value={stats.totalVacaciones}
+                bg="var(--card-info-bg)"
+                border="var(--card-info-border)"
+                color="var(--card-info-title)"
+              />
+              <StatMini
+                label="🏥 Reposos"
+                value={stats.totalReposo}
+                bg="var(--card-danger-bg)"
+                border="var(--card-danger-border)"
+                color="var(--card-danger-title)"
+              />
+              <StatMini
+                label="⚠️ Faltas"
+                value={stats.totalFaltas}
+                bg="var(--card-warning-bg)"
+                border="var(--card-warning-border)"
+                color="var(--card-warning-title)"
+              />
             </div>
           )}
 
@@ -432,6 +507,29 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
               />
               Solo con actividad
             </label>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '13px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                padding: '6px 12px',
+                background: mostrarAvanzado ? 'var(--primary-soft)' : 'var(--bg-hover)',
+                border: `1px solid ${mostrarAvanzado ? 'var(--primary)' : 'var(--border-color)'}`,
+                borderRadius: '8px',
+                fontWeight: '600',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={mostrarAvanzado}
+                onChange={(e) => setMostrarAvanzado(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              📊 Mostrar novedades y break
+            </label>
           </div>
 
           {reporteLimpio.length > 0 ? (
@@ -458,7 +556,7 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
                         borderBottom: '2px solid var(--table-header-border)',
                       }}
                     >
-                      {['Cédula', 'Nombre', 'Apellido', 'Trab.', 'Ause.', 'Libres', 'Sin Salida', 'Asist. %', 'Retardo', 'Sal. Temprana', 'H. Diurnas', 'H. Nocturnas', 'Extra Diur.', 'Extra Noct.', 'Total'].map((h, i) => (
+                      {headers.map((h, i) => (
                         <th key={i} style={thStyle}>
                           {h}
                         </th>
@@ -480,66 +578,19 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
                                 : 'var(--table-row-bg-alt)',
                           }}
                         >
-                          <td
-                            style={{
-                              padding: '8px 10px',
-                              fontWeight: '600',
-                              color: 'var(--primary)',
-                            }}
-                          >
+                          <td style={{ padding: '8px 10px', fontWeight: '600', color: 'var(--primary)' }}>
                             {item.employeeId}
                           </td>
-                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
-                            {nombre}
-                          </td>
-                          <td style={{ padding: '8px 10px', color: 'var(--text-secondary)' }}>
-                            {apellido}
-                          </td>
-                          <td
-                            style={{
-                              padding: '8px 10px',
-                              textAlign: 'center',
-                              color:
-                                item.diasTrabajados > 0
-                                  ? 'var(--success)'
-                                  : 'var(--table-row-text)',
-                              fontWeight: '600',
-                            }}
-                          >
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>{nombre}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--text-secondary)' }}>{apellido}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center', color: item.diasTrabajados > 0 ? 'var(--success)' : 'var(--table-row-text)', fontWeight: '600' }}>
                             {item.diasTrabajados}
                           </td>
-                          <td
-                            style={{
-                              padding: '8px 10px',
-                              textAlign: 'center',
-                              color:
-                                item.ausentes > 0
-                                  ? 'var(--danger)'
-                                  : 'var(--table-row-text)',
-                              fontWeight: item.ausentes > 0 ? '600' : '400',
-                            }}
-                          >
+                          <td style={{ padding: '8px 10px', textAlign: 'center', color: item.ausentes > 0 ? 'var(--danger)' : 'var(--table-row-text)', fontWeight: item.ausentes > 0 ? '600' : '400' }}>
                             {item.ausentes}
                           </td>
-                          <td
-                            style={{
-                              padding: '8px 10px',
-                              textAlign: 'center',
-                              color: 'var(--table-row-text)',
-                            }}
-                          >
-                            {item.descansos}
-                          </td>
-                          <td
-                            style={{
-                              padding: '8px 10px',
-                              textAlign: 'center',
-                              color:
-                                item.noMarcoSalida > 0
-                                  ? 'var(--warning)'
-                                  : 'var(--table-row-text)',
-                            }}
-                          >
+                          <td style={{ padding: '8px 10px', textAlign: 'center', color: 'var(--table-row-text)' }}>{item.descansos}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center', color: item.noMarcoSalida > 0 ? 'var(--warning)' : 'var(--table-row-text)' }}>
                             {item.noMarcoSalida}
                           </td>
                           <td style={{ padding: '8px 10px', textAlign: 'center' }}>
@@ -551,31 +602,49 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
                               <span style={{ color: 'var(--text-muted)' }}>—</span>
                             )}
                           </td>
-                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
-                            {item.retardoLegible}
-                          </td>
-                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
-                            {item.salidaTempranaLegible}
-                          </td>
-                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
-                            {item.horasDiurnasLegible}
-                          </td>
-                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
-                            {item.horasNocturnasLegible}
-                          </td>
-                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
-                            {item.horasExtraDiurnasLegible}
-                          </td>
-                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>
-                            {item.horasExtraNocturnasLegible}
-                          </td>
-                          <td
-                            style={{
-                              padding: '8px 10px',
-                              fontWeight: '700',
-                              color: 'var(--primary)',
-                            }}
-                          >
+
+                          {mostrarAvanzado && (
+                            <>
+                              <td style={{ padding: '8px 10px', textAlign: 'center', color: item.diasVacaciones > 0 ? 'var(--info)' : 'var(--text-muted)' }}>
+                                {item.diasVacaciones || 0}
+                              </td>
+                              <td style={{ padding: '8px 10px', textAlign: 'center', color: item.diasReposoMedico > 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                                {item.diasReposoMedico || 0}
+                              </td>
+                              <td style={{ padding: '8px 10px', textAlign: 'center', color: 'var(--table-row-text)' }}>
+                                {item.diasPermisoRemunerado || 0}
+                              </td>
+                              <td style={{ padding: '8px 10px', textAlign: 'center', color: 'var(--table-row-text)' }}>
+                                {item.diasPermisoNoRemunerado || 0}
+                              </td>
+                              <td style={{ padding: '8px 10px', textAlign: 'center', color: item.diasFaltaJustificada > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
+                                {item.diasFaltaJustificada || 0}
+                              </td>
+                              <td style={{ padding: '8px 10px', textAlign: 'center', color: item.diasFaltaInjustificada > 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                                {item.diasFaltaInjustificada || 0}
+                              </td>
+                              <td style={{ padding: '8px 10px', textAlign: 'center', color: 'var(--success)' }}>
+                                {item.diasBreakCorrecto || 0}
+                              </td>
+                              <td style={{ padding: '8px 10px', textAlign: 'center', color: item.diasBreakExceso > 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                                {item.diasBreakExceso || 0}
+                              </td>
+                              <td style={{ padding: '8px 10px', textAlign: 'center', color: item.diasBreakCorto > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
+                                {item.diasBreakCorto || 0}
+                              </td>
+                              <td style={{ padding: '8px 10px', color: item.breakExcesoLegible && item.breakExcesoLegible !== '0m' ? 'var(--danger)' : 'var(--text-muted)' }}>
+                                {item.breakExcesoLegible || '0m'}
+                              </td>
+                            </>
+                          )}
+
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>{item.retardoLegible}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>{item.salidaTempranaLegible}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>{item.horasDiurnasLegible}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>{item.horasNocturnasLegible}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>{item.horasExtraDiurnasLegible}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--table-row-text)' }}>{item.horasExtraNocturnasLegible}</td>
+                          <td style={{ padding: '8px 10px', fontWeight: '700', color: 'var(--primary)' }}>
                             {item.totalHorasTrabajadasLegible}
                           </td>
                         </tr>
@@ -588,13 +657,7 @@ export default function ReporteSemanal({ onGenerar, reporte }) {
               <Pagination {...pagination} />
             </div>
           ) : (
-            <p
-              style={{
-                color: 'var(--text-muted)',
-                textAlign: 'center',
-                padding: '20px',
-              }}
-            >
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
               No hay datos que coincidan con los filtros.
             </p>
           )}
@@ -613,25 +676,9 @@ const StatMini = ({ label, value, bg, border, color }) => (
       border: `1px solid ${border}`,
     }}
   >
-    <span
-      style={{
-        fontSize: '11px',
-        color,
-        textTransform: 'uppercase',
-        fontWeight: '600',
-      }}
-    >
+    <span style={{ fontSize: '11px', color, textTransform: 'uppercase', fontWeight: '600' }}>
       {label}
     </span>
-    <p
-      style={{
-        margin: '4px 0 0 0',
-        fontSize: '22px',
-        fontWeight: 'bold',
-        color,
-      }}
-    >
-      {value}
-    </p>
+    <p style={{ margin: '4px 0 0 0', fontSize: '22px', fontWeight: 'bold', color }}>{value}</p>
   </div>
 );

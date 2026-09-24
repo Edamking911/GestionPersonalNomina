@@ -148,6 +148,7 @@ export class CuentasBancariasController {
     description: 'Cuenta bancaria o empleado no encontrado',
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
+  /*
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateCuentaBancariaDto,
@@ -157,7 +158,7 @@ export class CuentasBancariasController {
       message: 'Cuenta bancaria actualizada exitosamente',
       cuenta,
     };
-  }
+  }*/
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)

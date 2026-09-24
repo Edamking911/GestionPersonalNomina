@@ -161,7 +161,7 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
   };
 
   // =========================================================
-  // ESTADO: CARGANDO (con nuevos skeletons)
+  // ESTADO: CARGANDO
   // =========================================================
   if (loading) {
     return (
@@ -209,8 +209,8 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
           </div>
         </Card>
 
-        {/* 🦴 Stats skeleton (6 tarjetas) */}
-        <StatsSkeleton count={6} />
+        {/* 🦴 Stats skeleton (11 tarjetas) */}
+        <StatsSkeleton count={11} />
 
         {/* 🦴 Gráfico grande */}
         <ChartSkeleton height={350} />
@@ -227,7 +227,6 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
           <ChartSkeleton height={300} />
         </div>
 
-        {/* 🦴 1 gráfico más */}
         <ChartSkeleton height={300} />
       </div>
     );
@@ -304,6 +303,9 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
   const diasRango = rango?.dias || 0;
   const esRangoLargo = diasRango > 30;
 
+  // =========================================================
+  // 📊 RESUMEN GENERAL
+  // =========================================================
   const resumen = {
     totalEmpleados: reporte.length,
     totalDiasTrabajados: reporte.reduce((s, r) => s + (r.diasTrabajados || 0), 0),
@@ -319,6 +321,31 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
       ) / 100,
   };
 
+  // =========================================================
+  // 🆕 RESUMEN DE NOVEDADES
+  // =========================================================
+  const resumenNovedades = {
+    totalVacaciones: reporte.reduce((s, r) => s + (r.diasVacaciones || 0), 0),
+    totalReposo: reporte.reduce((s, r) => s + (r.diasReposoMedico || 0), 0),
+    totalPermisos: reporte.reduce(
+      (s, r) =>
+        s + (r.diasPermisoRemunerado || 0) + (r.diasPermisoNoRemunerado || 0),
+      0,
+    ),
+    totalFaltas: reporte.reduce(
+      (s, r) =>
+        s + (r.diasFaltaJustificada || 0) + (r.diasFaltaInjustificada || 0),
+      0,
+    ),
+    totalBreakExceso: reporte.reduce(
+      (s, r) => s + (r.minutosBreakExceso || 0),
+      0,
+    ),
+  };
+
+  // =========================================================
+  // 📊 DATOS DE GRÁFICOS
+  // =========================================================
   const topEmpleados = [...reporte]
     .sort((a, b) => (b.diasTrabajados || 0) - (a.diasTrabajados || 0))
     .slice(0, 5)
@@ -492,6 +519,42 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
             {formatearHoras(resumen.totalHorasExtra)}
           </p>
         </Card>
+
+        {/* 🆕 NOVEDADES */}
+        <Card variant="info" padding="sm">
+          <span style={statLabelStyle}>🏖️ Vacaciones</span>
+          <p style={{ ...statValueStyle, color: COLORS.info }}>
+            {resumenNovedades.totalVacaciones}
+          </p>
+        </Card>
+
+        <Card variant="danger" padding="sm">
+          <span style={statLabelStyle}>🏥 Reposos</span>
+          <p style={{ ...statValueStyle, color: COLORS.danger }}>
+            {resumenNovedades.totalReposo}
+          </p>
+        </Card>
+
+        <Card variant="warning" padding="sm">
+          <span style={statLabelStyle}>📝 Permisos</span>
+          <p style={{ ...statValueStyle, color: COLORS.warning }}>
+            {resumenNovedades.totalPermisos}
+          </p>
+        </Card>
+
+        <Card variant="danger" padding="sm">
+          <span style={statLabelStyle}>⚠️ Faltas</span>
+          <p style={{ ...statValueStyle, color: COLORS.danger }}>
+            {resumenNovedades.totalFaltas}
+          </p>
+        </Card>
+
+        <Card variant="warning" padding="sm">
+          <span style={statLabelStyle}>⏱️ Exceso Break</span>
+          <p style={{ ...statValueStyle, color: COLORS.warning }}>
+            {formatearMinutos(resumenNovedades.totalBreakExceso)}
+          </p>
+        </Card>
       </div>
 
       {/* ============ GRÁFICO: TOP 5 EMPLEADOS ============ */}
@@ -542,7 +605,9 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
                 itemStyle={tooltipItemStyle}
                 labelStyle={tooltipLabelStyle}
               />
-              <Legend wrapperStyle={{ fontSize: 13, paddingTop: 10, color: 'var(--text-secondary)' }} />
+              <Legend
+                wrapperStyle={{ fontSize: 13, paddingTop: 10, color: 'var(--text-secondary)' }}
+              />
               <Bar
                 yAxisId="left"
                 dataKey="diasTrabajados"
@@ -599,7 +664,9 @@ export default function Dashboard({ reporteSemanal, onGenerarSemanal }) {
                   itemStyle={tooltipItemStyle}
                   labelStyle={tooltipLabelStyle}
                 />
-                <Legend wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)' }} />
+                <Legend
+                  wrapperStyle={{ fontSize: 12, color: 'var(--text-secondary)' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>

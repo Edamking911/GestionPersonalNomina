@@ -1,4 +1,5 @@
 // vite.config.js
+import fs from 'fs';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -65,40 +66,26 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
-        // 📴 Fallback para navegación offline
         navigateFallback: '/index.html',
-        // 🚫 No interceptar las llamadas al backend
         navigateFallbackDenylist: [/^\/api/, /^\/biometrico/, /^\/reglas/],
         runtimeCaching: [
+          // 🚫 NO interceptar API - dejamos que vaya directo al backend
+          // ✅ Solo cachear imágenes (assets estáticos)
           {
-            // API: red primero, luego cache
-            urlPattern: /^https?:\/\/.*\/(biometrico|reglas)\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              networkTimeoutSeconds: 5,
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 5 * 60, // 5 min
-              },
-            },
-          },
-          {
-            // Imágenes: cache primero
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'images-cache',
               expiration: {
                 maxEntries: 60,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 días
+                maxAgeSeconds: 30 * 24 * 60 * 60,
               },
             },
           },
         ],
       },
       devOptions: {
-        enabled: true, // 👈 PWA funciona en modo dev también
+        enabled: true,   // 👈 Reactivar PWA
         type: 'module',
         navigateFallback: 'index.html',
       },
@@ -107,5 +94,10 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // 🔒 HTTPS con certificados mkcert
+    https: {
+      key: fs.readFileSync('./localhost+2-key.pem'),
+      cert: fs.readFileSync('./localhost+2.pem'),
+    },
   },
 });

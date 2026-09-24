@@ -10,6 +10,11 @@ import {EgresosPersonalesModule} from './egresos-personales/egresos-personales.m
 import { MonedaModule } from './moneda/moneda.module';
 import { TasaCambioModule } from './tasa_cambio/tasa_cambio.module';
 import { ReglasBiometricosModule } from './reglas-biometricos/reglas-biometricos.module';
+import { HorarioAsistenciaModule } from './horario-asistencia/horario-asistencia.module';
+import { DiasLibresModule } from './dias-libres/dias-libres.module';
+import { FeriadosModule } from './feriados/feriados.module';
+import { MarcajesBiometricoModule } from './marcajes-biometrico/marcajes-biometrico.module';
+import { EmpleadosModule } from './empleados/empleados.module';
 
 @Module({
   imports: [
@@ -21,6 +26,7 @@ import { ReglasBiometricosModule } from './reglas-biometricos/reglas-biometricos
       password: '123456',
       database: 'Gestion_Personal',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      //autoLoadEntities: true,
       synchronize: false,
     }),
     ScheduleModule.forRoot(),
@@ -31,9 +37,12 @@ import { ReglasBiometricosModule } from './reglas-biometricos/reglas-biometricos
     TasaCambioModule,
     ReglasBiometricosModule,
     BiometricoModule,
-    ReglasBiometricosModule,
     EgresosPersonalesModule,
-    //EmpleadosModule,
+    HorarioAsistenciaModule,
+    DiasLibresModule,
+    FeriadosModule,
+    MarcajesBiometricoModule,
+    EmpleadosModule,
   ],
   
   controllers: [AppController],

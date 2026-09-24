@@ -24,10 +24,12 @@ export default function InstallPWA() {
 
     const handleBeforeInstall = (e) => {
       e.preventDefault();
+      console.log('[PWA] beforeinstallprompt capturado ✅');
       setDeferredPrompt(e);
     };
 
     const handleInstalled = () => {
+      console.log('[PWA] App instalada ✅');
       setIsInstalled(true);
       setDeferredPrompt(null);
     };
@@ -42,17 +44,32 @@ export default function InstallPWA() {
   }, []);
 
   const handleInstall = async () => {
+    // ✅ Caso ideal: hay prompt disponible → instalar directo
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log('[PWA] Resultado:', outcome);
-      setDeferredPrompt(null);
-      return;
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('[PWA] Resultado:', outcome);
+        if (outcome === 'accepted') {
+          setIsInstalled(true);
+        }
+        setDeferredPrompt(null);
+        return;
+      } catch (err) {
+        console.error('[PWA] Error al prompt:', err);
+      }
     }
+
+    // ⚠️ No hay prompt (Chrome ya lo dismisseó) → mostrar instrucciones
     setShowHint(true);
   };
 
+  // Solo ocultar si YA está instalada
   if (isInstalled) return null;
+
+  // Si hay prompt → botón verde
+  // Si no hay prompt → botón amarillo (con instrucciones)
+  const hayPrompt = !!deferredPrompt;
 
   return (
     <>
@@ -68,7 +85,9 @@ export default function InstallPWA() {
           justify-content: center;
           gap: 6px;
           padding: 6px 12px;
-          background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+          background: ${hayPrompt 
+            ? 'linear-gradient(135deg, #38a169 0%, #2f855a 100%)' 
+            : 'linear-gradient(135deg, #d69e2e 0%, #b7791f 100%)'};
           color: #fff;
           border: none;
           border-radius: 8px;
@@ -78,12 +97,15 @@ export default function InstallPWA() {
           font-family: inherit;
           transition: all 0.25s ease;
           height: 42px;
-          box-shadow: 0 4px 12px rgba(56, 161, 105, 0.35);
+          box-shadow: 0 4px 12px ${hayPrompt 
+            ? 'rgba(56, 161, 105, 0.35)' 
+            : 'rgba(214, 158, 46, 0.35)'};
         }
         .ipwa-btn:hover {
-          background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
           transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(56, 161, 105, 0.5);
+          box-shadow: 0 8px 20px ${hayPrompt 
+            ? 'rgba(56, 161, 105, 0.5)' 
+            : 'rgba(214, 158, 46, 0.5)'};
         }
         .ipwa-btn:active { transform: translateY(0) scale(0.98); }
 
@@ -102,7 +124,7 @@ export default function InstallPWA() {
         .ipwa-modal {
           background: var(--bg-card);
           border-radius: 14px;
-          max-width: 440px;
+          max-width: 460px;
           width: 100%;
           padding: 24px;
           box-shadow: var(--shadow-lg);
@@ -126,11 +148,11 @@ export default function InstallPWA() {
           margin-bottom: 20px;
         }
         .ipwa-step {
-          margin: 10px 0;
+          margin: 12px 0;
           font-size: 13px;
           line-height: 1.6;
           color: var(--text-secondary);
-          padding-left: 24px;
+          padding-left: 30px;
           position: relative;
         }
         .ipwa-step::before {
@@ -138,21 +160,41 @@ export default function InstallPWA() {
           counter-increment: step;
           position: absolute;
           left: 0;
-          top: 2px;
-          width: 18px;
-          height: 18px;
+          top: 1px;
+          width: 20px;
+          height: 20px;
           background: var(--primary);
           color: #fff;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 10px;
+          font-size: 11px;
           font-weight: 700;
         }
         .ipwa-step strong {
           color: var(--text-primary);
           font-weight: 700;
+        }
+        .ipwa-step code {
+          background: var(--bg-hover);
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-family: monospace;
+          font-size: 12px;
+          color: var(--primary);
+        }
+        .ipwa-warning {
+          background: var(--warning-soft);
+          border: 1px solid var(--card-warning-border);
+          padding: 12px;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 12px;
+          color: var(--card-warning-title);
+          display: flex;
+          gap: 8px;
+          align-items: flex-start;
         }
         .ipwa-close {
           width: 100%;
@@ -185,7 +227,7 @@ export default function InstallPWA() {
       <button
         className="ipwa-btn"
         onClick={handleInstall}
-        title="Instalar app en tu dispositivo"
+        title={hayPrompt ? 'Instalar app' : 'Ver cómo instalar la app'}
       >
         📲 <span className="ipwa-btn-text">Instalar</span>
       </button>
@@ -197,29 +239,51 @@ export default function InstallPWA() {
             <h3 className="ipwa-modal-title">
               {platform === 'ios' && 'Instalar en iOS'}
               {platform === 'android' && 'Instalar en Android'}
-              {platform === 'desktop' && 'Instalar en PC'}
+              {platform === 'desktop' && 'Instalar en esta PC'}
             </h3>
 
-            <div className="ipwa-steps">
-              {platform === 'ios' && (
-                <>
-                  <p className="ipwa-step">
-                    Abre esta página en <strong>Safari</strong> (no Chrome)
-                  </p>
-                  <p className="ipwa-step">
-                    Toca el botón <strong>Compartir</strong> (↑ en la barra inferior)
-                  </p>
-                  <p className="ipwa-step">
-                    Desliza y toca <strong>"Añadir a pantalla de inicio"</strong>
-                  </p>
-                  <p className="ipwa-step">
-                    Toca <strong>"Añadir"</strong> arriba a la derecha
-                  </p>
-                </>
-              )}
+            {platform === 'desktop' && (
+              <>
+                <div className="ipwa-warning">
+                  <span style={{ fontSize: '16px' }}>⚠️</span>
+                  <span>
+                    Chrome ya mostró el diálogo antes. Ahora hay que instalarla
+                    desde el menú del navegador.
+                  </span>
+                </div>
 
-              {platform === 'android' && (
-                <>
+                <div className="ipwa-steps">
+                  <p className="ipwa-step">
+                    En la barra de direcciones, busca el ícono{' '}
+                    <strong>📲 (monitor con flecha hacia abajo)</strong> al lado
+                    de la URL <code>https://172.18.0.84:5173</code>
+                  </p>
+                  <p className="ipwa-step">
+                    Si NO aparece, haz clic en el menú <strong>⋮</strong>{' '}
+                    (arriba a la derecha de Chrome)
+                  </p>
+                  <p className="ipwa-step">
+                    Busca la opción{' '}
+                    <strong>"Instalar Sistema Biométrico"</strong> o{' '}
+                    <strong>"Instalar aplicación"</strong>
+                  </p>
+                  <p className="ipwa-step">
+                    Confirma con <strong>"Instalar"</strong>
+                  </p>
+                </div>
+              </>
+            )}
+
+            {platform === 'android' && (
+              <>
+                <div className="ipwa-warning">
+                  <span style={{ fontSize: '16px' }}>⚠️</span>
+                  <span>
+                    Chrome ya dismisseó el diálogo antes. Instálala desde el menú.
+                  </span>
+                </div>
+
+                <div className="ipwa-steps">
                   <p className="ipwa-step">
                     Toca el menú <strong>⋮</strong> (arriba a la derecha)
                   </p>
@@ -231,28 +295,30 @@ export default function InstallPWA() {
                     Confirma tocando <strong>"Instalar"</strong>
                   </p>
                   <p className="ipwa-step">
-                    ¡Listo! Busca el ícono <strong>Biométrico</strong> en tu cajón
+                    ¡Listo! Busca el ícono en tu cajón de apps
                   </p>
-                </>
-              )}
+                </div>
+              </>
+            )}
 
-              {platform === 'desktop' && (
-                <>
-                  <p className="ipwa-step">
-                    Busca el ícono <strong>📲</strong> en la barra de direcciones
-                  </p>
-                  <p className="ipwa-step">
-                    O abre el menú y busca <strong>"Instalar Sistema Biométrico"</strong>
-                  </p>
-                  <p className="ipwa-step">Confirma la instalación</p>
-                </>
-              )}
-            </div>
+            {platform === 'ios' && (
+              <div className="ipwa-steps">
+                <p className="ipwa-step">
+                  Abre esta página en <strong>Safari</strong> (no Chrome)
+                </p>
+                <p className="ipwa-step">
+                  Toca el botón <strong>Compartir</strong> (↑ en la barra inferior)
+                </p>
+                <p className="ipwa-step">
+                  Desliza y toca <strong>"Añadir a pantalla de inicio"</strong>
+                </p>
+                <p className="ipwa-step">
+                  Toca <strong>"Añadir"</strong> arriba a la derecha
+                </p>
+              </div>
+            )}
 
-            <button
-              className="ipwa-close"
-              onClick={() => setShowHint(false)}
-            >
+            <button className="ipwa-close" onClick={() => setShowHint(false)}>
               Entendido
             </button>
           </div>

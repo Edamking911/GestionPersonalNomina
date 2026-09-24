@@ -61,8 +61,8 @@ export class CuentaBancaria {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'empleado_id', type: 'uuid', nullable: false })
-  empleadoId!: string;
+  @Column({ name: 'empleado_id', type: 'uuid', nullable: true })
+  empleadoId?: string;
 
   @Column({ type: 'varchar', length: 100, nullable: false })
   banco!: string;
@@ -80,10 +80,11 @@ export class CuentaBancaria {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
-
+    
   @ManyToOne(() => Empleado, (empleado) => empleado.cuentasBancarias, {
-    onDelete: 'CASCADE',
+    onDelete: 'RESTRICT',
+    nullable: true,
   })
   @JoinColumn({ name: 'empleado_id' })
-  empleado!: Empleado;
+  empleado?: Empleado;
 }

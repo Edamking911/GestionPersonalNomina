@@ -268,15 +268,19 @@ export function useBiometrico() {
     }
   }, [agregarNotificacion]);
 
-  // 🔴 Desactivar usuario
+  // 🔴 Desactivar usuario (con skipConfirm para evitar doble confirmación)
   const handleEliminarUsuario = useCallback(
-    async (employeeNo) => {
+    async (employeeNo, options = {}) => {
+      const { skipConfirm = false } = options;
+
       if (
+        !skipConfirm &&
         !window.confirm(
           `¿Seguro que deseas desactivar al usuario con cédula ${employeeNo}?`,
         )
       )
         return;
+
       try {
         setMensaje(`Desactivando usuario ${employeeNo}...`);
         await api.delete(`/biometrico/delete-user/${employeeNo}`);
@@ -313,10 +317,13 @@ export function useBiometrico() {
     [agregarNotificacion],
   );
 
-  // 🟢 Activar usuario
+  // 🟢 Activar usuario (con skipConfirm para evitar doble confirmación)
   const handleActivarUsuario = useCallback(
-    async (employeeNo) => {
+    async (employeeNo, options = {}) => {
+      const { skipConfirm = false } = options;
+
       if (
+        !skipConfirm &&
         !window.confirm(
           `¿Reactivar al usuario con cédula ${employeeNo}? Podrá volver a marcar en el biométrico.`,
         )

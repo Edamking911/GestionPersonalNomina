@@ -42,5 +42,10 @@
   {
     "employeeId": "29591045",
     "horarioId": "HORARIO_8_7"
+  },
+  {
+    "employeeId": "26082578",
+    "horarioId": "HORARIO_8_5_30",
+    "diasLibresFijos": []
   }
 ]

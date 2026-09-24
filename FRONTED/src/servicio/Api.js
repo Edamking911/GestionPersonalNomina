@@ -4,8 +4,8 @@ import axios from 'axios';
 // =========================================================
 // 🔍 Detectar automáticamente el host del backend
 // =========================================================
-// - En PC: localhost:5173 → llama a localhost:3000
-// - En móvil: 192.168.x.x:5173 → llama a 192.168.x.x:3000
+// - En PC: localhost:5173 → llama a localhost:3001
+// - En móvil: 192.168.x.x:5173 → llama a 192.168.x.x:3001
 // - Si hay VITE_API_URL en .env → la usa siempre
 // =========================================================
 const getBaseURL = () => {
@@ -17,16 +17,19 @@ const getBaseURL = () => {
   // 2. Detectar automáticamente el host actual
   if (typeof window !== 'undefined' && window.location) {
     const { protocol, hostname } = window.location;
-    // El backend corre en el puerto 3000
-    return `${protocol}//${hostname}:3000`;
+    // 👇 El backend corre en el puerto 3001
+    return `${protocol}//${hostname}:3001`;
   }
 
   // 3. Fallback
-  return 'http://localhost:3000';
+  return 'http://localhost:3001';
 };
 
+// ✅ Exportar la URL base para usarla en window.open / descargas directas
+export const API_BASE = getBaseURL();
+
 const api = axios.create({
-  baseURL: getBaseURL(),
+  baseURL: API_BASE,
   withCredentials: true,
   timeout: 60000,
 });

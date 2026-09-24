@@ -69,18 +69,8 @@ export default defineConfig({
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/, /^\/biometrico/, /^\/reglas/],
         runtimeCaching: [
-          {
-            urlPattern: /^https?:\/\/.*\/(biometrico|reglas)\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              networkTimeoutSeconds: 5,
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 5 * 60,
-              },
-            },
-          },
+          // 🚫 NO interceptar API - dejamos que vaya directo al backend
+          // ✅ Solo cachear imágenes (assets estáticos)
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
             handler: 'CacheFirst',
@@ -95,7 +85,7 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        enabled: true,
+        enabled: true,   // 👈 Reactivar PWA
         type: 'module',
         navigateFallback: 'index.html',
       },

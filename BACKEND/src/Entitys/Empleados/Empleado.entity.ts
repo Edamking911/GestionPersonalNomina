@@ -11,6 +11,10 @@ import {
 } from 'typeorm';
 import { CuentaBancaria } from '../CuentasBancarias/CuentaBancaria.entity';
 import { EgresoPersonal } from '../EgresosPersonales/EgresoPersonal.entity';
+import { Cargo } from '../Cargos/Cargos.entity';
+import { DiaLibre } from '../DiaLibre/DiaLibre.entity';
+import { AsignacionHorario } from '../AsignacionHorario/AsignacionHorario.entity';
+import {NovedadNomina} from '../Novedades/NovedadNomina.entity'
 
 import { Cargo } from '../Cargos/Cargos.entity';
 import { Departamento } from '../Departamentos/Departamentos.entity';
@@ -29,11 +33,17 @@ export class Empleado {
   @Column({ type: 'varchar', length: 100, nullable: false })
   apellido!: string;
 
+  @Column({ type: 'varchar', length: 150, unique: true, nullable: true })
+  email?: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  telefono?: string;
+
+  @Column({ name: 'fecha_ingreso', type: 'date', nullable: true })
+  fechaIngreso?: Date;
+
   @Column({ name: 'cargo_id', type: 'uuid', nullable: true })
   cargoId?: string;
-
-  @Column({ name: 'departamento_id', type: 'uuid', nullable: true })
-  departamentoId?: string;
 
   @Column({ type: 'varchar', length: 20, default: 'ACTIVO' })
   estado!: string;
@@ -47,22 +57,26 @@ export class Empleado {
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz' })
   deletedAt?: Date;
 
-  @ManyToOne(() => Cargo, { nullable: true })
-  @JoinColumn({ name: 'cargo_id' })
-  cargo!: Cargo;
-
-  @ManyToOne(() => Departamento, { nullable: true })
-  @JoinColumn({ name: 'departamento_id' })
-  departamento!: Departamento;
-
-  @OneToMany(() => CuentaBancaria, (cuenta) => cuenta.empleado, {
-    cascade: true,
+   @ManyToOne(() => Cargo, (cargo) => cargo.empleados, {
+    onDelete: 'RESTRICT',
+    nullable: true,
   })
+  @JoinColumn({ name: 'cargo_id' })
+  cargo?: Cargo;
+
+  @OneToMany(() => CuentaBancaria, (cuenta) => cuenta.empleado)
   cuentasBancarias!: CuentaBancaria[];
 
-  @OneToMany(() => EgresoPersonal, (egreso) => egreso.empleado, {
-    cascade: true,
-  })
+  @OneToMany(() => EgresoPersonal, (egreso) => egreso.empleado)
   egresosPersonales!: EgresoPersonal[];
 
-  }
+  @OneToMany(() => DiaLibre, (dia) => dia.empleado)
+  diasLibres!: DiaLibre[];
+
+  @OneToMany(() => AsignacionHorario, (asig) => asig.empleado)
+  asignacionesHorarios!: AsignacionHorario[];
+
+
+  @OneToMany(() => NovedadNomina, (novedad) => novedad.empleado)
+  novedades!: NovedadNomina[];
+}

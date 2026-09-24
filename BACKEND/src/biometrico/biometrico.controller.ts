@@ -6,7 +6,8 @@ import {
   Req,
   Query,
   Delete,
-  Param, UploadedFile, 
+  Param,
+  UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { BiometricoService } from './biometrico.service';
@@ -16,8 +17,6 @@ import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import * as path from 'path';
 import { BiometricDeviceFactory } from './Factory/Biometrico-device.factory';
-
-
 
 @Controller('biometrico')
 export class BiometricoController {
@@ -47,7 +46,7 @@ export class BiometricoController {
     @Body() body: { startDate?: string; endDate?: string; daysBack?: number },
   ) {
     return await this.biometricoService.syncLogsFromDevice(
-      '172.18.0.89',
+      '172.18.0.98',
       'admin',
       'Dtd2026*',
       {
@@ -69,7 +68,7 @@ export class BiometricoController {
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
     return await this.biometricoService.syncLogsFromDevice(
-      '172.18.0.89',
+      '172.18.0.98',
       'admin',
       'Dtd2026*',
       {
@@ -100,7 +99,7 @@ export class BiometricoController {
    */
   @Get('records-by-date')
   async getRecordsByDate(@Query('employeeId') employeeId?: string) {
-    const allRecords: any = this.biometricoService.getAllRecordsOrderedByDate();
+    const allRecords: any = await this.biometricoService.getAllRecordsOrderedByDate();
 
     if (employeeId) {
       const filtered: any = {
@@ -171,9 +170,21 @@ export class BiometricoController {
     return await this.biometricoService.insertAttendanceRecord(body);
   }
 
-  /**
-   * Webhook para eventos push del biométrico
-   */
+  // =========================================================
+  // 🎯 WEBHOOK — Acepta /event (nuevo) Y /webhook (viejo)
+  // =========================================================
+
+  @Post('event')
+  async handleEvent(@Req() req: Request) {
+    const contentType = req.headers['content-type'];
+    const success = await this.biometricoService.processEventPayload(
+      req.body,
+      contentType,
+    );
+    return { success };
+  }
+
+  // ✅ Alias para el biométrico que apunta al viejo /webhook
   @Post('webhook')
   async handleWebhook(@Req() req: Request) {
     const contentType = req.headers['content-type'];
@@ -207,7 +218,7 @@ export class BiometricoController {
         if (!ok) return cb(new Error('Solo se permiten archivos .xlsx o .xls'), false);
         cb(null, true);
       },
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+      limits: { fileSize: 10 * 1024 * 1024 },
     }),
   )
   async importUsers(@UploadedFile() file: Express.Multer.File) {
@@ -219,7 +230,6 @@ export class BiometricoController {
       const resultado = await this.biometricoService.importUsersFromExcel(file.path);
       return resultado;
     } finally {
-      // 🔑 Borrar el archivo temporal después de procesarlo
       if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
     }
   }
@@ -244,7 +254,7 @@ export class BiometricoController {
     const result = await this.biometricoService.getDeviceInfo();
     return {
       online: result.success,
-      ...(result.success ? { deviceInfo: result.deviceInfo } : { message: result.message })
+      ...(result.success ? { deviceInfo: result.deviceInfo } : { message: result.message }),
     };
   }
 
@@ -252,25 +262,23 @@ export class BiometricoController {
   async listUsers(@Query('incluirInactivos') incluirInactivos?: string) {
     const incluir = incluirInactivos === 'true';
     return await this.biometricoService.listUsers(
-      '172.18.0.89',
+      '172.18.0.98',
       'admin',
       'Dtd2026*',
-      incluir,  // 👈 CLAVE
+      incluir,
     );
   }
 
   /**
    * Eliminar usuario del biométrico
-   * Ejemplo: DELETE /biometrico/delete-user/16335012
    */
   @Delete('delete-user/:employeeNo')
   async deleteUser(@Param('employeeNo') employeeNo: string) {
     return await this.biometricoService.deleteUserFromDevice(employeeNo);
   }
 
-    /**
+  /**
    * Activar usuario previamente desactivado
-   * Ejemplo: POST /biometrico/activate-user/16335012
    */
   @Post('activate-user/:employeeNo')
   async activateUser(@Param('employeeNo') employeeNo: string) {
@@ -279,7 +287,6 @@ export class BiometricoController {
 
   /**
    * 🔐 Preparar usuario para registrar huella
-   * POST /biometrico/prepare-fingerprint/12345
    */
   @Post('prepare-fingerprint/:employeeNo')
   async prepareFingerprint(@Param('employeeNo') employeeNo: string) {
@@ -299,7 +306,6 @@ export class BiometricoController {
 
   /**
    * Obtener marcajes de una fecha específica
-   * GET /biometrico/marcajes/:fecha
    */
   @Get('marcajes/:fecha')
   async getMarcajesPorFecha(@Param('fecha') fecha: string) {
@@ -309,35 +315,33 @@ export class BiometricoController {
   @Get('list-all-users')
   async listAllUsers() {
     return await this.biometricoService.listUsers(
-      '172.18.0.89',
+      '172.18.0.98',
       'admin',
       'Dtd2026*',
-      true, // incluirInactivos = true
+      true,
     );
   }
 
-@Get('test-adapter')
-async testAdapter() {
-  const factory = new BiometricDeviceFactory();
-  const device = factory.crearDesdeEnv();
+  @Get('test-adapter')
+  async testAdapter() {
+    const factory = new BiometricDeviceFactory();
+    const device = factory.crearDesdeEnv();
 
-  const info = await device.getDeviceInfo();
-  const users = await device.listUsers();
-  const time = await device.getDeviceTime();
+    const info = await device.getDeviceInfo();
+    const users = await device.listUsers();
+    const time = await device.getDeviceTime();
 
-  return {
-    deviceType: device.deviceType,
-    info,
-    totalUsuarios: users.length,
-    primerosUsuarios: users.slice(0, 3),
-    deviceTime: time,
-  };
-}
+    return {
+      deviceType: device.deviceType,
+      info,
+      totalUsuarios: users.length,
+      primerosUsuarios: users.slice(0, 3),
+      deviceTime: time,
+    };
+  }
 
-@Post('refresh-names')
-async refreshNames() {
-  return await this.biometricoService.refreshEmployeeNames();
-}
-
-
+  @Post('refresh-names')
+  async refreshNames() {
+    return await this.biometricoService.refreshEmployeeNames();
+  }
 }

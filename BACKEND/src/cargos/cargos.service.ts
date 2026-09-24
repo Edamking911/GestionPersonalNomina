@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { Departamento } from '../Entitys/Departamentos/Departamentos.entity';
@@ -31,40 +31,38 @@ export class CargosService {
       where: { nombre: nombre },
     });
     if (existeCargo) {
-      return true;
+        throw new NotFoundException(
+        `Este Cargo ya esta Creado ${nombre}`,
+      );
     }
     return false;
   }
 
-  async Create_Cargo(
-    nombre: string,
-    CreateCargoDTO: CreateCargoDto,
-  ): Promise<Cargo> {
+  async Create_Cargo(nombre: string,CreateCargoDTO: CreateCargoDto): Promise<Cargo> {
     const existeDepa = await this.Validar_Departamento(nombre);
     if (existeDepa) {
-      const existeCargo = await this.Validar_Cargo(CreateCargoDTO.nombre);
-      if (existeCargo) {
-        throw new NotFoundException(
-          `Este Cargo ya ha Sido Creado ${CreateCargoDTO.nombre}`,
-        );
-      } else {
-        const crear = new Cargo();
-        crear.nombre = CreateCargoDTO.nombre;
-        crear.departamentoId = existeDepa.id;
-        return await this.CargoRepository.save(crear);
-      }
+      const crear = new Cargo();
+      crear.nombre = CreateCargoDTO.nombre;
+      crear.sueldo = CreateCargoDTO.sueldo;
+      crear.departamentoId = existeDepa.id;
+      return await this.CargoRepository.save(crear);
+      
     }
     throw new NotFoundException(`Error al Procesar La Solicitud`);
   }
 
-  async Traer_Cargos(): Promise<Cargo[]> {
-    return await this.CargoRepository.find();
+  async Traer_Cargos(){
+    const Existe_cargo = await this.CargoRepository.find({relations:{departamento:true},order:{nombre:'ASC'}});
+    return Existe_cargo.map ((carg) => ({
+        nombre : carg.nombre,
+        sueldo : carg.sueldo,
+        nombreDepa : carg.departamento?.nombre
+      }));
   }
 
   async Obtener_CargoEspecifico(nombre: string): Promise<Cargo> {
     const existeCargo = await this.CargoRepository.findOne({
-      where: { nombre: ILike(`%${nombre}%`) },
-    });
+      where: { nombre: ILike(`%${nombre}%`)}, relations:{departamento: true}});
     if (existeCargo) {
       return existeCargo;
     } else {
@@ -78,12 +76,20 @@ export class CargosService {
     );
   }
 
-  async Actualizar_Cargo(
-    nombre: string,
-    UpdateCargoDTO: UpdateCargoDto,
-  ): Promise<Cargo> {
-    const existeCargo = await this.Obtener_CargoEspecifico(nombre);
-    Object.assign(existeCargo, UpdateCargoDTO);
-    return await this.CargoRepository.save(existeCargo);
+  async Actualizar_Cargo(UpdateCargoDTO: UpdateCargoDto,): Promise<Cargo> {
+    if(UpdateCargoDTO.nombre){
+      throw new BadRequestException('El cargo es obligatoria para actualizar');
+    }
+    const Existe_cargo = await this.Obtener_CargoEspecifico(UpdateCargoDTO.nombre!)
+
+    if(UpdateCargoDTO.nombre !== undefined){
+      Existe_cargo.nombre = UpdateCargoDTO.nombre
+    }
+
+    if(UpdateCargoDTO.sueldo !== undefined){
+      Existe_cargo.sueldo = UpdateCargoDTO.sueldo
+    } 
+
+    return await this.CargoRepository.save(Existe_cargo)
   }
 }

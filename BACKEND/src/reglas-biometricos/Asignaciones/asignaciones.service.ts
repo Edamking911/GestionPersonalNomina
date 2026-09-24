@@ -1,44 +1,45 @@
 import { Injectable, Logger, StreamableFile } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Workbook } from 'exceljs';
 import { ReglasConfigService } from '../Configs/reglas-config.service';
 import { CacheEmpleadosService } from '../Cache/cache-empleados.service';
 import { ReportesService } from '../Reportes/reportes.service';
-import {
-  TODOS_LOS_DIAS,
-  formatoFechaLocal,
-  normalizarDia,
-} from '../Utils/tiempo.util';
+import {TODOS_LOS_DIAS,formatoFechaLocal,normalizarDia,nombreADia,obtenerInicioSemana, normalizarCedula, stringFechaADate} from '../Utils/tiempo.util';
+import { HorarioAsistencia as HorarioEntity } from '../../Entitys/HorariosAsistencia/HorarioAsistencia.entity';
+import { AsignacionHorario } from '../../Entitys/AsignacionHorario/AsignacionHorario.entity';
+import { DiaLibre } from '../../Entitys/DiaLibre/DiaLibre.entity';
+import { Empleado } from '../../Entitys/Empleados/Empleado.entity';
 
 @Injectable()
 export class AsignacionesService {
   private readonly logger = new Logger(AsignacionesService.name);
-  private readonly marcajesPath = path.join(process.cwd(), 'marcajes.json');
 
   constructor(
     private readonly config: ReglasConfigService,
     private readonly cache: CacheEmpleadosService,
     private readonly reportes: ReportesService,
+    @InjectRepository(HorarioEntity)
+    private readonly horarioRepo: Repository<HorarioEntity>,
+    @InjectRepository(AsignacionHorario)
+    private readonly asignacionRepo: Repository<AsignacionHorario>,
+    @InjectRepository(DiaLibre)
+    private readonly diaLibreRepo: Repository<DiaLibre>,
+    @InjectRepository(Empleado)
+    private readonly empleadoRepo: Repository<Empleado>,
   ) {}
 
-  private leerMarcajes(): any[] {
-    if (!fs.existsSync(this.marcajesPath)) return [];
-    return JSON.parse(fs.readFileSync(this.marcajesPath, 'utf-8'));
-  }
-
-  // ============ GET ASIGNACIONES ============
+  // =========================================================
+  // GET ASIGNACIONES
+  // =========================================================
   async getAsignaciones(semana?: string, generarExcel = false) {
     let semanaClave: string;
     if (semana) {
-      const [year, month, day] = semana.split('-').map(Number);
-      const fecha = new Date(year, month - 1, day);
-      semanaClave = require('../Utils/tiempo.util').obtenerInicioSemana(fecha);
+      semanaClave = obtenerInicioSemana(stringFechaADate(semana));
     } else {
-      semanaClave = require('../Utils/tiempo.util').obtenerInicioSemana(new Date());
+      semanaClave = obtenerInicioSemana(new Date());
     }
 
-    const marcajes = this.leerMarcajes();
     const resultado: any[] = [];
     const mapaNombres = await this.cache.obtenerMapaNombres();
     const activos = await this.cache.obtenerSetEmpleadosActivos();
@@ -46,8 +47,12 @@ export class AsignacionesService {
     for (const a of this.config.getAsignaciones()) {
       if (activos.size > 0 && !activos.has(String(a.employeeId))) continue;
 
-      const diasLibresRotativos = this.config.getDiasLibres()[a.employeeId]?.[semanaClave] || [];
-      const nombre = this.cache.resolverNombre(a.employeeId, marcajes, mapaNombres);
+      const diasLibresRotativos =
+        this.config.getDiasLibres()[a.employeeId]?.[semanaClave] || [];
+      const diasLibresFijos =
+        this.config.getDiasLibres()[a.employeeId]?.['_fijos'] || [];
+
+      const nombre = this.cache.resolverNombre(a.employeeId, [], mapaNombres);
       const horario = this.config.getHorarioPorId(a.horarioId);
 
       resultado.push({
@@ -57,10 +62,10 @@ export class AsignacionesService {
         horarioNombre: horario?.nombre || 'SIN HORARIO',
         entrada: horario?.entrada || '',
         salida: horario?.salida || '',
-        diasLibresFijos: a.diasLibresFijos || [],
+        diasLibresFijos,
         diasLibresRotativos,
         diasLibresEfectivos:
-          diasLibresRotativos.length > 0 ? diasLibresRotativos : a.diasLibresFijos || [],
+          diasLibresRotativos.length > 0 ? diasLibresRotativos : diasLibresFijos,
         semana: semanaClave,
       });
     }
@@ -95,62 +100,149 @@ export class AsignacionesService {
     return { semana: semanaClave, total: resultado.length, asignaciones: resultado };
   }
 
-  // ============ ASIGNAR ============
-  async asignarHorario(employeeId: string, horarioId: string, diasLibresFijos?: string[]) {
-    if (!this.config.getHorarioPorId(horarioId)) {
+  // =========================================================
+  // ASIGNAR HORARIO
+  // =========================================================
+  async asignarHorario(
+    employeeId: string,
+    horarioId: string,
+    diasLibresFijos?: string[],
+  ) {
+    const horario = await this.horarioRepo.findOne({ where: { codigo: horarioId } });
+    if (!horario) {
       return { success: false, message: 'Horario no válido' };
     }
 
-    const validacion = await this.cache.validarEmpleadoActivo(employeeId);
-    if (!validacion.activo) {
-      return { success: false, message: validacion.mensaje || 'El empleado no está activo.' };
+    // ✅ Buscar por cédula normalizada
+    const empleados = await this.empleadoRepo.find();
+    const cedulaNorm = normalizarCedula(employeeId);
+    const empleado = empleados.find(
+      (e) => normalizarCedula(e.cedula) === cedulaNorm,
+    );
+
+    if (!empleado) {
+      return { success: false, message: `Empleado ${employeeId} no encontrado` };
     }
 
-    const asignaciones = this.config.getAsignaciones();
-    const existente = asignaciones.find((a) => a.employeeId === employeeId);
-    if (existente) {
-      existente.horarioId = horarioId;
-      existente.diasLibresFijos = diasLibresFijos;
-    } else {
-      asignaciones.push({ employeeId, horarioId, diasLibresFijos });
+    // Cerrar asignación activa anterior
+    const anterior = await this.asignacionRepo.findOne({
+      where: { empleadoId: empleado.id, activo: true },
+    });
+
+    if (anterior) {
+      const diaAntes = new Date();
+      diaAntes.setDate(diaAntes.getDate() - 1);
+      anterior.fechaFin = diaAntes;
+      anterior.activo = false;
+      await this.asignacionRepo.save(anterior);
     }
 
-    this.config.setAsignaciones(asignaciones);
-    this.config.guardarAsignaciones();
+    // Crear nueva asignación
+    const nueva = this.asignacionRepo.create({
+      empleadoId: empleado.id,
+      horarioId: horario.id,
+      fechaInicio: new Date(),
+      activo: true,
+    });
+    await this.asignacionRepo.save(nueva);
+
+    // Días libres fijos
+    if (diasLibresFijos !== undefined) {
+      await this.diaLibreRepo.delete({
+        empleadoId: empleado.id,
+        tipo: 'FIJO',
+      });
+
+      if (diasLibresFijos.length > 0) {
+        const nuevos = diasLibresFijos
+          .map((nombre) => {
+            const num = nombreADia(nombre);
+            if (num === -1) return null;
+            return this.diaLibreRepo.create({
+              empleadoId: empleado.id,
+              tipo: 'FIJO',
+              diaSemana: num,
+              semanaInicio: null,
+            });
+          })
+          .filter(Boolean) as DiaLibre[];
+
+        if (nuevos.length > 0) {
+          await this.diaLibreRepo.save(nuevos);
+        }
+      }
+    }
+
+    await this.config.recargar();
     this.reportes.limpiarCaches();
 
-    return { success: true, message: `Horario ${horarioId} asignado al empleado ${employeeId}` };
+    return {
+      success: true,
+      message: `Horario ${horarioId} asignado al empleado ${employeeId}`,
+    };
   }
 
+  // =========================================================
+  // ASIGNAR DÍAS LIBRES ROTATIVOS
+  // =========================================================
   async asignarDiasLibres(employeeId: string, semana: string, diasLibres: string[]) {
-    const validacion = await this.cache.validarEmpleadoActivo(employeeId);
-    if (!validacion.activo) {
-      return { success: false, message: validacion.mensaje || 'El empleado no está activo.' };
+    const empleados = await this.empleadoRepo.find();
+    const cedulaNorm = normalizarCedula(employeeId);
+    const empleado = empleados.find(
+      (e) => normalizarCedula(e.cedula) === cedulaNorm,
+    );
+
+    if (!empleado) {
+      return { success: false, message: `Empleado ${employeeId} no encontrado` };
     }
 
-    const [year, month, day] = semana.split('-').map(Number);
-    const fecha = new Date(year, month - 1, day);
-    const semanaClave = require('../Utils/tiempo.util').obtenerInicioSemana(fecha);
+    const semanaClave = obtenerInicioSemana(stringFechaADate(semana));
+    // ✅ FIX timezone: construir Date LOCAL
+    const semanaDate = stringFechaADate(semanaClave);
 
-    const dias = this.config.getDiasLibres();
-    if (!dias[employeeId]) dias[employeeId] = {};
-    dias[employeeId][semanaClave] = diasLibres;
+    // Borrar rotativos viejos de esa semana
+    await this.diaLibreRepo.delete({
+      empleadoId: empleado.id,
+      tipo: 'ROTATIVO',
+      semanaInicio: semanaDate,
+    });
 
-    this.config.setDiasLibres(dias);
-    this.config.guardarDiasLibres();
+    // Crear nuevos
+    if (diasLibres.length > 0) {
+      const nuevos = diasLibres
+        .map((nombre) => {
+          const num = nombreADia(nombre);
+          if (num === -1) return null;
+          return this.diaLibreRepo.create({
+            empleadoId: empleado.id,
+            tipo: 'ROTATIVO',
+            diaSemana: num,
+            semanaInicio: semanaDate,
+          });
+        })
+        .filter(Boolean) as DiaLibre[];
+
+      if (nuevos.length > 0) {
+        await this.diaLibreRepo.save(nuevos);
+      }
+    }
+
+    await this.config.recargar();
     this.reportes.limpiarCaches();
 
     return { success: true, message: 'Días libres asignados' };
   }
 
-  // ============ EXCEL ASIGNACIONES ============
+  // =========================================================
+  // PARSEAR EXCEL
+  // =========================================================
   private async parsearExcelAsignaciones(buffer: Buffer): Promise<{
     filas: any[];
     errores: string[];
     domingos: string[];
   }> {
     const workbook: any = new Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(buffer as any);
 
     const hoja: any = workbook.getWorksheet('Asignaciones');
     if (!hoja) return { filas: [], errores: ['No se encontró la hoja "Asignaciones"'], domingos: [] };
@@ -179,9 +271,9 @@ export class AsignacionesService {
       const diasLibresFijosRaw = String(row.getCell(4).value || '').trim();
 
       if (!cedulaRaw) return;
-      if (cedulaRaw === '12345678' && nombre.toLowerCase().includes('ejemplo')) return;
 
-      const cedulaLimpia = cedulaRaw.replace(/[^0-9]/g, '');
+      // ✅ FIX: usar normalizarCedula, conserva solo números
+      const cedulaLimpia = normalizarCedula(cedulaRaw);
       if (!cedulaLimpia) return;
 
       const diasLibresFijos = diasLibresFijosRaw
@@ -211,19 +303,22 @@ export class AsignacionesService {
     return { filas, errores: [], domingos };
   }
 
+  // =========================================================
+  // VALIDAR EXCEL
+  // =========================================================
   async validarExcelAsignaciones(buffer: Buffer) {
     const { filas } = await this.parsearExcelAsignaciones(buffer);
     const errores: any[] = [];
     const preview: any[] = [];
 
-    let empleadosBiometrico: any[] = [];
-    try {
-      const usuarios = await this.cache['biometricoService'].listUsers('172.18.0.89', 'admin', 'Dtd2026*', true);
-      if (usuarios?.success) empleadosBiometrico = usuarios.usuarios;
-    } catch {}
+    const empleados = await this.empleadoRepo.find();
+    const horarios = await this.horarioRepo.find({ where: { activo: true } });
 
-    const idsValidos = new Set(empleadosBiometrico.map((u) => String(u.employeeNo)));
-    const horariosValidos = new Set(this.config.getReglas().horarios.map((h) => h.id));
+    // Normalizar cédulas para comparar
+    const cedulasValidas = new Set(
+      empleados.map((e) => normalizarCedula(e.cedula)),
+    );
+    const horariosValidos = new Set(horarios.map((h) => h.codigo));
     const diasValidos = new Set(TODOS_LOS_DIAS);
     const cedulasVistas = new Set<string>();
 
@@ -234,14 +329,19 @@ export class AsignacionesService {
       }
       cedulasVistas.add(fila.employeeId);
 
-      if (!idsValidos.has(fila.employeeId)) {
-        errores.push({ fila: fila.fila, error: `Cédula ${fila.employeeId} no existe en el biométrico` });
+      if (!cedulasValidas.has(fila.employeeId)) {
+        errores.push({ fila: fila.fila, error: `Cédula ${fila.employeeId} no existe en la BD` });
         continue;
       }
 
-      const empleado = empleadosBiometrico.find((u: any) => String(u.employeeNo) === String(fila.employeeId));
-      if (empleado && empleado.activo === false) {
-        errores.push({ fila: fila.fila, error: `Empleado ${empleado.name} está desactivado.` });
+      const empleado = empleados.find(
+        (e) => normalizarCedula(e.cedula) === fila.employeeId,
+      );
+      if (empleado && empleado.estado !== 'ACTIVO') {
+        errores.push({
+          fila: fila.fila,
+          error: `Empleado ${empleado.nombre} ${empleado.apellido} está ${empleado.estado}`,
+        });
         continue;
       }
 
@@ -252,7 +352,10 @@ export class AsignacionesService {
 
       const diasFijosInvalidos = fila.diasLibresFijos.filter((d: string) => !diasValidos.has(d));
       if (diasFijosInvalidos.length > 0) {
-        errores.push({ fila: fila.fila, error: `Días inválidos: ${diasFijosInvalidos.join(', ')}` });
+        errores.push({
+          fila: fila.fila,
+          error: `Días inválidos: ${diasFijosInvalidos.join(', ')}`,
+        });
         continue;
       }
 
@@ -266,12 +369,48 @@ export class AsignacionesService {
       }
       if (errorSemana) continue;
 
-      // Diff preview
-      const asignacionActual = this.config.getAsignaciones().find((a) => a.employeeId === fila.employeeId);
+      // =========================================================
+      // ✅ CAMBIO: Detectar TODOS los cambios (horario + días libres)
+      // =========================================================
+      const asignacionActual = this.config
+        .getAsignaciones()
+        .find((a) => a.employeeId === fila.employeeId);
+
       const cambios: string[] = [];
+
+      // 1. Comparar HORARIO
       if (fila.horarioId && fila.horarioId !== (asignacionActual?.horarioId || null)) {
-        cambios.push(`Horario: ${asignacionActual?.horarioId || 'ninguno'} → ${fila.horarioId}`);
+        cambios.push(
+          `Horario: ${asignacionActual?.horarioId || 'ninguno'} → ${fila.horarioId}`,
+        );
       }
+
+      // 2. Comparar DÍAS LIBRES FIJOS
+      const diasFijosActuales =
+        this.config.getDiasLibres()[fila.employeeId]?.['_fijos'] || [];
+      const fijosActualesSorted = [...diasFijosActuales].sort();
+      const fijosNuevosSorted = [...fila.diasLibresFijos].sort();
+
+      if (JSON.stringify(fijosActualesSorted) !== JSON.stringify(fijosNuevosSorted)) {
+        cambios.push(
+          `Días fijos: [${diasFijosActuales.join(', ') || 'ninguno'}] → [${fila.diasLibresFijos.join(', ') || 'ninguno'}]`,
+        );
+      }
+
+      // 3. Comparar DÍAS LIBRES ROTATIVOS (por semana)
+      for (const semana of fila.semanas) {
+        const diasRotActuales =
+          this.config.getDiasLibres()[fila.employeeId]?.[semana.semana] || [];
+        const rotActualesSorted = [...diasRotActuales].sort();
+        const rotNuevosSorted = [...semana.dias].sort();
+
+        if (JSON.stringify(rotActualesSorted) !== JSON.stringify(rotNuevosSorted)) {
+          cambios.push(
+            `Sem ${semana.semana}: [${diasRotActuales.join(', ') || 'ninguno'}] → [${semana.dias.join(', ') || 'ninguno'}]`,
+          );
+        }
+      }
+
       preview.push({
         fila: fila.fila,
         employeeId: fila.employeeId,
@@ -290,6 +429,9 @@ export class AsignacionesService {
     };
   }
 
+  // =========================================================
+  // IMPORTAR EXCEL
+  // =========================================================
   async importarExcelAsignaciones(buffer: Buffer) {
     const validacion = await this.validarExcelAsignaciones(buffer);
 
@@ -301,83 +443,121 @@ export class AsignacionesService {
       };
     }
 
-    // Backup
-    const backupDir = path.join(process.cwd(), 'backups_asignaciones');
-    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(backupDir, `backup_${timestamp}.json`);
-    fs.writeFileSync(backupPath, JSON.stringify(this.config.obtenerSnapshot(), null, 2), 'utf-8');
-
     const { filas } = await this.parsearExcelAsignaciones(buffer);
 
-    const activos = await this.cache.obtenerSetEmpleadosActivos(true);
-    const inactivos = filas.filter((f) => activos.size > 0 && !activos.has(String(f.employeeId)));
-    if (inactivos.length > 0) {
-      return {
-        success: false,
-        message: `No se puede importar: ${inactivos.length} empleado(s) están desactivados.`,
-        empleadosInactivos: inactivos.map((f) => ({ fila: f.fila, employeeId: f.employeeId, nombre: f.nombreReferencia })),
-      };
-    }
+    const empleados = await this.empleadoRepo.find();
+    const horarios = await this.horarioRepo.find({ where: { activo: true } });
+
+    // ✅ Map con cédulas normalizadas
+    const empleadoMap = new Map(
+      empleados.map((e) => [normalizarCedula(e.cedula), e]),
+    );
+    const horarioMap = new Map(horarios.map((h) => [h.codigo, h]));
 
     let horariosActualizados = 0;
     let diasLibresActualizados = 0;
     let diasLibresEliminados = 0;
 
-    const asignaciones = this.config.getAsignaciones();
-    const diasLibres = this.config.getDiasLibres();
-
     for (const fila of filas) {
+      const empleado = empleadoMap.get(fila.employeeId);
+      if (!empleado) continue;
+
+      // Asignar horario
       if (fila.horarioId) {
-        const existente = asignaciones.find((a) => a.employeeId === fila.employeeId);
-        if (existente) {
-          existente.horarioId = fila.horarioId;
-          existente.diasLibresFijos = fila.diasLibresFijos.length > 0 ? fila.diasLibresFijos : undefined;
-        } else {
-          asignaciones.push({
-            employeeId: fila.employeeId,
-            horarioId: fila.horarioId,
-            diasLibresFijos: fila.diasLibresFijos.length > 0 ? fila.diasLibresFijos : undefined,
+        const horario = horarioMap.get(fila.horarioId);
+        if (horario) {
+          const anterior = await this.asignacionRepo.findOne({
+            where: { empleadoId: empleado.id, activo: true },
           });
+
+          if (!anterior || anterior.horarioId !== horario.id) {
+            if (anterior) {
+              const diaAntes = new Date();
+              diaAntes.setDate(diaAntes.getDate() - 1);
+              anterior.fechaFin = diaAntes;
+              anterior.activo = false;
+              await this.asignacionRepo.save(anterior);
+            }
+
+            const nueva = this.asignacionRepo.create({
+              empleadoId: empleado.id,
+              horarioId: horario.id,
+              fechaInicio: new Date(),
+              activo: true,
+            });
+            await this.asignacionRepo.save(nueva);
+            horariosActualizados++;
+          }
         }
-        horariosActualizados++;
       }
 
-      for (const semana of fila.semanas) {
-        const sonIgualesALosFijos =
-          JSON.stringify([...semana.dias].sort()) === JSON.stringify([...fila.diasLibresFijos].sort());
+      // Días libres fijos
+      await this.diaLibreRepo.delete({ empleadoId: empleado.id, tipo: 'FIJO' });
+      if (fila.diasLibresFijos.length > 0) {
+        const nuevos = fila.diasLibresFijos
+          .map((nombre: string) => {
+            const num = nombreADia(nombre);
+            if (num === -1) return null;
+            return this.diaLibreRepo.create({
+              empleadoId: empleado.id,
+              tipo: 'FIJO',
+              diaSemana: num,
+              semanaInicio: null,
+            });
+          })
+          .filter(Boolean) as DiaLibre[];
+        if (nuevos.length > 0) {
+          await this.diaLibreRepo.save(nuevos);
+          diasLibresActualizados += nuevos.length;
+        }
+      }
 
-        if (sonIgualesALosFijos) {
-          if (diasLibres[fila.employeeId]?.[semana.semana]) {
-            delete diasLibres[fila.employeeId][semana.semana];
-            diasLibresEliminados++;
-          }
+      // Días libres rotativos
+      for (const semana of fila.semanas) {
+        // ✅ FIX timezone
+        const semanaDate = stringFechaADate(semana.semana);
+
+        const sonIgualesALosFijos =
+          JSON.stringify([...semana.dias].sort()) ===
+          JSON.stringify([...fila.diasLibresFijos].sort());
+
+        if (sonIgualesALosFijos || semana.dias.length === 0) {
+          const r = await this.diaLibreRepo.delete({
+            empleadoId: empleado.id,
+            tipo: 'ROTATIVO',
+            semanaInicio: semanaDate,
+          });
+          if ((r.affected ?? 0) > 0) diasLibresEliminados++;
           continue;
         }
 
-        if (semana.dias.length > 0) {
-          if (!diasLibres[fila.employeeId]) diasLibres[fila.employeeId] = {};
-          diasLibres[fila.employeeId][semana.semana] = semana.dias;
-          diasLibresActualizados++;
-        } else {
-          if (diasLibres[fila.employeeId]?.[semana.semana]) {
-            delete diasLibres[fila.employeeId][semana.semana];
-            diasLibresEliminados++;
-          }
+        await this.diaLibreRepo.delete({
+          empleadoId: empleado.id,
+          tipo: 'ROTATIVO',
+          semanaInicio: semanaDate,
+        });
+
+        const nuevos = semana.dias
+          .map((nombre: string) => {
+            const num = nombreADia(nombre);
+            if (num === -1) return null;
+            return this.diaLibreRepo.create({
+              empleadoId: empleado.id,
+              tipo: 'ROTATIVO',
+              diaSemana: num,
+              semanaInicio: semanaDate,
+            });
+          })
+          .filter(Boolean) as DiaLibre[];
+
+        if (nuevos.length > 0) {
+          await this.diaLibreRepo.save(nuevos);
+          diasLibresActualizados += nuevos.length;
         }
       }
     }
 
-    // Limpiar entradas vacías
-    for (const empId of Object.keys(diasLibres)) {
-      if (Object.keys(diasLibres[empId]).length === 0) delete diasLibres[empId];
-    }
-
-    this.config.setAsignaciones(asignaciones);
-    this.config.setDiasLibres(diasLibres);
-    this.config.guardarAsignaciones();
-    this.config.guardarDiasLibres();
+    await this.config.recargar();
     this.reportes.limpiarCaches();
 
     return {
@@ -386,11 +566,12 @@ export class AsignacionesService {
       horariosActualizados,
       diasLibresActualizados,
       diasLibresEliminados,
-      backupPath,
     };
   }
 
-  // ============ PLANTILLA EXCEL ============
+  // =========================================================
+  // PLANTILLA EXCEL
+  // =========================================================
   async generarPlantillaAsignaciones(mes?: string): Promise<StreamableFile> {
     let año: number;
     let mesNum: number;
@@ -418,35 +599,13 @@ export class AsignacionesService {
     });
 
     const workbook: any = new Workbook();
-    const marcajes = this.leerMarcajes();
 
-    let empleadosBiometrico: any[] = [];
-    const mapaNombres = new Map<string, string>();
-    try {
-      const usuarios = await this.cache['biometricoService'].listUsers('172.18.0.89', 'admin', 'Dtd2026*', true);
-      if (usuarios?.success) {
-        empleadosBiometrico = usuarios.usuarios;
-        empleadosBiometrico.forEach((u: any) => mapaNombres.set(u.employeeNo, u.name));
-      }
-    } catch {}
-
-    const idsAsignados = new Set(this.config.getAsignaciones().map((a) => a.employeeId));
-    const listaEmpleados: { employeeId: string; nombre: string }[] = [];
-
-    empleadosBiometrico.filter((u: any) => u.activo !== false).forEach((u: any) => {
-      listaEmpleados.push({ employeeId: u.employeeNo, nombre: u.name });
+    const empleados = await this.empleadoRepo.find({
+      where: { estado: 'ACTIVO' },
+      order: { nombre: 'ASC' },
     });
 
-    for (const id of idsAsignados) {
-      if (!listaEmpleados.some((e) => e.employeeId === id)) {
-        const empleadoBio = empleadosBiometrico.find((u: any) => u.employeeNo === id);
-        if (empleadoBio && empleadoBio.activo === false) continue;
-        const nombre = mapaNombres.get(id) || (await this.cache.obtenerNombreEmpleado(id, marcajes));
-        listaEmpleados.push({ employeeId: id, nombre });
-      }
-    }
-
-    listaEmpleados.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const horarios = await this.horarioRepo.find({ where: { activo: true } });
 
     const hojaAsignaciones: any = workbook.addWorksheet('Asignaciones');
     const columnasFijas = [
@@ -468,19 +627,25 @@ export class AsignacionesService {
     headerAsignaciones.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     headerAsignaciones.height = 32;
 
-    for (const emp of listaEmpleados) {
-      const asignacion = this.config.getAsignaciones().find((a) => a.employeeId === emp.employeeId);
+    for (const emp of empleados) {
+      const cedulaNorm = normalizarCedula(emp.cedula);
+      const asignacion = this.config
+        .getAsignaciones()
+        .find((a) => a.employeeId === cedulaNorm);
+
+      const diasFijos = this.config.getDiasLibres()[cedulaNorm]?.['_fijos'] || [];
+
       const fila: any = {
-        employeeId: emp.employeeId,
-        nombre: emp.nombre,
+        employeeId: emp.cedula,  // ✅ Mostrar la cédula completa (con V-)
+        nombre: `${emp.nombre} ${emp.apellido}`.trim(),
         horarioId: asignacion?.horarioId || '',
-        diasLibresFijos: asignacion?.diasLibresFijos?.join(', ') || '',
+        diasLibresFijos: diasFijos.join(', '),
       };
 
       domingos.forEach((dom, idx) => {
         const semanaClave = formatoFechaLocal(dom);
-        const diasRotativos = this.config.getDiasLibres()[emp.employeeId]?.[semanaClave] || [];
-        const diasEfectivos = diasRotativos.length > 0 ? diasRotativos : asignacion?.diasLibresFijos || [];
+        const diasRot = this.config.getDiasLibres()[cedulaNorm]?.[semanaClave] || [];
+        const diasEfectivos = diasRot.length > 0 ? diasRot : diasFijos;
         fila[`sem${idx + 1}`] = diasEfectivos.join(', ');
       });
 
@@ -520,11 +685,10 @@ export class AsignacionesService {
     hi.font = { bold: true, color: { argb: 'FFFFFF' } };
     hi.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '004080' } };
     hi.alignment = { vertical: 'middle', horizontal: 'center' };
-
     hojaInstrucciones.addRows([
       { campo: `📅 Mes: ${nombreMes}`, descripcion: `Semanas: ${domingos.length}` },
-      { campo: 'Cédula', descripcion: 'Solo números. Debe existir en el biométrico.' },
-      { campo: 'Horario', descripcion: 'ID del horario (ver hoja "Horarios Válidos").' },
+      { campo: 'Cédula', descripcion: 'V-20111222 o 20111222 (ambos válidos).' },
+      { campo: 'Horario', descripcion: 'Código del horario (ver hoja "Horarios Válidos").' },
       { campo: 'Días Libres Fijos', descripcion: 'Ej: sábado, domingo.' },
       { campo: 'Libres Sem N', descripcion: 'Días rotativos por semana (opcional).' },
     ]);
@@ -532,7 +696,7 @@ export class AsignacionesService {
     // Hoja Horarios
     const hojaHorarios: any = workbook.addWorksheet('Horarios Válidos');
     hojaHorarios.columns = [
-      { header: 'ID', key: 'id', width: 20 },
+      { header: 'Código', key: 'codigo', width: 20 },
       { header: 'Nombre', key: 'nombre', width: 30 },
       { header: 'Entrada', key: 'entrada', width: 12 },
       { header: 'Salida', key: 'salida', width: 12 },
@@ -541,23 +705,31 @@ export class AsignacionesService {
     hh.font = { bold: true, color: { argb: 'FFFFFF' } };
     hh.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '004080' } };
     hh.alignment = { vertical: 'middle', horizontal: 'center' };
-    for (const h of this.config.getReglas().horarios) {
-      hojaHorarios.addRow({ id: h.id, nombre: h.nombre, entrada: h.entrada, salida: h.salida });
+    for (const h of horarios) {
+      hojaHorarios.addRow({
+        codigo: h.codigo,
+        nombre: h.nombre,
+        entrada: h.horaEntrada,
+        salida: h.horaSalida,
+      });
     }
 
     // Hoja Empleados
     const hojaEmpleados: any = workbook.addWorksheet('Empleados Activos');
     hojaEmpleados.columns = [
-      { header: 'Cédula', key: 'employeeId', width: 15 },
+      { header: 'Cédula', key: 'cedula', width: 15 },
       { header: 'Nombre', key: 'nombre', width: 35 },
     ];
     const he = hojaEmpleados.getRow(1);
     he.font = { bold: true, color: { argb: 'FFFFFF' } };
     he.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '004080' } };
     he.alignment = { vertical: 'middle', horizontal: 'center' };
-    empleadosBiometrico.filter((u: any) => u.activo !== false).forEach((u: any) => {
-      hojaEmpleados.addRow({ employeeId: u.employeeNo, nombre: u.name });
-    });
+    for (const emp of empleados) {
+      hojaEmpleados.addRow({
+        cedula: emp.cedula,
+        nombre: `${emp.nombre} ${emp.apellido}`.trim(),
+      });
+    }
 
     const buffer = await workbook.xlsx.writeBuffer();
     return new StreamableFile(Buffer.from(buffer), {
@@ -566,6 +738,9 @@ export class AsignacionesService {
     });
   }
 
+  // =========================================================
+  // HELPER
+  // =========================================================
   private async generarExcelBuffer(
     nombreHoja: string,
     columnas: { header: string; key: string; width: number }[],

@@ -3,9 +3,8 @@ import { ReglasConfigService } from './Configs/reglas-config.service';
 import { EvaluacionService } from './Evaluacion/evaluacion.service';
 import { ReportesService } from './Reportes/reportes.service';
 import { AsignacionesService } from './Asignaciones/asignaciones.service';
-import { BackupsService } from './Backups/backups.service';
-
-// Re-exportar tipos para no romper imports existentes
+import { EmpleadosSyncService } from './empleados/empleados-sync.service';  
+import { MigracionJsonService } from './Migracion/migracion-json.service';
 export type {
   HorarioAsistencia,
   ReglasConfig,
@@ -20,7 +19,8 @@ export class ReglasBiometricosService {
     private readonly evaluacion: EvaluacionService,
     private readonly reportes: ReportesService,
     private readonly asignaciones: AsignacionesService,
-    private readonly backups: BackupsService,
+    private readonly empleadosSync: EmpleadosSyncService,
+     private readonly migracionJson: MigracionJsonService,  
   ) {}
 
   // ============ Config ============
@@ -33,12 +33,13 @@ export class ReglasBiometricosService {
   }
 
   // ============ Cache ============
+  async recargar() {
+    return await this.config.recargar();
+  }
+
   limpiarCachesReportes() {
     this.reportes.limpiarCaches();
-    return {
-      success: true,
-      message: 'Caches de reportes limpiados',
-    };
+    return { success: true, message: 'Caches de reportes limpiados' };
   }
 
   // ============ Asignaciones ============
@@ -61,6 +62,11 @@ export class ReglasBiometricosService {
     return this.asignaciones.generarPlantillaAsignaciones(mes);
   }
 
+  // ============ Empleados (NUEVO) ============
+  sincronizarEmpleadosDesdeBiometrico() {
+    return this.empleadosSync.Sincronizar_Empleados();
+  }
+
   // ============ Reportes ============
   generarReporteDiario(fecha: Date, generarExcel = false) {
     return this.reportes.generarReporteDiario(fecha, generarExcel);
@@ -75,9 +81,20 @@ export class ReglasBiometricosService {
     return this.reportes.validarSalidasPendientes(fecha, generarExcel);
   }
 
-  // ============ Backups ============
-  listarBackups() { return this.backups.listarBackups(); }
-  restaurarBackup(nombreArchivo: string) { return this.backups.restaurarBackup(nombreArchivo); }
-  restaurarUltimoBackup() { return this.backups.restaurarUltimoBackup(); }
-  limpiarBackupsViejos(diasAntiguedad = 30) { return this.backups.limpiarBackupsViejos(diasAntiguedad); }
+  // ============ Migración JSON → BD ============
+  migrarAsignaciones() {
+    return this.migracionJson.migrarAsignaciones();
+  }
+
+  migrarDiasLibres() {
+    return this.migracionJson.migrarDiasLibres();
+  }
+
+  migrarTodo() {
+    return this.migracionJson.migrarTodo();
+  }
+
+  estadoMigracion() {
+    return this.migracionJson.estadoMigracion();
+  }
 }

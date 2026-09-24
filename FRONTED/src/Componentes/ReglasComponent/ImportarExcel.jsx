@@ -2,7 +2,6 @@
 import { useState, useRef } from 'react';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
-import Badge from '../UI/Badge';
 
 export default function ImportarExcel({
   onDescargarPlantilla,
@@ -11,10 +10,6 @@ export default function ImportarExcel({
   previewExcel,
   resultadoImportacion,
   onLimpiarPreview,
-  backups,
-  onListarBackups,
-  onRestaurarBackup,
-  onRestaurarUltimo,
 }) {
   const hoy = new Date();
   const mesActual = String(hoy.getMonth() + 1).padStart(2, '0');
@@ -102,7 +97,7 @@ export default function ImportarExcel({
     if (!archivo) return alert('Selecciona un archivo primero.');
     if (!previewExcel) return alert('Primero valida el archivo.');
     if (previewExcel.filasConError > 0) return alert('Corrige los errores antes de importar.');
-    if (!window.confirm('¿Aplicar los cambios del Excel? Se creará un backup automático.')) return;
+    if (!window.confirm('¿Aplicar los cambios del Excel?')) return;
 
     setLoadingImportar(true);
     try {
@@ -120,24 +115,6 @@ export default function ImportarExcel({
     setArchivo(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     onLimpiarPreview();
-  };
-
-  const handleRestaurarUltimo = async () => {
-    if (!window.confirm('⚠️ ¿Restaurar el backup MÁS RECIENTE? Esto sobrescribirá las asignaciones actuales.')) return;
-    try {
-      await onRestaurarUltimo();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleRestaurarBackup = async (nombre) => {
-    if (!window.confirm(`¿Restaurar el backup "${nombre}"?`)) return;
-    try {
-      await onRestaurarBackup(nombre);
-    } catch (error) {
-      console.error(error);
-    }
   };
 
   const formatSize = (bytes) => {
@@ -231,22 +208,10 @@ export default function ImportarExcel({
           }}
         >
           <div style={{ fontSize: '40px', marginBottom: '8px' }}>📄</div>
-          <p
-            style={{
-              margin: 0,
-              fontWeight: '600',
-              color: 'var(--text-primary)',
-            }}
-          >
+          <p style={{ margin: 0, fontWeight: '600', color: 'var(--text-primary)' }}>
             {archivo ? archivo.name : 'Arrastra tu Excel aquí o haz clic para buscar'}
           </p>
-          <p
-            style={{
-              margin: '4px 0 0 0',
-              fontSize: '12px',
-              color: 'var(--text-muted)',
-            }}
-          >
+          <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
             {archivo ? formatSize(archivo.size) : 'Formatos: .xlsx, .xls'}
           </p>
           <input
@@ -324,13 +289,7 @@ export default function ImportarExcel({
                 marginBottom: '20px',
               }}
             >
-              <h4
-                style={{
-                  margin: '0 0 12px 0',
-                  fontSize: '14px',
-                  color: 'var(--card-danger-title)',
-                }}
-              >
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--card-danger-title)' }}>
                 ⚠️ Errores encontrados
               </h4>
               <ul
@@ -394,13 +353,7 @@ export default function ImportarExcel({
                       <td style={{ padding: '10px 12px', color: 'var(--table-row-text)' }}>
                         {p.fila}
                       </td>
-                      <td
-                        style={{
-                          padding: '10px 12px',
-                          fontWeight: '600',
-                          color: 'var(--primary)',
-                        }}
-                      >
+                      <td style={{ padding: '10px 12px', fontWeight: '600', color: 'var(--primary)' }}>
                         {p.employeeId}
                       </td>
                       <td style={{ padding: '10px 12px', color: 'var(--table-row-text)' }}>
@@ -472,119 +425,11 @@ export default function ImportarExcel({
           </div>
         </Card>
       )}
-
-      {/* ============ 5. BACKUPS ============ */}
-      <Card
-        title="Historial de Backups"
-        subtitle="Restaure versiones anteriores si algo sale mal"
-        icon="📋"
-        variant="default"
-      >
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-          <Button variant="primary" size="sm" onClick={onListarBackups} iconLeft="🔄">
-            Cargar Backups
-          </Button>
-          <Button variant="danger" size="sm" onClick={handleRestaurarUltimo} iconLeft="⚠️">
-            Restaurar Último
-          </Button>
-        </div>
-
-        {backups && backups.length > 0 ? (
-          <div
-            style={{
-              overflowX: 'auto',
-              borderRadius: '10px',
-              border: '1px solid var(--table-row-border)',
-            }}
-          >
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '13px',
-                background: 'var(--table-row-bg)',
-              }}
-            >
-              <thead>
-                <tr
-                  style={{
-                    background: 'var(--table-header-bg)',
-                    borderBottom: '2px solid var(--table-header-border)',
-                  }}
-                >
-                  {['Archivo', 'Fecha', 'Tamaño', 'Acciones'].map((h, i) => (
-                    <th
-                      key={i}
-                      style={{
-                        ...thStyle,
-                        textAlign: i === 3 ? 'right' : 'left',
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {backups.map((b, i) => (
-                  <tr
-                    key={i}
-                    style={{
-                      borderBottom: '1px solid var(--table-row-border)',
-                      background:
-                        i % 2 === 0
-                          ? 'var(--table-row-bg)'
-                          : 'var(--table-row-bg-alt)',
-                    }}
-                  >
-                    <td
-                      style={{
-                        padding: '10px 12px',
-                        fontSize: '12px',
-                        fontFamily: 'monospace',
-                        color: 'var(--table-row-text)',
-                      }}
-                    >
-                      {b.nombre}
-                    </td>
-                    <td style={{ padding: '10px 12px', color: 'var(--table-row-text)' }}>
-                      {new Date(b.fecha).toLocaleString('es-VE')}
-                    </td>
-                    <td style={{ padding: '10px 12px', color: 'var(--table-row-text)' }}>
-                      {b.tamanoKB} KB
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                      <Button
-                        variant="warning"
-                        size="sm"
-                        onClick={() => handleRestaurarBackup(b.nombre)}
-                        iconLeft="🔄"
-                      >
-                        Restaurar
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p
-            style={{
-              color: 'var(--text-muted)',
-              textAlign: 'center',
-              padding: '20px',
-            }}
-          >
-            Haz clic en "Cargar Backups" para ver el historial.
-          </p>
-        )}
-      </Card>
     </div>
   );
 }
 
-// 🎯 Mini stat card adaptable al tema
+// 🎯 Mini stat card
 const StatMini = ({ label, value, bg, color, border }) => (
   <div
     style={{

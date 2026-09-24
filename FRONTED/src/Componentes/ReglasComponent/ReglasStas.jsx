@@ -1,7 +1,7 @@
 // src/Componentes/ReglasComponent/ReglasStats.jsx
 import Card from '../UI/Card';
 
-// 🎨 Íconos SVG inline
+//  Íconos SVG inline
 const IconoHorarios = ({ color }) => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
@@ -35,7 +35,59 @@ const IconoRotativos = ({ color }) => (
   </svg>
 );
 
-export default function ReglasStats({ reglas, asignaciones, diasLibres }) {
+const IconoNovedades = ({ color }) => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 7h-9" />
+    <path d="M14 17H5" />
+    <circle cx="17" cy="17" r="3" />
+    <circle cx="7" cy="7" r="3" />
+  </svg>
+);
+
+// 🔧 Fecha helpers
+const fechaISOaString = (fechaStr) => {
+  if (!fechaStr) return '';
+  const d = new Date(fechaStr);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+};
+
+const obtenerDomingoActual = () => {
+  const hoy = new Date();
+  const dia = hoy.getDay();
+  const domingo = new Date(hoy);
+  domingo.setDate(hoy.getDate() - dia);
+  const y = domingo.getFullYear();
+  const m = String(domingo.getMonth() + 1).padStart(2, '0');
+  const d = String(domingo.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const novedadAplicaEnSemana = (novedad, semanaInicioISO) => {
+  if (!novedad || !semanaInicioISO) return false;
+  const inicioNov = fechaISOaString(novedad.fechaInicio);
+  const finNov = fechaISOaString(novedad.fechaFin);
+  if (!inicioNov || !finNov) return false;
+
+  const [y, m, d] = semanaInicioISO.split('-').map(Number);
+  const finSemanaDate = new Date(Date.UTC(y, m - 1, d));
+  finSemanaDate.setUTCDate(finSemanaDate.getUTCDate() + 6);
+  const finSemana = `${finSemanaDate.getUTCFullYear()}-${String(
+    finSemanaDate.getUTCMonth() + 1,
+  ).padStart(2, '0')}-${String(finSemanaDate.getUTCDate()).padStart(2, '0')}`;
+
+  return inicioNov <= finSemana && finNov >= semanaInicioISO;
+};
+
+export default function ReglasStats({
+  reglas,
+  asignaciones,
+  diasLibres,
+  novedades = [],
+}) {
   if (!reglas || !asignaciones) {
     return (
       <Card variant="default">
@@ -55,8 +107,22 @@ export default function ReglasStats({ reglas, asignaciones, diasLibres }) {
   const totalHorarios = reglas.horarios?.length || 0;
   const totalAsignaciones = asignaciones.length || 0;
   const totalDiasLibresFijos =
-    asignaciones.filter((a) => a.diasLibresFijos && a.diasLibresFijos.length > 0).length || 0;
+    asignaciones.filter((a) => a.diasLibresFijos && a.diasLibresFijos.length > 0)
+      .length || 0;
   const totalDiasLibresRotativos = diasLibres ? Object.keys(diasLibres).length : 0;
+
+  // 🆕 Empleados con novedad activa esta semana
+  const semanaActual = obtenerDomingoActual();
+  const cedulasConNovedad = new Set();
+  if (Array.isArray(novedades)) {
+    for (const n of novedades) {
+      if (!n.activo) continue;
+      if (!novedadAplicaEnSemana(n, semanaActual)) continue;
+      const cedula = String(n.cedula || '').trim();
+      if (cedula) cedulasConNovedad.add(cedula);
+    }
+  }
+  const totalConNovedad = cedulasConNovedad.size;
 
   const stats = [
     {
@@ -86,6 +152,14 @@ export default function ReglasStats({ reglas, asignaciones, diasLibres }) {
       color: '#e53e3e',
       colorLight: 'var(--accent-red-light)',
       icon: <IconoRotativos color="#e53e3e" />,
+    },
+    // 🆕 NUEVA CARD
+    {
+      label: 'Con Novedad Esta Semana',
+      value: totalConNovedad,
+      color: '#3182ce',
+      colorLight: 'var(--card-info-bg)',
+      icon: <IconoNovedades color="#3182ce" />,
     },
   ];
 
@@ -191,6 +265,7 @@ export default function ReglasStats({ reglas, asignaciones, diasLibres }) {
         .reglas-stat-card:nth-child(2) { animation-delay: 0.12s; }
         .reglas-stat-card:nth-child(3) { animation-delay: 0.24s; }
         .reglas-stat-card:nth-child(4) { animation-delay: 0.36s; }
+        .reglas-stat-card:nth-child(5) { animation-delay: 0.48s; }
       `}</style>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>

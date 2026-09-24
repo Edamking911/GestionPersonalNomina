@@ -9,7 +9,7 @@ import { exportarReportePDF, imprimirReporte } from '../../utils/pdfExport';
 import api from '../../servicio/Api';
 
 // =========================================================
-//  HELPERS
+// 🔧 HELPERS
 // =========================================================
 const formatearFechaLocal = (d) => {
   const y = d.getFullYear();
@@ -18,7 +18,7 @@ const formatearFechaLocal = (d) => {
   return `${y}-${m}-${dd}`;
 };
 
-// 🔧 Helper: convierte minutos a "Xh Ym"
+// 🔧 Convierte minutos a "Xh Ym"
 const formatearMinutos = (minutos) => {
   if (!minutos || minutos <= 0) return '0m';
   const h = Math.floor(minutos / 60);
@@ -28,7 +28,7 @@ const formatearMinutos = (minutos) => {
   return `${m}m`;
 };
 
-// 🔧 Helper: convierte horas decimales a "Xh Ym"
+// 🔧 Convierte horas decimales a "Xh Ym"
 const formatearHoras = (horas) => {
   if (!horas || horas <= 0) return '0h';
   const h = Math.floor(horas);
@@ -38,6 +38,7 @@ const formatearHoras = (horas) => {
   return `${m}m`;
 };
 
+// 🎨 Estados (incluye novedades)
 const getEstadoBadge = (estado) => {
   const map = {
     PUNTUAL: { variant: 'success', texto: 'Puntual' },
@@ -49,8 +50,24 @@ const getEstadoBadge = (estado) => {
     SIN_HORARIO: { variant: 'default', texto: 'Sin Horario' },
     PENDIENTE: { variant: 'info', texto: 'Pendiente' },
     NO_MARCO_SALIDA: { variant: 'danger', texto: 'Sin Salida' },
+    VACACIONES: { variant: 'info', texto: '🏖️ Vacaciones' },
+    REPOSO_MEDICO: { variant: 'danger', texto: '🏥 Reposo' },
+    PERMISO_REMUNERADO: { variant: 'success', texto: '📝 Permiso Rem.' },
+    PERMISO_NO_REMUNERADO: { variant: 'warning', texto: '📝 Permiso No Rem.' },
+    FALTA_JUSTIFICADA: { variant: 'warning', texto: '⚠️ Falta Just.' },
+    FALTA_INJUSTIFICADA: { variant: 'danger', texto: '❌ Falta Injust.' },
   };
   return map[estado] || { variant: 'default', texto: estado };
+};
+
+const getEstadoBreakBadge = (estado) => {
+  const map = {
+    CORRECTO: { variant: 'success', texto: '✅ OK' },
+    EXCESO: { variant: 'danger', texto: '⚠️ Exceso' },
+    CORTO: { variant: 'warning', texto: '⏱️ Corto' },
+    NO_MARCO: { variant: 'default', texto: '— Sin break' },
+  };
+  return map[estado] || { variant: 'default', texto: estado || '—' };
 };
 
 // =========================================================
@@ -154,7 +171,6 @@ export default function ReporteIndividualModal({
   // =========================================================
   const stats = useMemo(() => {
     if (!evaluaciones.length) return null;
-    const total = evaluaciones.length;
     const diasTrabajados = evaluaciones.filter((e) =>
       ['PUNTUAL', 'RETARDO', 'SALIDA_TEMPRANA', 'COMPLETO'].includes(e.estado),
     ).length;
@@ -163,6 +179,15 @@ export default function ReporteIndividualModal({
     const noMarcoSalida = evaluaciones.filter(
       (e) => e.estado === 'NO_MARCO_SALIDA',
     ).length;
+
+    // 🆕 Novedades
+    const vacaciones = evaluaciones.filter((e) => e.estado === 'VACACIONES').length;
+    const reposo = evaluaciones.filter((e) => e.estado === 'REPOSO_MEDICO').length;
+    const permisosRem = evaluaciones.filter((e) => e.estado === 'PERMISO_REMUNERADO').length;
+    const permisosNoRem = evaluaciones.filter((e) => e.estado === 'PERMISO_NO_REMUNERADO').length;
+    const faltasJust = evaluaciones.filter((e) => e.estado === 'FALTA_JUSTIFICADA').length;
+    const faltasInjust = evaluaciones.filter((e) => e.estado === 'FALTA_INJUSTIFICADA').length;
+
     const totalMinutosRetardo = evaluaciones.reduce(
       (s, e) => s + (e.minutosRetardo || 0),
       0,
@@ -180,21 +205,44 @@ export default function ReporteIndividualModal({
         (e.horasExtraNocturnas || 0),
       0,
     );
+
+    // 🆕 Break
+    const diasBreakCorrecto = evaluaciones.filter((e) => e.break?.estado === 'CORRECTO').length;
+    const diasBreakExceso = evaluaciones.filter((e) => e.break?.estado === 'EXCESO').length;
+    const diasBreakCorto = evaluaciones.filter((e) => e.break?.estado === 'CORTO').length;
+    const minutosBreakExceso = evaluaciones.reduce(
+      (s, e) => s + (e.break?.excesoMin || 0),
+      0,
+    );
+
     const asistenciaPct =
       diasTrabajados + ausentes > 0
         ? Math.round((diasTrabajados / (diasTrabajados + ausentes)) * 100)
         : null;
 
     return {
-      total,
+      total: evaluaciones.length,
       diasTrabajados,
       ausentes,
       descansos,
       noMarcoSalida,
+      // 🆕 novedades
+      vacaciones,
+      reposo,
+      permisosRem,
+      permisosNoRem,
+      faltasJust,
+      faltasInjust,
+      // resto
       totalMinutosRetardo,
       totalHorasExtra: Math.round(totalHorasExtra * 100) / 100,
       totalHorasTrabajadas: Math.round(totalHorasTrabajadas * 100) / 100,
       asistenciaPct,
+      // 🆕 break
+      diasBreakCorrecto,
+      diasBreakExceso,
+      diasBreakCorto,
+      minutosBreakExceso,
     };
   }, [evaluaciones]);
 
@@ -209,6 +257,9 @@ export default function ReporteIndividualModal({
       { key: 'entradaReal', label: 'Entrada' },
       { key: 'salidaReal', label: 'Salida' },
       { key: 'estado', label: 'Estado' },
+      { key: 'breakSalida', label: 'Break Sale' },
+      { key: 'breakEntrada', label: 'Break Entra' },
+      { key: 'breakDuracion', label: 'Dur. Break' },
       { key: 'retardoLegible', label: 'Retardo' },
       { key: 'salidaTempranaLegible', label: 'Sal. Temprana' },
       { key: 'horasDiurnasLegible', label: 'H. Diurnas', align: 'right' },
@@ -217,31 +268,24 @@ export default function ReporteIndividualModal({
       { key: 'horasExtraNocturnasLegible', label: 'Extra Noct.', align: 'right' },
     ];
 
-    const estadoTexto = (estado) =>
-      ({
-        PUNTUAL: 'Puntual',
-        RETARDO: 'Retardo',
-        SALIDA_TEMPRANA: 'Salida Temprana',
-        COMPLETO: 'Completo',
-        AUSENTE: 'Ausente',
-        DESCANSO: 'Descanso',
-        SIN_HORARIO: 'Sin Horario',
-        PENDIENTE: 'Pendiente',
-        NO_MARCO_SALIDA: 'Sin Salida',
-      })[estado] || estado;
-
-    const filas = evaluaciones.map((e) => ({
-      fecha: e.fecha,
-      entradaReal: e.entradaReal || '—',
-      salidaReal: e.salidaReal || '—',
-      estado: estadoTexto(e.estado),
-      retardoLegible: e.retardoLegible || '0m',
-      salidaTempranaLegible: e.salidaTempranaLegible || '0m',
-      horasDiurnasLegible: e.horasDiurnasLegible || '0h',
-      horasNocturnasLegible: e.horasNocturnasLegible || '0h',
-      horasExtraDiurnasLegible: e.horasExtraDiurnasLegible || '0h',
-      horasExtraNocturnasLegible: e.horasExtraNocturnasLegible || '0h',
-    }));
+    const filas = evaluaciones.map((e) => {
+      const badge = getEstadoBadge(e.estado);
+      return {
+        fecha: e.fecha,
+        entradaReal: e.entradaReal || '—',
+        salidaReal: e.salidaReal || '—',
+        estado: badge.texto,
+        breakSalida: e.break?.horaSalida || '—',
+        breakEntrada: e.break?.horaEntrada || '—',
+        breakDuracion: e.break?.duracionLegible || '—',
+        retardoLegible: e.retardoLegible || '0m',
+        salidaTempranaLegible: e.salidaTempranaLegible || '0m',
+        horasDiurnasLegible: e.horasDiurnasLegible || '0h',
+        horasNocturnasLegible: e.horasNocturnasLegible || '0h',
+        horasExtraDiurnasLegible: e.horasExtraDiurnasLegible || '0h',
+        horasExtraNocturnasLegible: e.horasExtraNocturnasLegible || '0h',
+      };
+    });
 
     return {
       titulo: 'Reporte Individual de Asistencia',
@@ -413,9 +457,7 @@ export default function ReporteIndividualModal({
           {/* HEADER */}
           <div className="rim-header">
             <div>
-              <h2 className="rim-title">
-                📄 Reporte Individual
-              </h2>
+              <h2 className="rim-title">📄 Reporte Individual</h2>
               <p className="rim-subtitle">
                 {nombre || 'Empleado'} · {employeeId}
               </p>
@@ -488,7 +530,6 @@ export default function ReporteIndividualModal({
                 />
               </div>
 
-              {/* Presets rápidos */}
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 <button
                   className="rim-preset-btn"
@@ -527,7 +568,6 @@ export default function ReporteIndividualModal({
                 </button>
               </div>
 
-              {/* Botones de exportar */}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
                 <Button
                   variant="danger"
@@ -551,7 +591,7 @@ export default function ReporteIndividualModal({
             </div>
 
             {/* SKELETON */}
-            {loading && <TableSkeleton columns={10} rows={8} />}
+            {loading && <TableSkeleton columns={13} rows={8} />}
 
             {/* ERROR */}
             {!loading && error && (
@@ -570,24 +610,18 @@ export default function ReporteIndividualModal({
             {/* RESULTADO */}
             {!loading && !error && evaluaciones.length > 0 && (
               <>
-                {/* Stats */}
+                {/* Stats principales */}
                 {stats && (
                   <div className="rim-stats">
                     <div className="rim-stat">
                       <div className="rim-stat-label">Días trabajados</div>
-                      <p
-                        className="rim-stat-value"
-                        style={{ color: 'var(--success)' }}
-                      >
+                      <p className="rim-stat-value" style={{ color: 'var(--success)' }}>
                         {stats.diasTrabajados}
                       </p>
                     </div>
                     <div className="rim-stat">
                       <div className="rim-stat-label">Ausencias</div>
-                      <p
-                        className="rim-stat-value"
-                        style={{ color: 'var(--danger)' }}
-                      >
+                      <p className="rim-stat-value" style={{ color: 'var(--danger)' }}>
                         {stats.ausentes}
                       </p>
                     </div>
@@ -597,27 +631,19 @@ export default function ReporteIndividualModal({
                     </div>
                     <div className="rim-stat">
                       <div className="rim-stat-label">Sin salida</div>
-                      <p
-                        className="rim-stat-value"
-                        style={{ color: 'var(--warning)' }}
-                      >
+                      <p className="rim-stat-value" style={{ color: 'var(--warning)' }}>
                         {stats.noMarcoSalida}
                       </p>
                     </div>
                     <div className="rim-stat">
                       <div className="rim-stat-label">Asistencia</div>
                       <p className="rim-stat-value">
-                        {stats.asistenciaPct !== null
-                          ? `${stats.asistenciaPct}%`
-                          : '—'}
+                        {stats.asistenciaPct !== null ? `${stats.asistenciaPct}%` : '—'}
                       </p>
                     </div>
                     <div className="rim-stat">
                       <div className="rim-stat-label">Retardo acum.</div>
-                      <p
-                        className="rim-stat-value"
-                        style={{ color: 'var(--warning)' }}
-                      >
+                      <p className="rim-stat-value" style={{ color: 'var(--warning)' }}>
                         {formatearMinutos(stats.totalMinutosRetardo)}
                       </p>
                     </div>
@@ -629,11 +655,92 @@ export default function ReporteIndividualModal({
                     </div>
                     <div className="rim-stat">
                       <div className="rim-stat-label">Horas extra</div>
-                      <p
-                        className="rim-stat-value"
-                        style={{ color: 'var(--success)' }}
-                      >
+                      <p className="rim-stat-value" style={{ color: 'var(--success)' }}>
                         {formatearHoras(stats.totalHorasExtra)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 🆕 Stats de Novedades */}
+                {stats && (stats.vacaciones + stats.reposo + stats.permisosRem + stats.permisosNoRem + stats.faltasJust + stats.faltasInjust) > 0 && (
+                  <div className="rim-stats" style={{ marginTop: '-10px' }}>
+                    {stats.vacaciones > 0 && (
+                      <div className="rim-stat">
+                        <div className="rim-stat-label">🏖️ Vacaciones</div>
+                        <p className="rim-stat-value" style={{ color: 'var(--info)' }}>
+                          {stats.vacaciones}
+                        </p>
+                      </div>
+                    )}
+                    {stats.reposo > 0 && (
+                      <div className="rim-stat">
+                        <div className="rim-stat-label">🏥 Reposos</div>
+                        <p className="rim-stat-value" style={{ color: 'var(--danger)' }}>
+                          {stats.reposo}
+                        </p>
+                      </div>
+                    )}
+                    {stats.permisosRem > 0 && (
+                      <div className="rim-stat">
+                        <div className="rim-stat-label">📝 Perm. Rem.</div>
+                        <p className="rim-stat-value" style={{ color: 'var(--success)' }}>
+                          {stats.permisosRem}
+                        </p>
+                      </div>
+                    )}
+                    {stats.permisosNoRem > 0 && (
+                      <div className="rim-stat">
+                        <div className="rim-stat-label">📝 Perm. No Rem.</div>
+                        <p className="rim-stat-value" style={{ color: 'var(--warning)' }}>
+                          {stats.permisosNoRem}
+                        </p>
+                      </div>
+                    )}
+                    {stats.faltasJust > 0 && (
+                      <div className="rim-stat">
+                        <div className="rim-stat-label">⚠️ Faltas Just.</div>
+                        <p className="rim-stat-value" style={{ color: 'var(--warning)' }}>
+                          {stats.faltasJust}
+                        </p>
+                      </div>
+                    )}
+                    {stats.faltasInjust > 0 && (
+                      <div className="rim-stat">
+                        <div className="rim-stat-label">❌ Faltas Injust.</div>
+                        <p className="rim-stat-value" style={{ color: 'var(--danger)' }}>
+                          {stats.faltasInjust}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 🆕 Stats de Break */}
+                {stats && (stats.diasBreakCorrecto + stats.diasBreakExceso + stats.diasBreakCorto) > 0 && (
+                  <div className="rim-stats" style={{ marginTop: '-10px' }}>
+                    <div className="rim-stat">
+                      <div className="rim-stat-label">✅ Break OK</div>
+                      <p className="rim-stat-value" style={{ color: 'var(--success)' }}>
+                        {stats.diasBreakCorrecto}
+                      </p>
+                    </div>
+                    <div className="rim-stat">
+                      <div className="rim-stat-label">⚠️ Break Exceso</div>
+                      <p className="rim-stat-value" style={{ color: 'var(--danger)' }}>
+                        {stats.diasBreakExceso}
+                      </p>
+                    </div>
+                    <div className="rim-stat">
+                      <div className="rim-stat-label">⏱️ Break Corto</div>
+                      <p className="rim-stat-value" style={{ color: 'var(--warning)' }}>
+                        {stats.diasBreakCorto}
+                      </p>
+                    </div>
+                    <div className="rim-stat">
+                      <div className="rim-stat-label">Exceso total</div>
+                      <p className="rim-stat-value" style={{ color: 'var(--danger)' }}>
+                        {formatearMinutos(stats.minutosBreakExceso)}
                       </p>
                     </div>
                   </div>
@@ -668,6 +775,10 @@ export default function ReporteIndividualModal({
                             'Entrada',
                             'Salida',
                             'Estado',
+                            'Break Sale',
+                            'Break Entra',
+                            'Dur. Break',
+                            'Est. Break',
                             'Retardo',
                             'Sal. Temprana',
                             'H. Diurnas',
@@ -684,6 +795,8 @@ export default function ReporteIndividualModal({
                       <tbody>
                         {pagination.paginatedItems.map((item, idx) => {
                           const badge = getEstadoBadge(item.estado);
+                          const breakBadge = getEstadoBreakBadge(item.break?.estado);
+
                           return (
                             <tr
                               key={`${item.fecha}-${idx}`}
@@ -727,6 +840,45 @@ export default function ReporteIndividualModal({
                                 <Badge variant={badge.variant} size="sm">
                                   {badge.texto}
                                 </Badge>
+                              </td>
+                              <td
+                                style={{
+                                  padding: '10px 12px',
+                                  color: 'var(--table-row-text)',
+                                  fontSize: '12px',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {item.break?.horaSalida || '—'}
+                              </td>
+                              <td
+                                style={{
+                                  padding: '10px 12px',
+                                  color: 'var(--table-row-text)',
+                                  fontSize: '12px',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {item.break?.horaEntrada || '—'}
+                              </td>
+                              <td
+                                style={{
+                                  padding: '10px 12px',
+                                  color: 'var(--table-row-text)',
+                                  fontSize: '12px',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {item.break?.duracionLegible || '—'}
+                              </td>
+                              <td style={{ padding: '10px 12px' }}>
+                                {item.break?.estado ? (
+                                  <Badge variant={breakBadge.variant} size="sm">
+                                    {breakBadge.texto}
+                                  </Badge>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                )}
                               </td>
                               <td
                                 style={{

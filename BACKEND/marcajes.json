@@ -862,5 +862,85 @@
     "deviceName": "DS-K1A8503MF",
     "rawType": "38",
     "employeeName": "ADRIANA SUBERO"
+  },
+  {
+    "employeeId": "24765865",
+    "timestamp": "2026-09-16T21:10:45.000Z",
+    "horaLocal": "16/09/2026, 05:10:45 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38",
+    "employeeName": "LUIS JOSE ROJAS MONTERO"
+  },
+  {
+    "employeeId": "29591045",
+    "timestamp": "2026-09-16T21:11:07.000Z",
+    "horaLocal": "16/09/2026, 05:11:07 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38",
+    "employeeName": "ADRIANA SUBERO"
+  },
+  {
+    "employeeId": "26082578",
+    "timestamp": "2026-09-16T21:11:25.000Z",
+    "horaLocal": "16/09/2026, 05:11:25 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38",
+    "employeeName": "ALEXIS ZABALA"
+  },
+  {
+    "employeeId": "27280588",
+    "timestamp": "2026-09-16T21:24:39.000Z",
+    "horaLocal": "16/09/2026, 05:24:39 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38",
+    "employeeName": "JONATHAN JOSE FARIAS RODRIGUEZ"
+  },
+  {
+    "employeeId": "22652518",
+    "timestamp": "2026-09-16T23:38:12.000Z",
+    "horaLocal": "16/09/2026, 07:38:12 p. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38",
+    "employeeName": "JORWINS MARCANO"
+  },
+  {
+    "employeeId": "26082578",
+    "timestamp": "2026-09-17T11:52:41.000Z",
+    "horaLocal": "17/09/2026, 07:52:41 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38",
+    "employeeName": "ALEXIS ZABALA"
+  },
+  {
+    "employeeId": "22652518",
+    "timestamp": "2026-09-17T11:55:47.000Z",
+    "horaLocal": "17/09/2026, 07:55:47 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38",
+    "employeeName": "JORWINS MARCANO"
+  },
+  {
+    "employeeId": "29789773",
+    "timestamp": "2026-09-17T11:59:36.000Z",
+    "horaLocal": "17/09/2026, 07:59:36 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38",
+    "employeeName": "EMANUEL DAVID APONTE MARCANO"
+  },
+  {
+    "employeeId": "29591045",
+    "timestamp": "2026-09-17T12:01:55.000Z",
+    "horaLocal": "17/09/2026, 08:01:55 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38",
+    "employeeName": "ADRIANA SUBERO"
+  },
+  {
+    "employeeId": "24765865",
+    "timestamp": "2026-09-17T12:02:04.000Z",
+    "horaLocal": "17/09/2026, 08:02:04 a. m.",
+    "deviceName": "DS-K1A8503MF",
+    "rawType": "38",
+    "employeeName": "LUIS JOSE ROJAS MONTERO"
   }
 ]

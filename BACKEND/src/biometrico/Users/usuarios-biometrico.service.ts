@@ -4,6 +4,10 @@ import * as path from 'path';
 import { Workbook } from 'exceljs';
 import { BiometricDeviceProvider } from '../Providers/biometrico-device.provider';
 import { delay } from '../Utils/Events-types.util';
+import { Empleado } from 'src/Entitys/Empleados/Empleado.entity';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { normalizarCedula } from 'src/utils/formato_horas.util';
 
 @Injectable()
 export class UsuariosBiometricoService {
@@ -13,7 +17,11 @@ export class UsuariosBiometricoService {
     'pendientes_huella.json',
   );
 
-  constructor(private readonly deviceProvider: BiometricDeviceProvider) {}
+  constructor(
+    private readonly deviceProvider: BiometricDeviceProvider,
+    @InjectRepository(Empleado)
+    private readonly empleadoRepo: Repository<Empleado>,
+  ) {}
 
   async listUsers(incluirInactivos = false) {
     const usuarios = await this.deviceProvider.device.listUsers(incluirInactivos);
@@ -69,10 +77,7 @@ export class UsuariosBiometricoService {
         else if (apellido) nombreCompleto = apellido;
         else nombreCompleto = `EMPLEADO ${cedula}`;
 
-        nombreCompleto = nombreCompleto
-          .replace(/\s+/g, ' ')
-          .trim()
-          .slice(0, 32);
+        nombreCompleto = nombreCompleto.replace(/\s+/g, ' ').trim().slice(0, 32);
 
         resultados.totalFilas++;
 
@@ -82,45 +87,29 @@ export class UsuariosBiometricoService {
           const result = await this.deviceProvider.device.upsertUser({
             employeeNo: cedula,
             name: nombreCompleto,
-            userType: cargo.toLowerCase().includes('admin')
-              ? 'admin'
-              : 'normal',
+            userType: cargo.toLowerCase().includes('admin') ? 'admin' : 'normal',
             userGroup: cargo,
           });
 
           if (result.success) {
             if (existente) {
               resultados.actualizados++;
-              this.logger.log(
-                `🔄 Usuario actualizado: ${cedula} - ${nombreCompleto} (${cargo})`,
-              );
+              this.logger.log(`🔄 Usuario actualizado: ${cedula} - ${nombreCompleto} (${cargo})`);
             } else {
               resultados.creados++;
-              this.logger.log(
-                `✅ Usuario creado: ${cedula} - ${nombreCompleto} (${cargo})`,
-              );
+              this.logger.log(`✅ Usuario creado: ${cedula} - ${nombreCompleto} (${cargo})`);
             }
           } else {
             resultados.fallidos++;
-            resultados.errores.push(
-              `Error con ${cedula}: ${JSON.stringify(result.raw)}`,
-            );
-            this.logger.warn(
-              `❌ Error con ${cedula}: ${JSON.stringify(result.raw)}`,
-            );
+            resultados.errores.push(`Error con ${cedula}: ${JSON.stringify(result.raw)}`);
           }
         } catch (error: any) {
           resultados.fallidos++;
           resultados.errores.push(`Error con ${cedula}: ${error.message}`);
-          this.logger.warn(`❌ Error con ${cedula}: ${error.message}`);
         }
 
         await delay(200);
       }
-
-      this.logger.log(
-        `📊 Importación completada: ${resultados.creados} creados, ${resultados.actualizados} actualizados, ${resultados.fallidos} fallidos`,
-      );
 
       this.deviceProvider.device.clearEmployeeCache();
 
@@ -139,6 +128,9 @@ export class UsuariosBiometricoService {
     }
   }
 
+  // =========================================================
+  // 🔴 DESACTIVAR USUARIO (biométrico + BD)
+  // =========================================================
   async deleteUser(employeeNo: string) {
     try {
       const currentUser = await this.deviceProvider.device.getUser(employeeNo);
@@ -149,24 +141,46 @@ export class UsuariosBiometricoService {
         };
       }
 
+      // 1. Desactivar en el biométrico
       const result = await this.deviceProvider.device.deactivateUser(employeeNo);
 
-      if (result.success) {
-        this.deviceProvider.device.clearEmployeeCache();
-        this.logger.log(`✅ Usuario ${employeeNo} desactivado`);
+      if (!result.success) {
+        this.logger.warn(
+          `⚠️ No se pudo desactivar ${employeeNo} en el biométrico: ${JSON.stringify(result.raw)}`,
+        );
         return {
-          success: true,
-          message: `Usuario ${employeeNo} (${currentUser.name}) desactivado`,
+          success: false,
+          message: 'No se pudo desactivar el usuario en el biométrico',
+          detail: result.raw,
         };
       }
 
-      this.logger.warn(
-        `⚠️ No se pudo desactivar ${employeeNo}: ${JSON.stringify(result.raw)}`,
-      );
+      // 2. ✅ Actualizar BD (empleado.estado = INACTIVO)
+      const cedulaNorm = normalizarCedula(employeeNo);
+      const empleado = await this.empleadoRepo.findOne({
+        where: { cedula: cedulaNorm },
+      });
+
+      let bdActualizada = false;
+      if (empleado) {
+        empleado.estado = 'INACTIVO';
+        await this.empleadoRepo.save(empleado);
+        bdActualizada = true;
+        this.logger.log(
+          `🔴 Usuario ${employeeNo} (${empleado.nombre} ${empleado.apellido}) DESACTIVADO en biométrico + BD`,
+        );
+      } else {
+        this.logger.warn(
+          `⚠️ Empleado ${employeeNo} no existe en BD. Solo se desactivó en biométrico.`,
+        );
+      }
+
+      this.deviceProvider.device.clearEmployeeCache();
+
       return {
-        success: false,
-        message: 'No se pudo desactivar el usuario',
-        detail: result.raw,
+        success: true,
+        message: `Usuario ${employeeNo} (${currentUser.name}) desactivado${bdActualizada ? ' + BD actualizada' : ''}`,
+        bdActualizada,
       };
     } catch (error: any) {
       this.logger.error(`Error desactivando ${employeeNo}: ${error.message}`);
@@ -178,6 +192,9 @@ export class UsuariosBiometricoService {
     }
   }
 
+  // =========================================================
+  // 🟢 ACTIVAR USUARIO (biométrico + BD)
+  // =========================================================
   async activateUser(employeeNo: string) {
     try {
       const currentUser = await this.deviceProvider.device.getUser(employeeNo);
@@ -188,29 +205,51 @@ export class UsuariosBiometricoService {
         };
       }
 
+      // 1. Activar en el biométrico
       const result = await this.deviceProvider.device.activateUser(employeeNo);
 
-      if (result.success) {
-        this.deviceProvider.device.clearEmployeeCache();
-        this.logger.log(`✅ Usuario ${employeeNo} activado`);
+      if (!result.success) {
+        this.logger.warn(
+          `⚠️ No se pudo activar ${employeeNo} en el biométrico: ${JSON.stringify(result.raw)}`,
+        );
         return {
-          success: true,
-          message: `Usuario ${employeeNo} (${currentUser.name}) activado. Ya puede marcar.`,
-          usuario: {
-            employeeNo,
-            nombre: currentUser.name,
-            activo: true,
-          },
+          success: false,
+          message: 'No se pudo activar el usuario en el biométrico',
+          detail: result.raw,
         };
       }
 
-      this.logger.warn(
-        `⚠️ No se pudo activar ${employeeNo}: ${JSON.stringify(result.raw)}`,
-      );
+      // 2. ✅ Actualizar BD (empleado.estado = ACTIVO)
+      const cedulaNorm = normalizarCedula(employeeNo);
+      const empleado = await this.empleadoRepo.findOne({
+        where: { cedula: cedulaNorm },
+      });
+
+      let bdActualizada = false;
+      if (empleado) {
+        empleado.estado = 'ACTIVO';
+        await this.empleadoRepo.save(empleado);
+        bdActualizada = true;
+        this.logger.log(
+          `🟢 Usuario ${employeeNo} (${empleado.nombre} ${empleado.apellido}) ACTIVADO en biométrico + BD`,
+        );
+      } else {
+        this.logger.warn(
+          `⚠️ Empleado ${employeeNo} no existe en BD. Solo se activó en biométrico.`,
+        );
+      }
+
+      this.deviceProvider.device.clearEmployeeCache();
+
       return {
-        success: false,
-        message: 'No se pudo activar el usuario',
-        detail: result.raw,
+        success: true,
+        message: `Usuario ${employeeNo} (${currentUser.name}) activado. Ya puede marcar.`,
+        usuario: {
+          employeeNo,
+          nombre: currentUser.name,
+          activo: true,
+        },
+        bdActualizada,
       };
     } catch (error: any) {
       this.logger.error(`Error activando ${employeeNo}: ${error.message}`);

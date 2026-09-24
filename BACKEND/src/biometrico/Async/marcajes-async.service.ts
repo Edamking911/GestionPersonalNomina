@@ -211,18 +211,25 @@ export class MarcajesSyncService {
       payload?.EventNotificationAlert?.AccessControllerEvent;
     if (!event) return null;
 
-    const minor = Number(event.minor);
-    const major = Number(event.major);
+    // ✅ Usar los nombres REALES del XML de Hikvision
+    const majorEventType = Number(event.majorEventType);
+    const subEventType = Number(event.subEventType);
     const systemEventMinors = [49, 50, 51, 52, 53, 54, 55];
-    if (systemEventMinors.includes(minor)) return null;
-    if (major !== 5) return null;
+
+    if (systemEventMinors.includes(subEventType)) return null;
+    if (majorEventType !== 5) return null;
 
     const employeeId = event.employeeNoString || event.employeeNo;
     if (!employeeId || String(employeeId).trim() === '' || employeeId === '0') {
       return null;
     }
 
-    const timeStr = event.time || payload?.EventNotificationAlert?.dateTime;
+    // ✅ El dateTime viene en EventNotificationAlert (raíz) o en event.time
+    const timeStr =
+      payload?.EventNotificationAlert?.dateTime ||
+      payload?.dateTime ||
+      event.time;
+
     const deviceName = event.deviceName || 'HIKVISION_DS-K1A8503MF';
     if (!timeStr) return null;
 
@@ -233,13 +240,33 @@ export class MarcajesSyncService {
       timestamp: dateObj,
       horaLocal,
       deviceName,
-      rawType: String(event.eventType || minor || 'AccessControl'),
+      rawType: String(event.subEventType || 'AccessControl'),
     };
   }
 
   private parseDeviceTime(timeStr: string) {
-    const clean = timeStr.replace(/[+-]\d{2}:\d{2}$/, '');
-    const dateObj = new Date(clean);
+    // ✅ FIX: mantener el timezone si viene en el string
+    // Ej: '2026-09-21T19:07:39-04:00' → se interpreta correctamente
+    const dateObj = new Date(timeStr);
+
+    // Verificar que no sea Invalid Date
+    if (isNaN(dateObj.getTime())) {
+      // Fallback: asumir UTC sin timezone
+      const clean = timeStr.replace(/[+-]\d{2}:\d{2}$/, '');
+      const fallback = new Date(clean + 'Z');
+      const horaLocalFallback = new Intl.DateTimeFormat('es-VE', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+        timeZone: 'America/Caracas',
+      }).format(fallback);
+      return { dateObj: fallback, horaLocal: horaLocalFallback };
+    }
+
     const horaLocal = new Intl.DateTimeFormat('es-VE', {
       year: 'numeric',
       month: '2-digit',
@@ -248,7 +275,9 @@ export class MarcajesSyncService {
       minute: '2-digit',
       second: '2-digit',
       hour12: true,
+      timeZone: 'America/Caracas',
     }).format(dateObj);
+
     return { dateObj, horaLocal };
   }
 

@@ -35,7 +35,6 @@ export class DepartamentosService {
     } else {
       const crear = new Departamento(); //Creo una variable de tipo Departamento
       crear.nombre = createDTO.nombre;
-      crear.codigo = createDTO.codigo;
       return this.departamento.save(crear);
     }
   }

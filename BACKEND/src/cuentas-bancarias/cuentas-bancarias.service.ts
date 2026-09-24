@@ -19,13 +19,13 @@ export class CuentasBancariasService {
     private readonly empleadoRepository: Repository<Empleado>,
   ) {}
 
-  async validarEmpleado(empleadoId: string): Promise<Empleado> {
+  async validarEmpleado(cedula: string): Promise<Empleado> {
     const empleado = await this.empleadoRepository.findOne({
-      where: { id: empleadoId },
+      where: { cedula: cedula },
     });
     if (!empleado) {
       throw new NotFoundException(
-        `Empleado con ID ${empleadoId} no encontrado`,
+        `Empleado con ID ${empleado} no encontrado`,
       );
     }
     return empleado;
@@ -99,10 +99,7 @@ export class CuentasBancariasService {
     return cuenta;
   }
 
-  async update(
-    id: string,
-    updateDto: UpdateCuentaBancariaDto,
-  ): Promise<CuentaBancaria> {
+  /*async update(id: string,updateDto: UpdateCuentaBancariaDto): Promise<CuentaBancaria> {
     const cuenta = await this.findOne(id);
 
     if (updateDto.empleadoId && updateDto.empleadoId !== cuenta.empleadoId) {
@@ -128,7 +125,7 @@ export class CuentasBancariasService {
     });
 
     return await this.cuentaRepository.save(cuenta);
-  }
+  } */
 
   async remove(id: string): Promise<CuentaBancaria> {
     const cuenta = await this.findOne(id);

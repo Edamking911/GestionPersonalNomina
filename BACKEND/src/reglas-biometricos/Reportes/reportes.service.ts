@@ -1,4 +1,4 @@
-import { Injectable, Logger, StreamableFile } from '@nestjs/common';
+import { Injectable, Logger, StreamableFile, Inject, forwardRef } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Workbook } from 'exceljs';
@@ -6,6 +6,7 @@ import { EvaluacionAsistencia } from '../Interfaces/reglas.interface';
 import { ReglasConfigService } from '../Configs/reglas-config.service';
 import { CacheEmpleadosService } from '../Cache/cache-empleados.service';
 import { EvaluacionService } from '../Evaluacion/evaluacion.service';
+import { MarcajesStorageService } from '../../biometrico/Storage/marcajes-storage.service';
 import {
   formatearHoras,
   formatearMinutos,
@@ -15,7 +16,6 @@ import {
 @Injectable()
 export class ReportesService {
   private readonly logger = new Logger(ReportesService.name);
-  private readonly marcajesPath = path.join(process.cwd(), 'marcajes.json');
 
   private readonly REPORTE_CACHE_TTL = 5 * 60 * 1000;
   private reporteSemanalCache = new Map<string, { data: any; timestamp: number }>();
@@ -24,14 +24,10 @@ export class ReportesService {
   constructor(
     private readonly config: ReglasConfigService,
     private readonly cache: CacheEmpleadosService,
+    @Inject(forwardRef(() => EvaluacionService))
     private readonly evaluacion: EvaluacionService,
+    private readonly marcajesStorage: MarcajesStorageService,
   ) {}
-
-  private leerMarcajes(): any[] {
-    if (!fs.existsSync(this.marcajesPath)) return [];
-    const data = fs.readFileSync(this.marcajesPath, 'utf-8');
-    return data ? JSON.parse(data) : [];
-  }
 
   limpiarCaches() {
     this.reporteSemanalCache.clear();
@@ -41,7 +37,7 @@ export class ReportesService {
 
   // ============ REPORTE DIARIO ============
   async generarReporteDiario(fecha: Date, generarExcel = false) {
-    const marcajes = this.leerMarcajes();
+    const marcajes = await this.marcajesStorage.obtenerMarcajesDelDia(fecha);
     const mapaNombres = await this.cache.obtenerMapaNombres();
     const activos = await this.cache.obtenerSetEmpleadosActivos();
 
@@ -56,7 +52,12 @@ export class ReportesService {
 
     const reporte: EvaluacionAsistencia[] = [];
     for (const emp of empleados) {
-      const ev = await this.evaluacion.evaluarEmpleado(emp.employeeId, fecha, emp.nombre, marcajes);
+      const ev = await this.evaluacion.evaluarEmpleado(
+        emp.employeeId,
+        fecha,
+        emp.nombre,
+        marcajes,
+      );
       reporte.push(ev);
     }
 
@@ -69,6 +70,14 @@ export class ReportesService {
         { header: 'Entrada Real', key: 'entradaReal', width: 25 },
         { header: 'Salida Real', key: 'salidaReal', width: 25 },
         { header: 'Estado', key: 'estado', width: 20 },
+        { header: 'Novedad', key: 'novedadTipo', width: 20 },
+        { header: 'Motivo Novedad', key: 'novedadMotivo', width: 30 },
+        // ⬇️ NUEVOS BREAK
+        { header: 'Break Salida', key: 'breakSalida', width: 22 },
+        { header: 'Break Entrada', key: 'breakEntrada', width: 22 },
+        { header: 'Duración Break', key: 'breakDuracion', width: 15 },
+        { header: 'Estado Break', key: 'breakEstado', width: 20 },
+        // ⬇️ RESTO
         { header: 'Retardo', key: 'retardoLegible', width: 15 },
         { header: 'Salida Temprana', key: 'salidaTempranaLegible', width: 18 },
         { header: 'Horas Extra', key: 'horasExtra', width: 12 },
@@ -84,6 +93,13 @@ export class ReportesService {
         entradaReal: emp.entradaReal || 'Sin marcar',
         salidaReal: emp.salidaReal || 'Sin marcar',
         tipoTurno: emp.tipoTurno || '',
+        novedadTipo: emp.novedad?.tipo || '',
+        novedadMotivo: emp.novedad?.motivo || '',
+        // ⬇️ NUEVOS BREAK
+        breakSalida: emp.break?.horaSalida || '',
+        breakEntrada: emp.break?.horaEntrada || '',
+        breakDuracion: emp.break?.duracionLegible || '',
+        breakEstado: emp.break?.diferenciaLegible || '',
       }));
 
       const buffer = await this.generarExcelBuffer('Reporte Diario', columnas, filas);
@@ -110,7 +126,7 @@ export class ReportesService {
       return { success: false, message: 'La fecha debe ser anterior a hoy para validar salidas' };
     }
 
-    const marcajes = this.leerMarcajes();
+    const marcajes = await this.marcajesStorage.obtenerMarcajesDelDia(fecha);
     const mapaNombres = await this.cache.obtenerMapaNombres();
     const activos = await this.cache.obtenerSetEmpleadosActivos();
 
@@ -213,7 +229,7 @@ export class ReportesService {
       return { success: false, message: 'El rango está en el futuro.' };
     }
 
-    const marcajes = this.leerMarcajes();
+    const marcajes = await this.marcajesStorage.obtenerMarcajesEnRango(desde, limite);
     const mapaNombres = await this.cache.obtenerMapaNombres();
     const activos = await this.cache.obtenerSetEmpleadosActivos();
 
@@ -234,6 +250,20 @@ export class ReportesService {
         minutosRetardo: 0, minutosSalidaTemprana: 0,
         horasExtraDiurnas: 0, horasExtraNocturnas: 0,
         horasDiurnas: 0, horasNocturnas: 0,
+        // NUEVOS - NOVEDADES
+        diasVacaciones: 0,
+        diasReposoMedico: 0,
+        diasPermisoRemunerado: 0,
+        diasPermisoNoRemunerado: 0,
+        diasFaltaJustificada: 0,
+        diasFaltaInjustificada: 0,
+        // ⬇️ NUEVOS BREAK
+        diasBreakCorrecto: 0,
+        diasBreakExceso: 0,
+        diasBreakCorto: 0,
+        diasBreakNoMarco: 0,
+        minutosBreakTotal: 0,
+        minutosBreakExceso: 0,
       };
 
       for (const dia of dias) {
@@ -248,6 +278,13 @@ export class ReportesService {
           case 'DESCANSO': acc.descansos++; break;
           case 'NO_MARCO_SALIDA': acc.noMarcoSalida++; break;
           case 'PENDIENTE': acc.pendientes++; break;
+          // NUEVOS - NOVEDADES
+          case 'VACACIONES': acc.diasVacaciones++; break;
+          case 'REPOSO_MEDICO': acc.diasReposoMedico++; break;
+          case 'PERMISO_REMUNERADO': acc.diasPermisoRemunerado++; break;
+          case 'PERMISO_NO_REMUNERADO': acc.diasPermisoNoRemunerado++; break;
+          case 'FALTA_JUSTIFICADA': acc.diasFaltaJustificada++; break;
+          case 'FALTA_INJUSTIFICADA': acc.diasFaltaInjustificada++; break;
         }
         acc.minutosRetardo += ev.minutosRetardo;
         acc.minutosSalidaTemprana += ev.minutosSalidaTemprana;
@@ -255,6 +292,16 @@ export class ReportesService {
         acc.horasExtraNocturnas += ev.horasExtraNocturnas;
         acc.horasDiurnas += ev.horasDiurnas;
         acc.horasNocturnas += ev.horasNocturnas;
+
+        // ⬇️ ACUMULAR BREAK
+        if (ev.break) {
+          acc.minutosBreakTotal += ev.break.duracionMin;
+          acc.minutosBreakExceso += ev.break.excesoMin;
+          if (ev.break.estado === 'CORRECTO') acc.diasBreakCorrecto++;
+          if (ev.break.estado === 'EXCESO') acc.diasBreakExceso++;
+          if (ev.break.estado === 'CORTO') acc.diasBreakCorto++;
+          if (ev.break.estado === 'NO_MARCO') acc.diasBreakNoMarco++;
+        }
       }
 
       const totalHorasExtra = Math.round((acc.horasExtraDiurnas + acc.horasExtraNocturnas) * 100) / 100;
@@ -270,6 +317,23 @@ export class ReportesService {
         descansos: acc.descansos,
         noMarcoSalida: acc.noMarcoSalida,
         pendientes: acc.pendientes,
+        // NUEVOS - NOVEDADES
+        diasVacaciones: acc.diasVacaciones,
+        diasReposoMedico: acc.diasReposoMedico,
+        diasPermisoRemunerado: acc.diasPermisoRemunerado,
+        diasPermisoNoRemunerado: acc.diasPermisoNoRemunerado,
+        diasFaltaJustificada: acc.diasFaltaJustificada,
+        diasFaltaInjustificada: acc.diasFaltaInjustificada,
+        // ⬇️ NUEVOS BREAK
+        diasBreakCorrecto: acc.diasBreakCorrecto,
+        diasBreakExceso: acc.diasBreakExceso,
+        diasBreakCorto: acc.diasBreakCorto,
+        diasBreakNoMarco: acc.diasBreakNoMarco,
+        minutosBreakTotal: acc.minutosBreakTotal,
+        breakTotalLegible: formatearMinutos(acc.minutosBreakTotal),
+        minutosBreakExceso: acc.minutosBreakExceso,
+        breakExcesoLegible: formatearMinutos(acc.minutosBreakExceso),
+        // RESTO
         minutosRetardo: acc.minutosRetardo,
         retardoLegible: formatearMinutos(acc.minutosRetardo),
         minutosSalidaTemprana: acc.minutosSalidaTemprana,
@@ -307,6 +371,19 @@ export class ReportesService {
         { header: 'Descansos', key: 'descansos', width: 12 },
         { header: 'No Marco Salida', key: 'noMarcoSalida', width: 15 },
         { header: 'Pendientes', key: 'pendientes', width: 12 },
+        { header: 'Vacaciones', key: 'diasVacaciones', width: 12 },
+        { header: 'Reposo Médico', key: 'diasReposoMedico', width: 14 },
+        { header: 'Permiso Remunerado', key: 'diasPermisoRemunerado', width: 18 },
+        { header: 'Permiso No Remunerado', key: 'diasPermisoNoRemunerado', width: 20 },
+        { header: 'Falta Justificada', key: 'diasFaltaJustificada', width: 16 },
+        { header: 'Falta Injustificada', key: 'diasFaltaInjustificada', width: 18 },
+        // ⬇️ NUEVOS BREAK
+        { header: 'Break OK', key: 'diasBreakCorrecto', width: 12 },
+        { header: 'Break Exceso', key: 'diasBreakExceso', width: 14 },
+        { header: 'Break Corto', key: 'diasBreakCorto', width: 12 },
+        { header: 'Sin Break', key: 'diasBreakNoMarco', width: 12 },
+        { header: 'Exceso Break', key: 'breakExcesoLegible', width: 15 },
+        // RESTO
         { header: 'Retardo Total', key: 'retardoLegible', width: 15 },
         { header: 'Salida Temprana Total', key: 'salidaTempranaLegible', width: 20 },
         { header: 'Horas Diurnas', key: 'horasDiurnasLegible', width: 15 },
@@ -325,6 +402,19 @@ export class ReportesService {
         descansos: c.descansos,
         noMarcoSalida: c.noMarcoSalida,
         pendientes: c.pendientes,
+        diasVacaciones: c.diasVacaciones,
+        diasReposoMedico: c.diasReposoMedico,
+        diasPermisoRemunerado: c.diasPermisoRemunerado,
+        diasPermisoNoRemunerado: c.diasPermisoNoRemunerado,
+        diasFaltaJustificada: c.diasFaltaJustificada,
+        diasFaltaInjustificada: c.diasFaltaInjustificada,
+        // BREAK
+        diasBreakCorrecto: c.diasBreakCorrecto,
+        diasBreakExceso: c.diasBreakExceso,
+        diasBreakCorto: c.diasBreakCorto,
+        diasBreakNoMarco: c.diasBreakNoMarco,
+        breakExcesoLegible: c.breakExcesoLegible,
+        // RESTO
         retardoLegible: c.retardoLegible,
         salidaTempranaLegible: c.salidaTempranaLegible,
         horasDiurnasLegible: c.horasDiurnasLegible,
@@ -399,7 +489,7 @@ export class ReportesService {
 
     const nombreMes = desde.toLocaleDateString('es-VE', { month: 'long', year: 'numeric' });
 
-    const marcajes = this.leerMarcajes();
+    const marcajes = await this.marcajesStorage.obtenerMarcajesEnRango(desde, limite);
     const mapaNombres = await this.cache.obtenerMapaNombres();
     const activos = await this.cache.obtenerSetEmpleadosActivos();
 
@@ -420,6 +510,20 @@ export class ReportesService {
         noMarcoSalida: 0, pendientes: 0, minutosRetardo: 0, minutosSalidaTemprana: 0,
         horasNormalesDiurnas: 0, horasNormalesNocturnas: 0,
         horasExtraDiurnas: 0, horasExtraNocturnas: 0,
+        // NUEVOS - NOVEDADES
+        diasVacaciones: 0,
+        diasReposoMedico: 0,
+        diasPermisoRemunerado: 0,
+        diasPermisoNoRemunerado: 0,
+        diasFaltaJustificada: 0,
+        diasFaltaInjustificada: 0,
+        // ⬇️ NUEVOS BREAK
+        diasBreakCorrecto: 0,
+        diasBreakExceso: 0,
+        diasBreakCorto: 0,
+        diasBreakNoMarco: 0,
+        minutosBreakTotal: 0,
+        minutosBreakExceso: 0,
       };
 
       for (const dia of dias) {
@@ -436,6 +540,13 @@ export class ReportesService {
           case 'DESCANSO': acc.descansos++; break;
           case 'NO_MARCO_SALIDA': acc.noMarcoSalida++; acc.diasLaborables++; break;
           case 'PENDIENTE': acc.pendientes++; break;
+          // NUEVOS - NOVEDADES
+          case 'VACACIONES': acc.diasVacaciones++; acc.diasLaborables++; break;
+          case 'REPOSO_MEDICO': acc.diasReposoMedico++; acc.diasLaborables++; break;
+          case 'PERMISO_REMUNERADO': acc.diasPermisoRemunerado++; acc.diasLaborables++; break;
+          case 'PERMISO_NO_REMUNERADO': acc.diasPermisoNoRemunerado++; acc.diasLaborables++; break;
+          case 'FALTA_JUSTIFICADA': acc.diasFaltaJustificada++; acc.diasLaborables++; break;
+          case 'FALTA_INJUSTIFICADA': acc.diasFaltaInjustificada++; acc.diasLaborables++; break;
         }
         acc.minutosRetardo += ev.minutosRetardo;
         acc.minutosSalidaTemprana += ev.minutosSalidaTemprana;
@@ -443,6 +554,16 @@ export class ReportesService {
         acc.horasNormalesNocturnas += ev.horasNocturnas;
         acc.horasExtraDiurnas += ev.horasExtraDiurnas;
         acc.horasExtraNocturnas += ev.horasExtraNocturnas;
+
+        // ⬇️ ACUMULAR BREAK
+        if (ev.break) {
+          acc.minutosBreakTotal += ev.break.duracionMin;
+          acc.minutosBreakExceso += ev.break.excesoMin;
+          if (ev.break.estado === 'CORRECTO') acc.diasBreakCorrecto++;
+          if (ev.break.estado === 'EXCESO') acc.diasBreakExceso++;
+          if (ev.break.estado === 'CORTO') acc.diasBreakCorto++;
+          if (ev.break.estado === 'NO_MARCO') acc.diasBreakNoMarco++;
+        }
       }
 
       const totalHorasNormales = Math.round((acc.horasNormalesDiurnas + acc.horasNormalesNocturnas) * 100) / 100;
@@ -458,6 +579,23 @@ export class ReportesService {
         descansos: acc.descansos,
         noMarcoSalida: acc.noMarcoSalida,
         pendientes: acc.pendientes,
+        // NUEVOS - NOVEDADES
+        diasVacaciones: acc.diasVacaciones,
+        diasReposoMedico: acc.diasReposoMedico,
+        diasPermisoRemunerado: acc.diasPermisoRemunerado,
+        diasPermisoNoRemunerado: acc.diasPermisoNoRemunerado,
+        diasFaltaJustificada: acc.diasFaltaJustificada,
+        diasFaltaInjustificada: acc.diasFaltaInjustificada,
+        // ⬇️ NUEVOS BREAK
+        diasBreakCorrecto: acc.diasBreakCorrecto,
+        diasBreakExceso: acc.diasBreakExceso,
+        diasBreakCorto: acc.diasBreakCorto,
+        diasBreakNoMarco: acc.diasBreakNoMarco,
+        minutosBreakTotal: acc.minutosBreakTotal,
+        breakTotalLegible: formatearMinutos(acc.minutosBreakTotal),
+        minutosBreakExceso: acc.minutosBreakExceso,
+        breakExcesoLegible: formatearMinutos(acc.minutosBreakExceso),
+        // RESTO
         minutosRetardo: acc.minutosRetardo,
         retardoLegible: formatearMinutos(acc.minutosRetardo),
         minutosSalidaTemprana: acc.minutosSalidaTemprana,
@@ -499,6 +637,19 @@ export class ReportesService {
         { header: 'Ausentes', key: 'ausentes', width: 12 },
         { header: 'Descansos', key: 'descansos', width: 12 },
         { header: 'No Marco Salida', key: 'noMarcoSalida', width: 15 },
+        { header: 'Vacaciones', key: 'diasVacaciones', width: 12 },
+        { header: 'Reposo Médico', key: 'diasReposoMedico', width: 14 },
+        { header: 'Permiso Remunerado', key: 'diasPermisoRemunerado', width: 18 },
+        { header: 'Permiso No Remunerado', key: 'diasPermisoNoRemunerado', width: 20 },
+        { header: 'Falta Justificada', key: 'diasFaltaJustificada', width: 16 },
+        { header: 'Falta Injustificada', key: 'diasFaltaInjustificada', width: 18 },
+        // ⬇️ NUEVOS BREAK
+        { header: 'Break OK', key: 'diasBreakCorrecto', width: 12 },
+        { header: 'Break Exceso', key: 'diasBreakExceso', width: 14 },
+        { header: 'Break Corto', key: 'diasBreakCorto', width: 12 },
+        { header: 'Sin Break', key: 'diasBreakNoMarco', width: 12 },
+        { header: 'Exceso Break', key: 'breakExcesoLegible', width: 15 },
+        // RESTO
         { header: 'Horas Normales Diurnas', key: 'horasNormalesDiurnasLegible', width: 22 },
         { header: 'Horas Normales Nocturnas', key: 'horasNormalesNocturnasLegible', width: 22 },
         { header: 'Total Horas Normales', key: 'totalHorasNormalesLegible', width: 20 },
@@ -518,6 +669,19 @@ export class ReportesService {
         ausentes: c.ausentes,
         descansos: c.descansos,
         noMarcoSalida: c.noMarcoSalida,
+        diasVacaciones: c.diasVacaciones,
+        diasReposoMedico: c.diasReposoMedico,
+        diasPermisoRemunerado: c.diasPermisoRemunerado,
+        diasPermisoNoRemunerado: c.diasPermisoNoRemunerado,
+        diasFaltaJustificada: c.diasFaltaJustificada,
+        diasFaltaInjustificada: c.diasFaltaInjustificada,
+        // BREAK
+        diasBreakCorrecto: c.diasBreakCorrecto,
+        diasBreakExceso: c.diasBreakExceso,
+        diasBreakCorto: c.diasBreakCorto,
+        diasBreakNoMarco: c.diasBreakNoMarco,
+        breakExcesoLegible: c.breakExcesoLegible,
+        // RESTO
         horasNormalesDiurnasLegible: c.horasNormalesDiurnasLegible,
         horasNormalesNocturnasLegible: c.horasNormalesNocturnasLegible,
         totalHorasNormalesLegible: c.totalHorasNormalesLegible,

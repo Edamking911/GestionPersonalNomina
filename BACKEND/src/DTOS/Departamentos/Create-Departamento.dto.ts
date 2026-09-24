@@ -10,13 +10,4 @@ export class CreateDepartamentoDto {
   @IsString({ message: 'El nombre debe ser una cadena de texto' })
   @MaxLength(100, { message: 'El nombre no puede superar los 100 caracteres' })
   nombre!: string;
-
-  @ApiProperty({
-    example: 'RRHH',
-    description: 'Código único del departamento',
-  })
-  @IsNotEmpty({ message: 'El código del departamento no puede estar vacío' })
-  @IsString({ message: 'El código debe ser una cadena de texto' })
-  @MaxLength(100, { message: 'El código no puede superar los 100 caracteres' })
-  codigo!: string;
 }

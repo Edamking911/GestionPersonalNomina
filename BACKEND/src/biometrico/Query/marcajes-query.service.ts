@@ -6,8 +6,8 @@ import { parseEventType } from '../Utils/Events-types.util';
 export class MarcajesQueryService {
   constructor(private readonly storage: MarcajesStorageService) {}
 
-  getFormattedEvents(employeeIdFilter?: string) {
-    let records = this.storage.getSavedEvents();
+  async getFormattedEvents(employeeIdFilter?: string) {
+    let records = await this.storage.getSavedEvents();
     if (employeeIdFilter) {
       records = records.filter((r) => r.employeeId === employeeIdFilter);
     }
@@ -29,8 +29,8 @@ export class MarcajesQueryService {
     return { totalRecords: events.length, events };
   }
 
-  getStats() {
-    const events = this.storage.getSavedEvents();
+  async getStats() {
+    const events = await this.storage.getSavedEvents();
     const byDay: any = {};
     const byEmployee: any = {};
 
@@ -68,13 +68,11 @@ export class MarcajesQueryService {
     };
   }
 
-  getAllRecordsOrderedByDate() {
-    const events = this.storage
-      .getSavedEvents()
-      .sort(
-        (a, b) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-      );
+  async getAllRecordsOrderedByDate() {
+    const events = (await this.storage.getSavedEvents()).sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
 
     const grouped: any = {};
 
@@ -122,7 +120,7 @@ export class MarcajesQueryService {
     const [year, month, day] = fechaStr.split('-').map(Number);
     const fecha = new Date(year, month - 1, day);
 
-    const eventos = this.storage.getSavedEvents();
+    const eventos = await this.storage.getSavedEvents();
 
     const marcajesDia = eventos
       .filter((ev) => {

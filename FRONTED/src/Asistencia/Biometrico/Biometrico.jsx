@@ -1,16 +1,16 @@
 // src/Biometrico/Biometrico.jsx
 import { useState, useEffect, useRef } from 'react';
-import { useBiometrico } from '../Hoosk/hooks-Biometrico';
-import {useToast} from '../Hoosk/hoosk'
-import StatsCards from '../Componentes/BiometricoComponent/StastsCards';
-import ActionBar from '../Componentes/BiometricoComponent/ActionBar';
-import TabsNav from '../Componentes/BiometricoComponent/TabsNav';
-import UserTable from '../Componentes/BiometricoComponent/UserTable';
-import MarcajesHistory from '../Componentes/BiometricoComponent/MarcajeHistory';
-import DateSearchView from '../Componentes/BiometricoComponent/DateSearchView';
-import EmployeeSearchView from '../Componentes/BiometricoComponent/EmployeeSearchView';
-import ConfirmModal from '../Componentes/BiometricoComponent/ConfirmarModal';
-import Toast from '../Componentes/UI/Toast';
+import { useBiometrico } from '../../Hoosk/hooks-Biometrico';
+import { useToast } from '../../Hoosk/hoosk';
+import StatsCards from '../BiometricoComponent/StastsCards';
+import ActionBar from '../BiometricoComponent/ActionBar';
+import TabsNav from '../BiometricoComponent/TabsNav';
+import UserTable from '../BiometricoComponent/UserTable';
+import MarcajesHistory from '../BiometricoComponent/MarcajeHistory';
+import DateSearchView from '../BiometricoComponent/DateSearchView';
+import EmployeeSearchView from '../BiometricoComponent/EmployeeSearchView';
+import ConfirmModal from '../BiometricoComponent/ConfirmarModal';
+import Toast from '../../Componentes/UI/Toast';
 
 export default function Biometrico() {
   const {
@@ -158,9 +158,13 @@ export default function Biometrico() {
     setModalLoading(true);
     try {
       if (modalConfirm.action === 'desactivar') {
-        await handleEliminarUsuario(modalConfirm.employeeNo);
+        await handleEliminarUsuario(modalConfirm.employeeNo, {
+          skipConfirm: true,
+        });
       } else if (modalConfirm.action === 'activar') {
-        await handleActivarUsuario(modalConfirm.employeeNo);
+        await handleActivarUsuario(modalConfirm.employeeNo, {
+          skipConfirm: true,
+        });
       }
       setModalConfirm((prev) => ({ ...prev, isOpen: false }));
     } catch (error) {

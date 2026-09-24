@@ -286,20 +286,30 @@ export class HikvisionAdapter implements IBiometricDevice {
       };
     }
 
-    const userPayload: UserPayload = {
-      employeeNo,
-      name: current.name,
-      userType: current.userType,
-      userGroup: current.userGroup,
-      validFrom: current.raw?.Valid?.beginTime
-        ? new Date(current.raw.Valid.beginTime)
-        : new Date(),
-      validTo: current.raw?.Valid?.endTime
-        ? new Date(current.raw.Valid.endTime)
-        : this.addYears(new Date(), 10),
+    // ✅ FIX: usar strings hardcoded con formato Hikvision válido
+    // (igual que deactivateUser, pero con enable: true)
+    const payload = {
+      UserInfo: {
+        employeeNo,
+        name: current.name,
+        userType: current.userType || 'normal',
+        userGroup: current.userGroup || 'EMPLEADO',
+        doorRight: '1',
+        Valid: {
+          enable: true,
+          beginTime: '2020-01-01T00:00:00',   // ⬅️ Ya efectivo (en el pasado)
+          endTime: '2036-01-01T23:59:59',      // ⬅️ Válido hasta 2036
+        },
+      },
     };
 
-    const result = await this.updateUser(userPayload);
+    const stdout = await this.curl(
+      '/ISAPI/AccessControl/UserInfo/Modify?format=json',
+      'PUT',
+      payload,
+    );
+
+    const result = this.parseResponse(stdout);
     if (result.success) {
       this.employeeMap.delete(employeeNo);
     }

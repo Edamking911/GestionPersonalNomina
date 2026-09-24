@@ -1,18 +1,20 @@
 // src/ReglasBiometrico/ReglasBiometrico.jsx
-import { useReglasBiometrico } from '../Hoosk/hooks-reglas-biometrico';
-import {useToast} from '../Hoosk/hoosk'
-import Toast from '../Componentes/UI/Toast';
-import ReglasStats from '../Componentes/ReglasComponent/ReglasStas';
-import AsignacionesList from '../Componentes/ReglasComponent/AsignacionesList';
-import AsignarHorario from '../Componentes/ReglasComponent/AsignarHorario';
-import DiasLibresConfig from '../Componentes/ReglasComponent/DiasLibresConfig';
-import ValidarSalidas from '../Componentes/ReglasComponent/ValidarSalidas';
-import EvaluarEmpleado from '../Componentes/ReglasComponent/EvaluarEmpleado';
-import ReporteDiario from '../Componentes/ReglasComponent/ReporteDiarios';
-import ReporteSemanal from '../Componentes/ReglasComponent/ReporteSemanal';    
-import ReporteMensual from '../Componentes/ReglasComponent/ReporteMensual';    
-import ImportarExcel from '../Componentes/ReglasComponent/ImportarExcel';  
-import Dashboard from '../Componentes/ReglasComponent/Dashboard';
+import { useReglasBiometrico } from '../../Hoosk/hooks-reglas-biometrico';
+import { useToast } from '../../Hoosk/hoosk';
+import Toast from '../../Componentes/UI/Toast';
+import ReglasStats from '../ReglasComponent/ReglasStas';
+import AsignacionesList from '../ReglasComponent/AsignacionesList';
+import AsignarHorario from '../ReglasComponent/AsignarHorario';
+import DiasLibresConfig from '../ReglasComponent/DiasLibresConfig';
+import ValidarSalidas from '../ReglasComponent/ValidarSalidas';
+import EvaluarEmpleado from '../ReglasComponent/EvaluarEmpleado';
+import ReporteDiario from '../ReglasComponent/ReporteDiarios';
+import ReporteSemanal from '../ReglasComponent/ReporteSemanal';
+import ReporteMensual from '../ReglasComponent/ReporteMensual';
+import ImportarExcel from '../ReglasComponent/ImportarExcel';
+import Dashboard from '../ReglasComponent/Dashboard';
+import EvolucionMensual from '../ReglasComponent/EvolucionMensual';
+import NovedadesPanel from '../../Componentes/Novedades/NovedadesPanel'; // ✅ BIEN
 import { useState, useEffect, useRef } from 'react';
 
 export default function ReglasBiometrico() {
@@ -30,7 +32,6 @@ export default function ReglasBiometrico() {
     validacion,
     previewExcel,
     resultadoImportacion,
-    backups,
     obtenerReglas,
     obtenerAsignaciones,
     obtenerDiasLibres,
@@ -45,11 +46,14 @@ export default function ReglasBiometrico() {
     descargarPlantilla,
     validarExcel,
     importarExcel,
-    listarBackups,
-    restaurarBackup,
-    restaurarUltimoBackup,
-    limpiarBackups,
     limpiarPreview,
+    // 🆕 NOVEDADES
+    novedades,
+    listarNovedades,
+    crearNovedad,
+    actualizarNovedad,
+    eliminarNovedad,
+    descargarConstanciaNovedad,
   } = useReglasBiometrico();
 
   const { toast, showToast, clearToast } = useToast();
@@ -85,9 +89,10 @@ export default function ReglasBiometrico() {
         msg.includes('desactivado') ||
         msg.includes('generad') ||
         msg.includes('importad') ||
-        msg.includes('restaurad') ||
         msg.includes('asignad') ||
-        msg.includes('validación exitosa');
+        msg.includes('validación exitosa') ||
+        msg.includes('registrad') ||
+        msg.includes('actualizad');
 
       const esWarning =
         msg.includes('⚠️') ||
@@ -126,6 +131,8 @@ export default function ReglasBiometrico() {
     obtenerReglas();
     obtenerAsignaciones();
     obtenerDiasLibres();
+    listarNovedades();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tabs = [
@@ -135,6 +142,7 @@ export default function ReglasBiometrico() {
     { id: 'asignaciones', label: '📅 Asignaciones' },
     { id: 'asignar', label: '➕ Asignar Horario' },
     { id: 'dias-libres', label: '🗓️ Días Libres' },
+    { id: 'novedades', label: '🏖️ Novedades' },
     { id: 'validar', label: '✅ Validar Salidas' },
     { id: 'evaluar', label: '🔍 Evaluar Empleado' },
     { id: 'reporte', label: '📄 Reporte Diario' },
@@ -151,6 +159,7 @@ export default function ReglasBiometrico() {
             reglas={reglas}
             asignaciones={asignaciones}
             diasLibres={diasLibres}
+            novedades={novedades}
           />
         );
 
@@ -170,6 +179,7 @@ export default function ReglasBiometrico() {
           <AsignacionesList
             asignaciones={asignaciones}
             onRefresh={(semana) => obtenerAsignaciones(semana)}
+            novedades={novedades}
           />
         );
 
@@ -183,6 +193,20 @@ export default function ReglasBiometrico() {
             onRefresh={obtenerDiasLibres}
             onAsignar={asignarDiasLibresSemana}
             showToast={showToast}
+            asignaciones={asignaciones}
+            novedades={novedades}
+          />
+        );
+
+      case 'novedades':
+        return (
+          <NovedadesPanel
+            novedades={novedades}
+            listarNovedades={listarNovedades}
+            crearNovedad={crearNovedad}
+            actualizarNovedad={actualizarNovedad}
+            eliminarNovedad={eliminarNovedad}
+            descargarConstanciaNovedad={descargarConstanciaNovedad}
           />
         );
 
@@ -233,11 +257,6 @@ export default function ReglasBiometrico() {
             previewExcel={previewExcel}
             resultadoImportacion={resultadoImportacion}
             onLimpiarPreview={limpiarPreview}
-            backups={backups}
-            onListarBackups={listarBackups}
-            onRestaurarBackup={restaurarBackup}
-            onRestaurarUltimo={restaurarUltimoBackup}
-            showToast={showToast}
           />
         );
 
@@ -351,6 +370,7 @@ export default function ReglasBiometrico() {
         .reglas-tab:nth-child(10) { animation-delay: 0.45s; }
         .reglas-tab:nth-child(11) { animation-delay: 0.50s; }
         .reglas-tab:nth-child(12) { animation-delay: 0.55s; }
+        .reglas-tab:nth-child(13) { animation-delay: 0.60s; }
       `}</style>
 
       <h2 className="titulo-reglas">

@@ -9,7 +9,8 @@ export type { AttendanceRecord } from './Interfaces/biometrico-device.interface'
 
 @Injectable()
 export class BiometricoService {
-  private readonly logger = new Logger(BiometricoService.name);  
+  private readonly logger = new Logger(BiometricoService.name);
+
   constructor(
     private readonly sync: MarcajesSyncService,
     private readonly users: UsuariosBiometricoService,
@@ -18,7 +19,9 @@ export class BiometricoService {
     private readonly deviceProvider: BiometricDeviceProvider,
   ) {}
 
-  // ============ Sincronización ============
+  // =========================================================
+  // SINCRONIZACIÓN
+  // =========================================================
   syncAllLogsFromDevice() {
     return this.sync.syncAllLogsFromDevice();
   }
@@ -40,7 +43,9 @@ export class BiometricoService {
     return this.sync.processEventPayload(body, contentType);
   }
 
-  // ============ Usuarios ============
+  // =========================================================
+  // USUARIOS
+  // =========================================================
   listUsers(
     _ip?: string,
     _user?: string,
@@ -94,59 +99,69 @@ export class BiometricoService {
     return this.users.removeFromPendingList(employeeNo);
   }
 
-  // ============ Consultas ============
-  getFormattedEvents(employeeIdFilter?: string) {
-    return this.query.getFormattedEvents(employeeIdFilter);
+  // =========================================================
+  // CONSULTAS (async porque el storage es BD)
+  // =========================================================
+  async getFormattedEvents(employeeIdFilter?: string) {
+    return await this.query.getFormattedEvents(employeeIdFilter);
   }
 
-  getStats() {
-    return this.query.getStats();
+  async getStats() {
+    return await this.query.getStats();
   }
 
-  getAllRecordsOrderedByDate() {
-    return this.query.getAllRecordsOrderedByDate();
+  async getAllRecordsOrderedByDate() {
+    return await this.query.getAllRecordsOrderedByDate();
   }
 
-  getMarcajesPorFecha(fechaStr: string) {
-    return this.query.getMarcajesPorFecha(fechaStr);
+  async getMarcajesPorFecha(fechaStr: string) {
+    return await this.query.getMarcajesPorFecha(fechaStr);
   }
 
-  // ============ Storage / utilidades ============
-  getSavedEvents() {
-    return this.storage.getSavedEvents();
+  // =========================================================
+  // STORAGE / UTILIDADES (async porque el storage es BD)
+  // =========================================================
+  async getSavedEvents() {
+    return await this.storage.getSavedEvents();
   }
 
-  cleanDuplicates() {
-    return this.storage.cleanDuplicates();
+  async cleanDuplicates() {
+    return await this.storage.cleanDuplicates();
   }
 
-  exportDetailedJson() {
-    return this.storage.exportDetailedJson();
+  async exportDetailedJson() {
+    return await this.storage.exportDetailedJson();
   }
 
-  checkExcelStatus() {
-    return this.storage.checkExcelStatus();
+  async checkExcelStatus() {
+    return await this.storage.checkExcelStatus();
   }
 
+  // =========================================================
+  // REFRESH DE NOMBRES
+  // =========================================================
   async refreshEmployeeNames() {
-  this.logger.log('🔄 Iniciando refresh de nombres...');
-  const result = await this.storage.refreshEmployeeNames((id) =>
-    this.deviceProvider.device.getEmployeeName(id),
-  );
+    this.logger.log('🔄 Iniciando refresh de nombres...');
 
-  // Limpiar cache para asegurar que se lean nombres frescos
-  this.deviceProvider.device.clearEmployeeCache();
+    const result = await this.storage.refreshEmployeeNames((id) =>
+      this.deviceProvider.device.getEmployeeName(id),
+    );
 
-  return {
-    success: true,
-    message: `Se actualizaron ${result.actualizados} registros con nombres nuevos`,
-    actualizados: result.actualizados,
-    total: result.total,
-    errores: result.errores,
-  };
-}
+    // Limpiar caché para asegurar nombres frescos
+    this.deviceProvider.device.clearEmployeeCache();
 
-  // ============ Device ============
+    return {
+      success: true,
+      message: `Se actualizaron ${result.actualizados} registros con nombres nuevos`,
+      actualizados: result.actualizados,
+      total: result.total,
+      errores: result.errores,
+    };
+  }
+
+  // =========================================================
+  // DEVICE
+  // =========================================================
   getEmployeeName(employeeId: string) {
     return this.deviceProvider.device.getEmployeeName(employeeId);
   }

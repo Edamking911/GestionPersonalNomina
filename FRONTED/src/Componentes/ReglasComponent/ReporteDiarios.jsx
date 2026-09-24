@@ -7,6 +7,7 @@ import Pagination from '../UI/Paginacion';
 import TableSkeleton from '../UI/EsqueletoTable';
 import { usePagination } from '../../Hoosk/PaginacionHoosk';
 import { exportarReportePDF, imprimirReporte } from '../../utils/pdfExport';
+import { API_BASE } from '../../servicio/Api'; // ✅ NUEVO
 
 function separarNombreApellido(nombreCompleto) {
   if (!nombreCompleto) return { nombre: '', apellido: 'N/A' };
@@ -21,6 +22,37 @@ function separarNombreApellido(nombreCompleto) {
   const mitad = Math.ceil(total / 2);
   return { nombre: partes.slice(0, mitad).join(' '), apellido: partes.slice(mitad).join(' ') };
 }
+
+const getEstadoBadge = (estado) => {
+  const map = {
+    PUNTUAL: { variant: 'success', texto: 'Puntual' },
+    RETARDO: { variant: 'warning', texto: 'Retardo' },
+    SALIDA_TEMPRANA: { variant: 'warning', texto: 'Salida Temprana' },
+    COMPLETO: { variant: 'success', texto: 'Completo' },
+    AUSENTE: { variant: 'danger', texto: 'Ausente' },
+    DESCANSO: { variant: 'info', texto: 'Descanso' },
+    SIN_HORARIO: { variant: 'default', texto: 'Sin Horario' },
+    PENDIENTE: { variant: 'info', texto: 'Pendiente' },
+    NO_MARCO_SALIDA: { variant: 'danger', texto: 'Sin Salida' },
+    VACACIONES: { variant: 'info', texto: '🏖️ Vacaciones' },
+    REPOSO_MEDICO: { variant: 'danger', texto: '🏥 Reposo' },
+    PERMISO_REMUNERADO: { variant: 'success', texto: '📝 Permiso Rem.' },
+    PERMISO_NO_REMUNERADO: { variant: 'warning', texto: '📝 Permiso No Rem.' },
+    FALTA_JUSTIFICADA: { variant: 'warning', texto: '⚠️ Falta Just.' },
+    FALTA_INJUSTIFICADA: { variant: 'danger', texto: '❌ Falta Injust.' },
+  };
+  return map[estado] || { variant: 'default', texto: estado };
+};
+
+const getEstadoBreakBadge = (estado) => {
+  const map = {
+    CORRECTO: { variant: 'success', texto: '✅ OK' },
+    EXCESO: { variant: 'danger', texto: '⚠️ Exceso' },
+    CORTO: { variant: 'warning', texto: '⏱️ Corto' },
+    NO_MARCO: { variant: 'default', texto: '— Sin break' },
+  };
+  return map[estado] || { variant: 'default', texto: estado || '—' };
+};
 
 export default function ReporteDiario({ onGenerar, reporte }) {
   const [fecha, setFecha] = useState('');
@@ -48,12 +80,13 @@ export default function ReporteDiario({ onGenerar, reporte }) {
     }
   };
 
+  // ✅ FIX: usa API_BASE
   const handleDescargarExcel = () => {
     if (!fecha) {
       alert('Selecciona una fecha primero.');
       return;
     }
-    window.open(`http://localhost:3000/reglas/reporte/${fecha}?generarExcel=true`, '_blank');
+    window.open(`${API_BASE}/reglas/reporte/${fecha}?generarExcel=true`, '_blank');
   };
 
   const prepararDatosReporte = () => {
@@ -67,6 +100,10 @@ export default function ReporteDiario({ onGenerar, reporte }) {
       { key: 'entradaReal', label: 'Entrada' },
       { key: 'salidaReal', label: 'Salida' },
       { key: 'estado', label: 'Estado' },
+      { key: 'breakSalida', label: 'Break Sale' },
+      { key: 'breakEntrada', label: 'Break Entra' },
+      { key: 'breakDuracion', label: 'Dur. Break' },
+      { key: 'breakEstado', label: 'Est. Break' },
       { key: 'horasDiurnasLegible', label: 'H. Diurnas', align: 'right' },
       { key: 'horasNocturnasLegible', label: 'H. Nocturnas', align: 'right' },
       { key: 'horasExtraDiurnasLegible', label: 'Extra Diur.', align: 'right' },
@@ -75,18 +112,7 @@ export default function ReporteDiario({ onGenerar, reporte }) {
 
     const filas = reporte.reporte.map((item) => {
       const { nombre, apellido } = separarNombreApellido(item.nombre || '');
-      const estadoTexto =
-        {
-          PUNTUAL: 'Puntual',
-          RETARDO: 'Retardo',
-          SALIDA_TEMPRANA: 'Salida Temprana',
-          COMPLETO: 'Completo',
-          AUSENTE: 'Ausente',
-          DESCANSO: 'Descanso',
-          SIN_HORARIO: 'Sin Horario',
-          PENDIENTE: 'Pendiente',
-          NO_MARCO_SALIDA: 'Sin Salida',
-        }[item.estado] || item.estado;
+      const badge = getEstadoBadge(item.estado);
 
       return {
         employeeId: item.employeeId,
@@ -95,7 +121,11 @@ export default function ReporteDiario({ onGenerar, reporte }) {
         horario: item.horario || '—',
         entradaReal: item.entradaReal || '—',
         salidaReal: item.salidaReal || '—',
-        estado: estadoTexto,
+        estado: badge.texto,
+        breakSalida: item.break?.horaSalida || '—',
+        breakEntrada: item.break?.horaEntrada || '—',
+        breakDuracion: item.break?.duracionLegible || '—',
+        breakEstado: item.break?.diferenciaLegible || '—',
         horasDiurnasLegible: item.horasDiurnasLegible || '0h',
         horasNocturnasLegible: item.horasNocturnasLegible || '0h',
         horasExtraDiurnasLegible: item.horasExtraDiurnasLegible || '0h',
@@ -134,19 +164,35 @@ export default function ReporteDiario({ onGenerar, reporte }) {
     imprimirReporte(datos);
   };
 
-  const getEstadoBadge = (estado) => {
-    const map = {
-      PUNTUAL: { variant: 'success', texto: 'Puntual' },
-      RETARDO: { variant: 'warning', texto: 'Retardo' },
-      SALIDA_TEMPRANA: { variant: 'warning', texto: 'Salida Temprana' },
-      COMPLETO: { variant: 'success', texto: 'Completo' },
-      AUSENTE: { variant: 'danger', texto: 'Ausente' },
-      DESCANSO: { variant: 'info', texto: 'Descanso' },
-      SIN_HORARIO: { variant: 'default', texto: 'Sin Horario' },
-      PENDIENTE: { variant: 'info', texto: 'Pendiente' },
-      NO_MARCO_SALIDA: { variant: 'danger', texto: 'Sin Salida' },
-    };
-    return map[estado] || { variant: 'default', texto: estado };
+  const inputDateStyle = {
+    padding: '0 14px',
+    height: '42px',
+    border: '1px solid var(--input-border)',
+    borderRadius: '8px',
+    fontSize: '14px',
+    color: 'var(--input-text)',
+    background: 'var(--input-bg)',
+    outline: 'none',
+    fontFamily: 'inherit',
+  };
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '6px',
+    fontWeight: '600',
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
+  };
+
+  const thStyle = {
+    padding: '10px 12px',
+    textAlign: 'left',
+    fontSize: '11px',
+    color: 'var(--table-header-text)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    fontWeight: '700',
+    whiteSpace: 'nowrap',
   };
 
   const inputDateStyle = {
@@ -243,14 +289,12 @@ export default function ReporteDiario({ onGenerar, reporte }) {
         </Button>
       </form>
 
-      {/* 🦴 SKELETON mientras carga */}
       {loading && (
         <div style={{ marginTop: '16px' }}>
-          <TableSkeleton columns={11} rows={10} />
+          <TableSkeleton columns={15} rows={10} />
         </div>
       )}
 
-      {/* ✅ Reporte listo */}
       {!loading && reporte && (
         <div style={{ marginTop: '16px' }}>
           <div
@@ -295,7 +339,23 @@ export default function ReporteDiario({ onGenerar, reporte }) {
                         borderBottom: '2px solid var(--table-header-border)',
                       }}
                     >
-                      {['Cédula', 'Nombre', 'Apellido', 'Horario', 'Entrada', 'Salida', 'Estado', 'H. Diurnas', 'H. Nocturnas', 'Extra Diur.', 'Extra Noct.'].map((h, i) => (
+                      {[
+                        'Cédula',
+                        'Nombre',
+                        'Apellido',
+                        'Horario',
+                        'Entrada',
+                        'Salida',
+                        'Estado',
+                        'Break Sale',
+                        'Break Entra',
+                        'Dur. Break',
+                        'Est. Break',
+                        'H. Diurnas',
+                        'H. Nocturnas',
+                        'Extra Diur.',
+                        'Extra Noct.',
+                      ].map((h, i) => (
                         <th key={i} style={thStyle}>
                           {h}
                         </th>
@@ -306,6 +366,8 @@ export default function ReporteDiario({ onGenerar, reporte }) {
                     {pagination.paginatedItems.map((item, idx) => {
                       const { nombre, apellido } = separarNombreApellido(item.nombre || '');
                       const badge = getEstadoBadge(item.estado);
+                      const breakBadge = getEstadoBreakBadge(item.break?.estado);
+
                       return (
                         <tr
                           key={`${item.employeeId}-${idx}`}
@@ -364,6 +426,45 @@ export default function ReporteDiario({ onGenerar, reporte }) {
                             <Badge variant={badge.variant} size="sm">
                               {badge.texto}
                             </Badge>
+                          </td>
+                          <td
+                            style={{
+                              padding: '10px 12px',
+                              color: 'var(--table-row-text)',
+                              fontSize: '12px',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {item.break?.horaSalida || '—'}
+                          </td>
+                          <td
+                            style={{
+                              padding: '10px 12px',
+                              color: 'var(--table-row-text)',
+                              fontSize: '12px',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {item.break?.horaEntrada || '—'}
+                          </td>
+                          <td
+                            style={{
+                              padding: '10px 12px',
+                              color: 'var(--table-row-text)',
+                              fontSize: '12px',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {item.break?.duracionLegible || '—'}
+                          </td>
+                          <td style={{ padding: '10px 12px' }}>
+                            {item.break?.estado ? (
+                              <Badge variant={breakBadge.variant} size="sm">
+                                {breakBadge.texto}
+                              </Badge>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)' }}>—</span>
+                            )}
                           </td>
                           <td style={{ padding: '10px 12px', color: 'var(--table-row-text)' }}>
                             {item.horasDiurnasLegible || '0h'}

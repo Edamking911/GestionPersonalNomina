@@ -116,7 +116,7 @@ export class CargosController {
     };
   }
 
-  @Patch('/Actualizar-Cargo/:nombre')
+  @Patch('/Actualizar-Cargo')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Actualizar un cargo',
@@ -132,12 +132,8 @@ export class CargosController {
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
   @ApiResponse({ status: 404, description: 'Cargo no encontrado' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async Actualizar_Cargo(
-    @Param('nombre') nombre: string,
-    @Body() updateCargoDTO: UpdateCargoDto,
-  ) {
+  async Actualizar_Cargo(@Body() updateCargoDTO: UpdateCargoDto) {
     const cargo = await this.cargosService.Actualizar_Cargo(
-      nombre,
       updateCargoDTO,
     );
     return {

@@ -179,39 +179,73 @@ export class ReglasBiometricosController {
   }
 
   // =========================================================
-  // BACKUPS
-  // =========================================================
-
-  @Get('backups')
-  listarBackups() {
-    return this.reglasService.listarBackups();
-  }
-
-  @Post('rollback')
-  restaurarBackup(@Body() body: { nombre: string }) {
-    if (!body?.nombre) {
-      throw new BadRequestException('Debes enviar el nombre del backup');
-    }
-    return this.reglasService.restaurarBackup(body.nombre);
-  }
-
-  @Post('rollback-ultimo')
-  restaurarUltimoBackup() {
-    return this.reglasService.restaurarUltimoBackup();
-  }
-
-  @Get('limpiar-backups')
-  limpiarBackups(@Query('dias') dias?: string) {
-    const diasAntiguedad = dias ? parseInt(dias, 10) : 30;
-    return this.reglasService.limpiarBackupsViejos(diasAntiguedad);
-  }
-
-  // =========================================================
   // CACHE
   // =========================================================
 
   @Get('clear-report-cache')
   async clearReportCache() {
     return this.reglasService.limpiarCachesReportes();
+  }
+
+// =========================================================
+// SINCRONIZACIÓN DE EMPLEADOS
+// =========================================================
+
+/**
+ * POST /reglas/sync-empleados
+ * Lee los empleados del biométrico y los sincroniza con la BD.
+ * - Ignora cédulas inválidas
+ * - Ignora el admin del equipo
+ * - No duplica
+ * - Actualiza nombres si cambiaron
+ */
+  @Post('sync-empleados') //Uso solo por Desarrolladores o este caso Los administradores del sistema   curl -k -X POST https://localhost:3001/reglas/sync-empleados
+  async sincronizarEmpleados() {
+    return await this.reglasService.sincronizarEmpleadosDesdeBiometrico();
+  }
+
+
+ // Usos Solo por los Desarrolladores
+  // =========================================================
+// MIGRACIÓN JSON → BD
+// =========================================================
+
+/**
+ * POST /reglas/migrar-asignaciones
+ * Lee asignaciones_turnos.json y las migra a la tabla asignaciones_horarios.
+ * ⚠️ Solo usar UNA VEZ. No duplica las que ya existen.
+ */
+  @Post('migrar-asignaciones')
+  async migrarAsignaciones() {
+    return await this.reglasService.migrarAsignaciones();
+  }
+
+  /**
+   * POST /reglas/migrar-dias-libres
+   * Lee dias_libres.json y los migra a la tabla dias_libres.
+   * ⚠️ Solo usar UNA VEZ. Borra los días previos de cada empleado.
+   */
+  @Post('migrar-dias-libres')
+  async migrarDiasLibres() {
+    return await this.reglasService.migrarDiasLibres();
+  }
+
+  /**
+   * POST /reglas/migrar-todo
+   * Migra asignaciones + días libres de una sola vez.
+   * ⚠️ Solo usar UNA VEZ.
+   */
+  @Post('migrar-todo')
+  async migrarTodo() {
+    return await this.reglasService.migrarTodo();
+  }
+
+  /**
+   * GET /reglas/estado-migracion
+   * Verifica qué está migrado y qué falta.
+   */
+  @Get('estado-migracion')
+  async estadoMigracion() {
+    return await this.reglasService.estadoMigracion();
   }
 }

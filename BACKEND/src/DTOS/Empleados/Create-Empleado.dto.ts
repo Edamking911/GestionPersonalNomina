@@ -44,15 +44,6 @@ export class CreateEmpleadoDto {
   cargoId?: string;
 
   @ApiProperty({
-    example: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
-    description: 'ID del departamento (UUID)',
-    required: false,
-  })
-  @IsOptional()
-  @IsUUID('4', { message: 'El ID del departamento debe ser un UUID válido' })
-  departamentoId?: string;
-
-  @ApiProperty({
     example: 'ACTIVO',
     description: 'Estado del empleado',
     enum: ['ACTIVO', 'INACTIVO', 'SUSPENDIDO'],
@@ -64,4 +55,36 @@ export class CreateEmpleadoDto {
     message: 'El estado debe ser ACTIVO, INACTIVO o SUSPENDIDO',
   })
   estado?: string;
+
+  @ApiProperty({
+    example: 'juan.perez@empresa.com',
+    description: 'Email del empleado',
+    required: false,
+  })
+  @IsOptional()
+  @IsEmail({}, { message: 'El email debe ser un correo válido' })
+  @MaxLength(150, { message: 'El email no puede superar los 150 caracteres' })
+  email?: string;
+
+  @ApiProperty({
+    example: '04141234567',
+    description: 'Teléfono del empleado',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: 'El teléfono debe ser una cadena de texto' })
+  @MaxLength(20, { message: 'El teléfono no puede superar los 20 caracteres' })
+  telefono?: string;
+
+  @ApiProperty({
+    example: '2026-01-15',
+    description: 'Fecha de ingreso (YYYY-MM-DD)',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString(
+    {},
+    { message: 'La fecha de ingreso debe tener formato YYYY-MM-DD' },
+  )
+  fechaIngreso?: string;
 }

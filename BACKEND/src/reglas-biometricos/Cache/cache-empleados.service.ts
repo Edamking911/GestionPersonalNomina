@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { BiometricoService } from '../../biometrico/biometrico.service';
+import { Empleado } from '../../Entitys/Empleados/Empleado.entity';
+import { normalizarCedula } from '../Utils/tiempo.util';
 
 @Injectable()
 export class CacheEmpleadosService {
@@ -11,9 +15,16 @@ export class CacheEmpleadosService {
   private empleadosActivosCache: Set<string> | null = null;
   private empleadosActivosCacheTime = 0;
 
-  private readonly CACHE_TTL = 30000; // 30 segundos
+  private mapaNombresCache: Map<string, string> | null = null;
+  private mapaNombresCacheTime = 0;
 
-  constructor(private readonly biometricoService: BiometricoService) {}
+  private readonly CACHE_TTL = 30000;
+
+  constructor(
+    private readonly biometricoService: BiometricoService,
+    @InjectRepository(Empleado)
+    private readonly empleadoRepo: Repository<Empleado>,
+  ) {}
 
   async obtenerHoraCache(): Promise<Date> {
     const ahora = Date.now();
@@ -41,19 +52,14 @@ export class CacheEmpleadosService {
 
     const set = new Set<string>();
     try {
-      const usuarios = await this.biometricoService.listUsers(
-        '172.18.0.89',
-        'admin',
-        'Dtd2026*',
-        true,
-      );
-      if (usuarios?.success && Array.isArray(usuarios.usuarios)) {
-        usuarios.usuarios
-          .filter((u: any) => u.activo !== false)
-          .forEach((u: any) => set.add(String(u.employeeNo)));
-      }
+      // ✅ Ahora consulta la BD en vez del biométrico
+      const empleados = await this.empleadoRepo.find({
+        where: { estado: 'ACTIVO' },
+      });
+      empleados.forEach((e) => set.add(normalizarCedula(e.cedula)));
+      this.logger.debug(`📋 ${empleados.length} empleados activos desde BD`);
     } catch (error) {
-      this.logger.warn('No se pudieron cargar los empleados activos', error);
+      this.logger.warn('No se pudieron cargar empleados activos', error);
     }
 
     this.empleadosActivosCache = set;
@@ -68,52 +74,66 @@ export class CacheEmpleadosService {
     noExiste?: boolean;
   }> {
     try {
-      const usuarios = await this.biometricoService.listUsers(
-        '172.18.0.89',
-        'admin',
-        'Dtd2026*',
-        true,
+      const cedulaNorm = normalizarCedula(employeeId);
+      const empleados = await this.empleadoRepo.find();
+      const empleado = empleados.find(
+        (e) => normalizarCedula(e.cedula) === cedulaNorm,
       );
-      if (usuarios?.success && Array.isArray(usuarios.usuarios)) {
-        const empleado = usuarios.usuarios.find(
-          (u: any) => String(u.employeeNo).trim() === String(employeeId).trim(),
-        );
 
-        if (!empleado) {
-          return {
-            activo: false,
-            noExiste: true,
-            mensaje: `El empleado con cédula ${employeeId} no existe en el biométrico.`,
-          };
-        }
-        if (empleado.activo === false) {
-          return {
-            activo: false,
-            nombre: empleado.name,
-            mensaje: `El empleado ${empleado.name} (${employeeId}) está desactivado. Reactívalo primero.`,
-          };
-        }
-        return { activo: true, nombre: empleado.name };
+      if (!empleado) {
+        return {
+          activo: false,
+          noExiste: true,
+          mensaje: `El empleado con cédula ${employeeId} no existe en la BD.`,
+        };
       }
+
+      if (empleado.estado !== 'ACTIVO') {
+        return {
+          activo: false,
+          nombre: `${empleado.nombre} ${empleado.apellido}`.trim(),
+          mensaje: `El empleado ${empleado.nombre} ${empleado.apellido} está ${empleado.estado}.`,
+        };
+      }
+
+      return {
+        activo: true,
+        nombre: `${empleado.nombre} ${empleado.apellido}`.trim(),
+      };
     } catch (error) {
-      this.logger.warn('No se pudo validar el estado del empleado', error);
+      this.logger.warn('No se pudo validar empleado', error);
     }
     return { activo: true };
   }
 
-  async obtenerMapaNombres(): Promise<Map<string, string>> {
+  async obtenerMapaNombres(forceRefresh = false): Promise<Map<string, string>> {
+    const ahora = Date.now();
+    if (
+      !forceRefresh &&
+      this.mapaNombresCache &&
+      ahora - this.mapaNombresCacheTime < this.CACHE_TTL
+    ) {
+      return this.mapaNombresCache;
+    }
+
     const mapa = new Map<string, string>();
+
+    // ✅ Ahora consulta la BD
     try {
-      const usuarios = await this.biometricoService.listUsers(
-        '172.18.0.89',
-        'admin',
-        'Dtd2026*',
-        true,
-      );
-      if (usuarios?.success && Array.isArray(usuarios.usuarios)) {
-        usuarios.usuarios.forEach((u: any) => mapa.set(u.employeeNo, u.name));
+      const empleados = await this.empleadoRepo.find();
+      for (const emp of empleados) {
+        const nombreCompleto = `${emp.nombre} ${emp.apellido}`.trim();
+        const cedulaNorm = normalizarCedula(emp.cedula);
+        mapa.set(cedulaNorm, nombreCompleto);
+        mapa.set(emp.cedula, nombreCompleto);
       }
-    } catch {}
+      this.logger.debug(`📋 ${empleados.length} nombres desde BD`);
+    } catch (error) {
+      this.logger.warn('Error cargando empleados desde BD', error);
+    }
+
+    this.mapaNombresCache = mapa;
+    this.mapaNombresCacheTime = ahora;
     return mapa;
   }
 
@@ -122,12 +142,17 @@ export class CacheEmpleadosService {
     marcajes: any[],
     mapaNombres: Map<string, string>,
   ): string {
+    const cedulaNorm = normalizarCedula(employeeId);
+
+    if (mapaNombres.has(cedulaNorm)) {
+      return mapaNombres.get(cedulaNorm)!;
+    }
     if (mapaNombres.has(employeeId)) {
       return mapaNombres.get(employeeId)!;
     }
 
     const marcajeConNombre = marcajes.find(
-      (m) => m.employeeId === employeeId && m.employeeName,
+      (m) => normalizarCedula(m.employeeId) === cedulaNorm && m.employeeName,
     );
     if (marcajeConNombre?.employeeName) {
       return marcajeConNombre.employeeName;
@@ -137,19 +162,35 @@ export class CacheEmpleadosService {
 
   async obtenerNombreEmpleado(
     employeeId: string,
-    marcajes: any[],
+    marcajes: any[] = [],
   ): Promise<string> {
+    const cedulaNorm = normalizarCedula(employeeId);
+
+    try {
+      const empleados = await this.empleadoRepo.find();
+      const empleado = empleados.find(
+        (e) => normalizarCedula(e.cedula) === cedulaNorm,
+      );
+      if (empleado) {
+        return `${empleado.nombre} ${empleado.apellido}`.trim();
+      }
+    } catch {}
+
     const marcajeConNombre = marcajes.find(
-      (m) => m.employeeId === employeeId && m.employeeName,
+      (m) => normalizarCedula(m.employeeId) === cedulaNorm && m.employeeName,
     );
     if (marcajeConNombre?.employeeName) {
       return marcajeConNombre.employeeName;
     }
-    try {
-      const nombre = await this.biometricoService.getEmployeeName(employeeId);
-      return nombre !== 'DESCONOCIDO' ? nombre : 'DESCONOCIDO';
-    } catch {
-      return 'DESCONOCIDO';
-    }
+
+    return 'DESCONOCIDO';
+  }
+
+  limpiarCache() {
+    this.mapaNombresCache = null;
+    this.mapaNombresCacheTime = 0;
+    this.empleadosActivosCache = null;
+    this.empleadosActivosCacheTime = 0;
+    this.logger.log('🧹 Caché de empleados limpiado');
   }
 }

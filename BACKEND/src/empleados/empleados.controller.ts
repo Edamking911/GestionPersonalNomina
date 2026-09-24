@@ -2,14 +2,15 @@ import {
   Controller,
   Get,
   Post,
-  Put,
   Patch,
   Delete,
   Body,
   Param,
-  Query,
   HttpCode,
   HttpStatus,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,221 +18,225 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
-  ApiQuery,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { EmpleadosService } from './empleados.service';
+import { EmpleadosExcelService } from './empleados-excel.service';
 import { CreateEmpleadoDto } from '../DTOS/Empleados/Create-Empleado.dto';
 import { UpdateEmpleadoDto } from '../DTOS/Empleados/Update-Empleado.dto';
 
 @ApiTags('Empleados')
 @Controller('empleados')
 export class EmpleadosController {
-  constructor(private readonly empleadosService: EmpleadosService) {}
+  constructor(
+    private readonly empleadosService: EmpleadosService,
+    private readonly empleadosExcelService: EmpleadosExcelService,
+  ) {}
 
-  @Post()
+  // =========================================================
+  // 📄 EXCEL — Carga masiva
+  // =========================================================
+
+  @Get('plantilla')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Descargar plantilla Excel de empleados',
+    description:
+      'Genera un archivo Excel con los campos necesarios, la hoja de cargos válidos y las instrucciones.',
+  })
+  @ApiResponse({ status: 200, description: 'Plantilla descargada' })
+  async plantillaEmpleados() {
+    return await this.empleadosExcelService.generarPlantillaEmpleados();
+  }
+
+  @Post('validar-excel')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Validar Excel de empleados (sin importar)',
+    description:
+      'Analiza el Excel y devuelve un preview con los errores y las filas válidas SIN crear los empleados.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Validación completada' })
+  @ApiResponse({ status: 400, description: 'No se subió archivo' })
+  async validarExcelEmpleados(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No se subió ningún archivo');
+    }
+    return await this.empleadosExcelService.validarExcelEmpleados(file.buffer);
+  }
+
+  @Post('importar-excel')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Importar Excel de empleados',
+    description:
+      'Valida y luego crea TODOS los empleados del Excel. Si hay errores, no crea ninguno.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Empleados importados' })
+  @ApiResponse({ status: 400, description: 'No se subió archivo o hay errores' })
+  async importarExcelEmpleados(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No se subió ningún archivo');
+    }
+    return await this.empleadosExcelService.importarExcelEmpleados(file.buffer);
+  }
+
+  // =========================================================
+  // 📋 CRUD — Empleados
+  // =========================================================
+
+  @Post('crear-empleado/:nombre')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Crear un nuevo empleado',
-    description: 'Registra un nuevo empleado en el sistema',
+    description:
+      'Registra un nuevo empleado asociándolo al cargo indicado en la URL (por nombre).',
+  })
+  @ApiParam({
+    name: 'nombre',
+    description: 'Nombre del cargo (debe existir en BD)',
+    example: 'Gerencia',
   })
   @ApiBody({ type: CreateEmpleadoDto })
   @ApiResponse({ status: 201, description: 'Empleado creado exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   @ApiResponse({ status: 409, description: 'Cédula ya registrada' })
-  @ApiResponse({
-    status: 404,
-    description: 'Cargo o departamento no encontrado',
-  })
+  @ApiResponse({ status: 404, description: 'Cargo no encontrado' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async create(@Body() createDto: CreateEmpleadoDto) {
-    const empleado = await this.empleadosService.create(createDto);
+  async create(
+    @Param('nombre') nombre: string,
+    @Body() createDto: CreateEmpleadoDto,
+  ) {
+    const empleado = await this.empleadosService.Crear_Empleado(
+      nombre,
+      createDto,
+    );
     return {
       message: 'Empleado creado exitosamente',
       empleado,
     };
   }
 
-  @Get()
+  @Get('Obtener-Empleados')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Obtener todos los empleados',
     description:
-      'Retorna la lista de empleados con filtros opcionales y relaciones',
-  })
-  @ApiQuery({
-    name: 'nombre',
-    required: false,
-    description: 'Filtrar por nombre o apellido',
-    example: 'Juan',
-  })
-  @ApiQuery({
-    name: 'cedula',
-    required: false,
-    description: 'Filtrar por cédula',
-    example: 'V-12345678',
-  })
-  @ApiQuery({
-    name: 'cargoId',
-    required: false,
-    description: 'Filtrar por ID de cargo (UUID)',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  })
-  @ApiQuery({
-    name: 'departamentoId',
-    required: false,
-    description: 'Filtrar por ID de departamento (UUID)',
-    example: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
-  })
-  @ApiQuery({
-    name: 'estado',
-    required: false,
-    description: 'Filtrar por estado',
-    enum: ['ACTIVO', 'INACTIVO', 'SUSPENDIDO'],
+      'Retorna el listado completo de empleados con el NOMBRE del cargo (no UUID).',
   })
   @ApiResponse({
     status: 200,
     description: 'Lista de empleados obtenida exitosamente',
   })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async findAll(
-    @Query('nombre') nombre?: string,
-    @Query('cedula') cedula?: string,
-    @Query('cargoId') cargoId?: string,
-    @Query('departamentoId') departamentoId?: string,
-    @Query('estado') estado?: string,
-  ) {
-    const empleados = await this.empleadosService.findAll({
-      nombre,
-      cedula,
-      cargoId,
-      departamentoId,
-      estado,
-    });
+  async findAll() {
+    const empleados = await this.empleadosService.Obtener_Empleados_Todos();
     return {
       message: 'Lista de empleados',
+      total: empleados.length,
       empleados,
     };
   }
 
-  @Get('cedula/:cedula')
+  @Get('Obtener-Empleado/:cedula')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Obtener empleado por cédula',
-    description:
-      'Retorna un empleado específico con todas sus relaciones por cédula',
+    description: 'Retorna un empleado específico con su cargo anidado.',
   })
   @ApiParam({
     name: 'cedula',
-    description: 'Cédula del empleado',
-    example: 'V-12345678',
+    description: 'Cédula del empleado (solo números)',
+    example: '22652518',
   })
-  @ApiResponse({ status: 200, description: 'Empleado encontrado exitosamente' })
+  @ApiResponse({ status: 200, description: 'Empleado encontrado' })
   @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async findByCedula(@Param('cedula') cedula: string) {
-    const empleado = await this.empleadosService.findByCedula(cedula);
+  async findOne(@Param('cedula') cedula: string) {
+    const empleado = await this.empleadosService.Obtener_Empleado_ID(cedula);
     return {
       message: 'Empleado encontrado',
       empleado,
     };
   }
 
-  @Get(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Obtener empleado por ID',
-    description:
-      'Retorna un empleado específico con todas sus relaciones por ID',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'ID del empleado (UUID)',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  })
-  @ApiResponse({ status: 200, description: 'Empleado encontrado exitosamente' })
-  @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
-  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async findOne(@Param('id') id: string) {
-    const empleado = await this.empleadosService.findOne(id);
-    return {
-      message: 'Empleado encontrado',
-      empleado,
-    };
-  }
-
-  @Put(':id')
+  @Patch('Actualizar-Empleado')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Actualizar un empleado',
-    description: 'Actualiza los datos de un empleado existente',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'ID del empleado (UUID)',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description:
+      'Actualiza los datos de un empleado. La cédula es obligatoria en el body para identificar al empleado.',
   })
   @ApiBody({ type: UpdateEmpleadoDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Empleado actualizado exitosamente',
-  })
-  @ApiResponse({ status: 400, description: 'Datos inválidos' })
-  @ApiResponse({
-    status: 404,
-    description: 'Empleado, cargo o departamento no encontrado',
-  })
-  @ApiResponse({ status: 409, description: 'Cédula ya registrada' })
+  @ApiResponse({ status: 200, description: 'Empleado actualizado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o cédula faltante' })
+  @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async update(@Param('id') id: string, @Body() updateDto: UpdateEmpleadoDto) {
-    const empleado = await this.empleadosService.update(id, updateDto);
+  async update(@Body() updateDto: UpdateEmpleadoDto) {
+    const empleado = await this.empleadosService.Actualizar_Empleado(updateDto);
     return {
       message: 'Empleado actualizado exitosamente',
       empleado,
     };
   }
 
-  @Patch(':id/toggle-estado')
+  @Patch('Desactivar-Empleado/:cedula')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Alternar estado del empleado',
-    description:
-      'Cambia el estado del empleado (ACTIVO ↔ INACTIVO, SUSPENDIDO → ACTIVO)',
+    summary: 'Desactivar empleado',
+    description: 'Cambia el estado del empleado a INACTIVO.',
   })
   @ApiParam({
-    name: 'id',
-    description: 'ID del empleado (UUID)',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    name: 'cedula',
+    description: 'Cédula del empleado',
+    example: '22652518',
   })
-  @ApiResponse({ status: 200, description: 'Estado actualizado exitosamente' })
+  @ApiResponse({ status: 200, description: 'Empleado desactivado' })
   @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async toggleEstado(@Param('id') id: string) {
-    const empleado = await this.empleadosService.toggleEstado(id);
+  async desactivar(@Param('cedula') cedula: string) {
+    const empleado = await this.empleadosService.Desactivar_empleado(cedula);
     return {
-      message: 'Estado del empleado actualizado',
+      message: 'Empleado desactivado exitosamente',
       empleado,
     };
   }
 
-  @Delete(':id')
+  @Delete('Eliminar-Empleado/:cedula')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Eliminar un empleado (soft delete)',
-    description: 'Realiza soft delete del empleado (cambia estado a INACTIVO)',
+    summary: 'Eliminar empleado (soft delete + inactivar)',
+    description:
+      'Marca el empleado como INACTIVO y aplica soft delete (deleted_at). No se puede eliminar dos veces.',
   })
   @ApiParam({
-    name: 'id',
-    description: 'ID del empleado (UUID)',
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    name: 'cedula',
+    description: 'Cédula del empleado',
+    example: '22652518',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Empleado eliminado exitosamente (soft delete)',
-  })
+  @ApiResponse({ status: 200, description: 'Empleado eliminado exitosamente' })
   @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
+  @ApiResponse({ status: 409, description: 'Empleado ya eliminado' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async remove(@Param('id') id: string) {
-    const empleado = await this.empleadosService.softDelete(id);
+  async remove(@Param('cedula') cedula: string) {
+    const empleado = await this.empleadosService.Eliminar_empleado(cedula);
     return {
       message: 'Empleado eliminado exitosamente (soft delete)',
       empleado,

@@ -1,4 +1,4 @@
-// src/ReglasBiometrico/hooks-reglas-biometrico.js
+// src/Hoosk/hooks-reglas-biometrico.js
 import { useState, useCallback } from 'react';
 import api from '../servicio/Api';
 import { useNotificaciones } from '../Componentes/Context/Notificaciones';
@@ -19,9 +19,38 @@ export function useReglasBiometrico() {
   const [validacion, setValidacion] = useState(null);
   const [previewExcel, setPreviewExcel] = useState(null);
   const [resultadoImportacion, setResultadoImportacion] = useState(null);
-  const [backups, setBackups] = useState([]);
 
-  // 1. Obtener todas las reglas
+  // 🆕 NOVEDADES
+  const [novedades, setNovedades] = useState([]);
+  const [novedadActual, setNovedadActual] = useState(null);
+  const [estadisticasNovedades, setEstadisticasNovedades] = useState(null);
+
+  // =========================================================
+  // 🔧 UTILIDAD: Parseo de fechas (evita timezone bug)
+  // =========================================================
+  const normalizarRangoFechas = useCallback((desde, hasta) => {
+    let fechaDesde = desde;
+    let fechaHasta = hasta;
+
+    if (desde instanceof Date) {
+      const y = desde.getFullYear();
+      const m = String(desde.getMonth() + 1).padStart(2, '0');
+      const d = String(desde.getDate()).padStart(2, '0');
+      fechaDesde = `${y}-${m}-${d}`;
+    }
+    if (hasta instanceof Date) {
+      const y = hasta.getFullYear();
+      const m = String(hasta.getMonth() + 1).padStart(2, '0');
+      const d = String(hasta.getDate()).padStart(2, '0');
+      fechaHasta = `${y}-${m}-${d}`;
+    }
+
+    return { desde: fechaDesde, hasta: fechaHasta };
+  }, []);
+
+  // =========================================================
+  // 1. REGLAS BASE
+  // =========================================================
   const obtenerReglas = useCallback(async () => {
     try {
       setLoading(true);
@@ -35,7 +64,6 @@ export function useReglasBiometrico() {
     }
   }, []);
 
-  // 2. Obtener asignaciones
   const obtenerAsignaciones = useCallback(async (semana) => {
     try {
       setLoading(true);
@@ -51,7 +79,6 @@ export function useReglasBiometrico() {
     }
   }, []);
 
-  // 3. Obtener días libres
   const obtenerDiasLibres = useCallback(async () => {
     try {
       setLoading(true);
@@ -65,7 +92,9 @@ export function useReglasBiometrico() {
     }
   }, []);
 
-  // 4. Asignar horario
+  // =========================================================
+  // 2. ASIGNACIONES
+  // =========================================================
   const asignarHorario = useCallback(
     async (employeeId, horarioId, diasLibresFijos) => {
       try {
@@ -104,7 +133,6 @@ export function useReglasBiometrico() {
     [agregarNotificacion],
   );
 
-  // 5. Asignar días libres
   const asignarDiasLibresSemana = useCallback(
     async (employeeId, semana, diasLibres) => {
       try {
@@ -145,7 +173,9 @@ export function useReglasBiometrico() {
     [agregarNotificacion],
   );
 
-  // 6. Validar salidas
+  // =========================================================
+  // 3. VALIDAR Y EVALUAR
+  // =========================================================
   const validarSalidas = useCallback(async (fecha) => {
     try {
       setLoading(true);
@@ -168,7 +198,6 @@ export function useReglasBiometrico() {
     }
   }, []);
 
-  // 7. Evaluar empleado
   const evaluarEmpleado = useCallback(async (employeeId, fecha) => {
     try {
       setLoading(true);
@@ -195,7 +224,9 @@ export function useReglasBiometrico() {
     setMensaje('');
   }, []);
 
-  // 8. Reporte diario
+  // =========================================================
+  // 4. REPORTES
+  // =========================================================
   const obtenerReporte = useCallback(async (fecha) => {
     try {
       setLoading(true);
@@ -212,26 +243,28 @@ export function useReglasBiometrico() {
     }
   }, []);
 
-  // 9. Reporte semanal
-  const obtenerReporteSemanal = useCallback(async (desde, hasta) => {
-    try {
-      setLoading(true);
-      const res = await api.get('/reglas/reporte-semanal', {
-        params: { desde, hasta },
-      });
-      setReporteSemanal(res.data);
-      setMensaje('Reporte semanal generado.');
-      return res.data;
-    } catch (error) {
-      setMensaje(error.message || 'Error al generar reporte semanal.');
-      console.error(error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const obtenerReporteSemanal = useCallback(
+    async (desde, hasta) => {
+      try {
+        setLoading(true);
+        const { desde: d, hasta: h } = normalizarRangoFechas(desde, hasta);
+        const res = await api.get('/reglas/reporte-semanal', {
+          params: { desde: d, hasta: h },
+        });
+        setReporteSemanal(res.data);
+        setMensaje('Reporte semanal generado.');
+        return res.data;
+      } catch (error) {
+        setMensaje(error.message || 'Error al generar reporte semanal.');
+        console.error(error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [normalizarRangoFechas],
+  );
 
-  // 10. Reporte mensual
   const obtenerReporteMensual = useCallback(async (mes) => {
     try {
       setLoading(true);
@@ -250,7 +283,9 @@ export function useReglasBiometrico() {
     }
   }, []);
 
-  // 11. Descargar plantilla
+  // =========================================================
+  // 5. IMPORTAR / EXPORTAR EXCEL
+  // =========================================================
   const descargarPlantilla = useCallback(
     async (mes) => {
       try {
@@ -294,22 +329,24 @@ export function useReglasBiometrico() {
     [agregarNotificacion],
   );
 
-  // 12. Validar Excel
   const validarExcel = useCallback(
     async (file) => {
       try {
         setLoading(true);
         const formData = new FormData();
         formData.append('file', file);
-        const res = await api.post('/reglas/validar-excel-asignaciones', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const res = await api.post(
+          '/reglas/validar-excel-asignaciones',
+          formData,
+          {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          },
+        );
         setPreviewExcel(res.data);
 
         const { filasValidas, filasConError } = res.data;
         if (filasConError === 0) {
           setMensaje(`✅ Validación exitosa: ${filasValidas} filas válidas.`);
-
           agregarNotificacion({
             tipo: 'success',
             titulo: 'Excel validado',
@@ -319,7 +356,6 @@ export function useReglasBiometrico() {
           setMensaje(
             `⚠️ Validación: ${filasValidas} válidas, ${filasConError} con problemas.`,
           );
-
           agregarNotificacion({
             tipo: 'warning',
             titulo: 'Validación con observaciones',
@@ -346,16 +382,19 @@ export function useReglasBiometrico() {
     [agregarNotificacion],
   );
 
-  // 13. Importar Excel
   const importarExcel = useCallback(
     async (file) => {
       try {
         setLoading(true);
         const formData = new FormData();
         formData.append('file', file);
-        const res = await api.post('/reglas/importar-excel-asignaciones', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const res = await api.post(
+          '/reglas/importar-excel-asignaciones',
+          formData,
+          {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          },
+        );
         setResultadoImportacion(res.data);
         setMensaje('✅ Excel importado correctamente.');
         await obtenerAsignaciones();
@@ -388,15 +427,30 @@ export function useReglasBiometrico() {
     [obtenerAsignaciones, obtenerDiasLibres, agregarNotificacion],
   );
 
-  // 14. Listar backups
-  const listarBackups = useCallback(async () => {
+  const limpiarPreview = useCallback(() => {
+    setPreviewExcel(null);
+    setResultadoImportacion(null);
+  }, []);
+
+  // =========================================================
+  // 🆕 6. NOVEDADES
+  // =========================================================
+
+  const listarNovedades = useCallback(async (filtros = {}) => {
     try {
       setLoading(true);
-      const res = await api.get('/reglas/backups');
-      setBackups(res.data.backups || []);
-      return res.data;
+      const params = {};
+      if (filtros.desde) params.desde = filtros.desde;
+      if (filtros.hasta) params.hasta = filtros.hasta;
+      if (filtros.cedula) params.cedula = filtros.cedula;
+      if (filtros.incluirInactivas) params.incluirInactivas = 'true';
+
+      const res = await api.get('/reglas/novedades', { params });
+      const data = res.data?.novedades || res.data || [];
+      setNovedades(Array.isArray(data) ? data : []);
+      return data;
     } catch (error) {
-      setMensaje('Error al listar backups.');
+      setMensaje('Error al cargar novedades.');
       console.error(error);
       throw error;
     } finally {
@@ -404,31 +458,50 @@ export function useReglasBiometrico() {
     }
   }, []);
 
-  // 15. Restaurar backup
-  const restaurarBackup = useCallback(
-    async (nombreArchivo) => {
+  const obtenerNovedad = useCallback(async (id) => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/reglas/novedades/${id}`);
+      const data = res.data?.novedad || res.data;
+      setNovedadActual(data);
+      return data;
+    } catch (error) {
+      setMensaje('Error al cargar la novedad.');
+      console.error(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const crearNovedad = useCallback(
+    async (dto) => {
       try {
         setLoading(true);
-        const res = await api.post('/reglas/rollback', { nombre: nombreArchivo });
-        setMensaje(res.data.message || '✅ Backup restaurado correctamente.');
-        await obtenerAsignaciones();
-        await obtenerDiasLibres();
+        const res = await api.post('/reglas/novedades', dto);
+
+        if (res.data.success === false) {
+          throw new Error(res.data.message || 'No se pudo crear la novedad.');
+        }
+
+        setMensaje('✅ Novedad registrada correctamente.');
+        await listarNovedades();
 
         agregarNotificacion({
           tipo: 'success',
-          titulo: 'Backup restaurado',
-          mensaje: `Se restauró el backup "${nombreArchivo}".`,
+          titulo: 'Novedad registrada',
+          mensaje: `${dto.tipo} · ${dto.employeeId} (${dto.fechaInicio} → ${dto.fechaFin})`,
         });
 
         return res.data;
       } catch (error) {
-        setMensaje('Error al restaurar backup.');
+        setMensaje(error.message || 'Error al crear la novedad.');
         console.error(error);
 
         agregarNotificacion({
           tipo: 'error',
-          titulo: 'Error al restaurar',
-          mensaje: 'No se pudo restaurar el backup.',
+          titulo: 'Error al crear novedad',
+          mensaje: error.message || 'No se pudo registrar la novedad.',
         });
 
         throw error;
@@ -436,34 +509,37 @@ export function useReglasBiometrico() {
         setLoading(false);
       }
     },
-    [obtenerAsignaciones, obtenerDiasLibres, agregarNotificacion],
+    [listarNovedades, agregarNotificacion],
   );
 
-  // 16. Restaurar último backup
-  const restaurarUltimoBackup = useCallback(
-    async () => {
+  const actualizarNovedad = useCallback(
+    async (id, dto) => {
       try {
         setLoading(true);
-        const res = await api.post('/reglas/rollback-ultimo');
-        setMensaje(res.data.message || '✅ Último backup restaurado correctamente.');
-        await obtenerAsignaciones();
-        await obtenerDiasLibres();
+        const res = await api.patch(`/reglas/novedades/${id}`, dto);
+
+        if (res.data.success === false) {
+          throw new Error(res.data.message || 'No se pudo actualizar.');
+        }
+
+        setMensaje('✅ Novedad actualizada correctamente.');
+        await listarNovedades();
 
         agregarNotificacion({
           tipo: 'success',
-          titulo: 'Backup restaurado',
-          mensaje: 'Se restauró el último backup disponible.',
+          titulo: 'Novedad actualizada',
+          mensaje: `ID ${id} actualizado correctamente.`,
         });
 
         return res.data;
       } catch (error) {
-        setMensaje('Error al restaurar último backup.');
+        setMensaje(error.message || 'Error al actualizar la novedad.');
         console.error(error);
 
         agregarNotificacion({
           tipo: 'error',
-          titulo: 'Error al restaurar',
-          mensaje: 'No se pudo restaurar el último backup.',
+          titulo: 'Error al actualizar',
+          mensaje: error.message || 'No se pudo actualizar la novedad.',
         });
 
         throw error;
@@ -471,26 +547,110 @@ export function useReglasBiometrico() {
         setLoading(false);
       }
     },
-    [obtenerAsignaciones, obtenerDiasLibres, agregarNotificacion],
+    [listarNovedades, agregarNotificacion],
   );
 
-  // 17. Limpiar backups
-  const limpiarBackups = useCallback(
-    async () => {
+  const eliminarNovedad = useCallback(
+    async (id) => {
       try {
         setLoading(true);
-        const res = await api.get('/reglas/limpiar-backups');
-        setMensaje(res.data.message || '✅ Backups limpiados.');
+        const res = await api.delete(`/reglas/novedades/${id}`);
+
+        if (res.data.success === false) {
+          throw new Error(res.data.message || 'No se pudo eliminar.');
+        }
+
+        setMensaje('✅ Novedad desactivada.');
+        await listarNovedades();
+
+        agregarNotificacion({
+          tipo: 'warning',
+          titulo: 'Novedad desactivada',
+          mensaje: `ID ${id} fue desactivada.`,
+        });
+
+        return res.data;
+      } catch (error) {
+        setMensaje(error.message || 'Error al eliminar la novedad.');
+        console.error(error);
+
+        agregarNotificacion({
+          tipo: 'error',
+          titulo: 'Error al eliminar',
+          mensaje: error.message || 'No se pudo desactivar la novedad.',
+        });
+
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [listarNovedades, agregarNotificacion],
+  );
+
+  const reporteNovedadesEmpleado = useCallback(
+    async (cedula, desde, hasta) => {
+      try {
+        setLoading(true);
+        const params = {};
+        if (desde) params.desde = desde;
+        if (hasta) params.hasta = hasta;
+
+        const res = await api.get(
+          `/reglas/novedades/reporte-empleado/${cedula}`,
+          { params },
+        );
+        return res.data;
+      } catch (error) {
+        setMensaje('Error al cargar reporte de novedades.');
+        console.error(error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
+  const descargarReporteNovedadesPDF = useCallback(
+    async (cedula, desde, hasta) => {
+      try {
+        setLoading(true);
+        const params = {};
+        if (desde) params.desde = desde;
+        if (hasta) params.hasta = hasta;
+
+        const response = await api.get(
+          `/reglas/novedades/reporte-empleado/${cedula}/pdf`,
+          {
+            params,
+            responseType: 'blob',
+          },
+        );
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute(
+          'download',
+          `reporte_novedades_${cedula}_${desde || 'inicio'}_${hasta || 'hoy'}.pdf`,
+        );
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        setMensaje('✅ Reporte PDF descargado.');
 
         agregarNotificacion({
           tipo: 'info',
-          titulo: 'Backups limpiados',
-          mensaje: res.data.message || 'Se eliminaron los backups antiguos.',
+          titulo: 'Reporte PDF',
+          mensaje: `Reporte de novedades de ${cedula} descargado.`,
         });
 
-        return res.data;
+        return true;
       } catch (error) {
-        setMensaje('Error al limpiar backups.');
+        setMensaje('Error al descargar reporte PDF.');
         console.error(error);
         throw error;
       } finally {
@@ -500,13 +660,71 @@ export function useReglasBiometrico() {
     [agregarNotificacion],
   );
 
-  // 18. Limpiar preview
-  const limpiarPreview = useCallback(() => {
-    setPreviewExcel(null);
-    setResultadoImportacion(null);
-  }, []);
+  const descargarConstanciaNovedad = useCallback(
+    async (id) => {
+      try {
+        setLoading(true);
+        const response = await api.get(
+          `/reglas/novedades/${id}/constancia.pdf`,
+          { responseType: 'blob' },
+        );
 
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `constancia_novedad_${id}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        setMensaje('✅ Constancia descargada.');
+
+        agregarNotificacion({
+          tipo: 'info',
+          titulo: 'Constancia PDF',
+          mensaje: `Constancia de novedad ${id} descargada.`,
+        });
+
+        return true;
+      } catch (error) {
+        setMensaje('Error al descargar constancia.');
+        console.error(error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [agregarNotificacion],
+  );
+
+  const obtenerEstadisticasNovedades = useCallback(
+    async (desde, hasta) => {
+      try {
+        setLoading(true);
+        const params = {};
+        if (desde) params.desde = desde;
+        if (hasta) params.hasta = hasta;
+
+        const res = await api.get('/reglas/novedades/estadisticas', { params });
+        setEstadisticasNovedades(res.data);
+        return res.data;
+      } catch (error) {
+        setMensaje('Error al cargar estadísticas de novedades.');
+        console.error(error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
+  // =========================================================
+  // RETURN
+  // =========================================================
   return {
+    // Estado
     loading,
     mensaje,
     setMensaje,
@@ -520,7 +738,13 @@ export function useReglasBiometrico() {
     validacion,
     previewExcel,
     resultadoImportacion,
-    backups,
+
+    // 🆕 Novedades
+    novedades,
+    novedadActual,
+    estadisticasNovedades,
+
+    // Acciones Reglas
     obtenerReglas,
     obtenerAsignaciones,
     obtenerDiasLibres,
@@ -535,10 +759,17 @@ export function useReglasBiometrico() {
     descargarPlantilla,
     validarExcel,
     importarExcel,
-    listarBackups,
-    restaurarBackup,
-    restaurarUltimoBackup,
-    limpiarBackups,
     limpiarPreview,
+
+    // 🆕 Acciones Novedades
+    listarNovedades,
+    obtenerNovedad,
+    crearNovedad,
+    actualizarNovedad,
+    eliminarNovedad,
+    reporteNovedadesEmpleado,
+    descargarReporteNovedadesPDF,
+    descargarConstanciaNovedad,
+    obtenerEstadisticasNovedades,
   };
 }

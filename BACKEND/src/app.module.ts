@@ -8,9 +8,11 @@ import { CargosModule } from './cargos/cargos.module';
 import { EgresosPersonalesModule } from './egresos-personales/egresos-personales.module';
 import { MonedaModule } from './moneda/moneda.module';
 import { TasaCambioModule } from './tasa_cambio/tasa_cambio.module';
-//import { BiometricoModule } from './biometrico/biometrico.module';
-//import { ReglasBiometricosModule } from './reglas-biometricos/reglas-biometricos.module';
-import { CuentasBancariasModule } from './cuentas-bancarias/cuentas-bancarias.module';
+import { ReglasBiometricosModule } from './reglas-biometricos/reglas-biometricos.module';
+import { HorarioAsistenciaModule } from './horario-asistencia/horario-asistencia.module';
+import { DiasLibresModule } from './dias-libres/dias-libres.module';
+import { FeriadosModule } from './feriados/feriados.module';
+import { MarcajesBiometricoModule } from './marcajes-biometrico/marcajes-biometrico.module';
 import { EmpleadosModule } from './empleados/empleados.module';
 
 @Module({
@@ -23,6 +25,7 @@ import { EmpleadosModule } from './empleados/empleados.module';
       password: '123456',
       database: 'Gestion_Personal',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      //autoLoadEntities: true,
       synchronize: false,
     }),
     ScheduleModule.forRoot(),
@@ -31,9 +34,13 @@ import { EmpleadosModule } from './empleados/empleados.module';
     CargosModule,
     MonedaModule,
     TasaCambioModule,
-    //ReglasBiometricosModule,
-    //BiometricoModule,
+    ReglasBiometricosModule,
+    BiometricoModule,
     EgresosPersonalesModule,
+    HorarioAsistenciaModule,
+    DiasLibresModule,
+    FeriadosModule,
+    MarcajesBiometricoModule,
     EmpleadosModule,
   ],
 

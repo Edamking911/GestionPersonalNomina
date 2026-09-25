@@ -26,7 +26,8 @@ export interface BreakInfo {
   duracionLegible: string;
   excesoMin: number;
   diferenciaMin: number; // + exceso, - corto
-  estado: 'CORRECTO' | 'EXCESO' | 'CORTO' | 'NO_MARCO';
+   //NUEVO: 'EN_CURSO' cuando ya marcó salida a break pero no el regreso
+  estado: 'CORRECTO' | 'EXCESO' | 'CORTO' | 'NO_MARCO' | 'EN_CURSO';
   diferenciaLegible: string;
 }
 

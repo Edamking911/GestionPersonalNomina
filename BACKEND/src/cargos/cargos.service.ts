@@ -77,7 +77,7 @@ export class CargosService {
   }
 
   async Actualizar_Cargo(UpdateCargoDTO: UpdateCargoDto,): Promise<Cargo> {
-    if(UpdateCargoDTO.nombre){
+    if(!UpdateCargoDTO.nombre){
       throw new BadRequestException('El cargo es obligatoria para actualizar');
     }
     const Existe_cargo = await this.Obtener_CargoEspecifico(UpdateCargoDTO.nombre!)

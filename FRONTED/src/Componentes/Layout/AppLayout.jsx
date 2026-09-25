@@ -16,11 +16,16 @@ export default function AppLayout({ children, vistaActiva, onChangeVista }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { toggleTheme } = useTheme();
 
-  // ⌨️ Atajos globales
+  //  Atajos globales
   useKeyboardShortcuts({
+    // Navegación principal
+    'ctrl+b': () => onChangeVista('asistencia', 'biometrico'), //  Biometrico
+    'ctrl+r': () => onChangeVista('asistencia', 'reglas'),     //  Reglas
+    'ctrl+g': () => onChangeVista('rrhh', 'empleados'),        //  Gestión Personal
+
+    // Utilidades
     'ctrl+d': () => toggleTheme(),
     'ctrl+/': () => setShortcutsOpen((p) => !p),
-    'ctrl+b': () => setMobileSidebarOpen((p) => !p), // toggle sidebar móvil
   });
 
   // Cerrar sidebar móvil al cambiar de vista

@@ -8,10 +8,10 @@ import Button from '../Componentes/UI/Button';
 import Card from '../Componentes/UI/Card';
 import EmpleadosTabla from '../Componentes/Empleados/EmpleadosTabla';
 import VerEmpleadoModal from '../Componentes/Empleados/VerEmpleadoModal';
-import EditarEmpleadoModal from '../Componentes/Empleados/EditarEmpleadoModal';
-import CrearEmpleadoModal from '../Componentes/Empleados/CrearEmpleadoModal';
-import ImportarEmpleadosExcelModal from '../Componentes/Empleados/ImportarEmpleadosExcelModal';
-import { useEmpleadosExcel } from '../Hoosk/hooks-empleados-excel'; 
+import EditarEmpleadoModal from '../../RHH/Empleados/EditarEmpleadoModal';
+import CrearEmpleadoModal from '../../RHH/Empleados/CrearEmpleadoModal';
+import ImportarEmpleadosExcelModal from '../../RHH/Empleados/ImportarEmpleadosExcelModal';
+import { useEmpleadosExcel } from '../../Hoosk/hooks-empleados-excel'; 
 
 export default function GestionPersonal() {
   const {
@@ -36,6 +36,9 @@ export default function GestionPersonal() {
     limpiarPreview,
   } = useEmpleadosExcel();
 
+  // 🆕 Cargos disponibles
+  const { cargos, listarCargos } = useCargos();
+
   const { toast, showToast, clearToast } = useToast();
 
   const [modalVerOpen, setModalVerOpen] = useState(false);
@@ -47,6 +50,7 @@ export default function GestionPersonal() {
   // 🚀 Carga inicial
   useEffect(() => {
     listarEmpleados().catch(() => {});
+    listarCargos().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -64,7 +68,7 @@ export default function GestionPersonal() {
     return () => clearTimeout(timer);
   }, [mensaje, showToast, setMensaje]);
 
-  // ========== HANDLERS CRUD ==========
+  // ========== HANDLERS ==========
   const handleVer = async (emp) => {
     try {
       const data = await verEmpleado(emp.cedula);
@@ -100,15 +104,13 @@ export default function GestionPersonal() {
     } catch (err) {
       console.error(err);
       window.alert(
-        `❌ No se pudo desactivar:\n${
-          err.response?.data?.message || err.message
-        }`,
+        `❌ No se pudo desactivar:\n${err.response?.data?.message || err.message}`,
       );
     }
   };
 
-  // 🔒 Eliminar BLOQUEADO — funcionalidad en desarrollo
-  const handleEliminar = async (emp) => {
+  // 🔒 Eliminar bloqueado
+  const handleEliminar = async () => {
     window.alert(
       '🔒 Funcionalidad en desarrollo\n\nLa eliminación de empleados estará disponible próximamente.\n\nPor ahora puedes usar "Desactivar" para marcarlo como inactivo.',
     );
@@ -132,7 +134,7 @@ export default function GestionPersonal() {
     }
   };
 
-  // ========== HANDLERS EXCEL ==========
+  // ========== EXCEL ==========
   const handleAbrirExcel = () => {
     limpiarPreview();
     setModalExcelOpen(true);
@@ -180,30 +182,18 @@ export default function GestionPersonal() {
           gap: 10px;
           animation: gpEntrada 0.5s ease-out;
         }
-
         @media (max-width: 768px) {
-          .gp-container {
-            padding: 16px 12px !important;
-          }
-          .gp-titulo {
-            font-size: 20px !important;
-            margin-bottom: 16px !important;
-          }
-          .gp-titulo span:first-child {
-            font-size: 22px !important;
-          }
+          .gp-container { padding: 16px 12px !important; }
+          .gp-titulo { font-size: 20px !important; margin-bottom: 16px !important; }
+          .gp-titulo span:first-child { font-size: 22px !important; }
           .gp-stats {
             grid-template-columns: repeat(2, 1fr) !important;
             gap: 10px !important;
           }
-          .gp-stats .stat-card-value {
-            font-size: 22px !important;
-          }
+          .gp-stats .stat-card-value { font-size: 22px !important; }
         }
         @media (max-width: 400px) {
-          .gp-stats {
-            grid-template-columns: 1fr !important;
-          }
+          .gp-stats { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -223,101 +213,37 @@ export default function GestionPersonal() {
         }}
       >
         <Card variant="info" padding="sm">
-          <span
-            style={{
-              fontSize: '11px',
-              color: 'var(--card-info-title)',
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              letterSpacing: '0.5px',
-            }}
-          >
+          <span style={{ fontSize: '11px', color: 'var(--card-info-title)', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>
             👥 Total Empleados
           </span>
-          <p
-            className="stat-card-value"
-            style={{
-              margin: '6px 0 0 0',
-              fontSize: '26px',
-              fontWeight: 'bold',
-              color: 'var(--card-info-title)',
-            }}
-          >
+          <p className="stat-card-value" style={{ margin: '6px 0 0 0', fontSize: '26px', fontWeight: 'bold', color: 'var(--card-info-title)' }}>
             {empleados.length}
           </p>
         </Card>
 
         <Card variant="success" padding="sm">
-          <span
-            style={{
-              fontSize: '11px',
-              color: 'var(--card-success-title)',
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              letterSpacing: '0.5px',
-            }}
-          >
+          <span style={{ fontSize: '11px', color: 'var(--card-success-title)', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>
             ✅ Activos
           </span>
-          <p
-            className="stat-card-value"
-            style={{
-              margin: '6px 0 0 0',
-              fontSize: '26px',
-              fontWeight: 'bold',
-              color: 'var(--card-success-title)',
-            }}
-          >
+          <p className="stat-card-value" style={{ margin: '6px 0 0 0', fontSize: '26px', fontWeight: 'bold', color: 'var(--card-success-title)' }}>
             {totalActivos}
           </p>
         </Card>
 
         <Card variant="danger" padding="sm">
-          <span
-            style={{
-              fontSize: '11px',
-              color: 'var(--card-danger-title)',
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              letterSpacing: '0.5px',
-            }}
-          >
+          <span style={{ fontSize: '11px', color: 'var(--card-danger-title)', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>
             🚫 Inactivos
           </span>
-          <p
-            className="stat-card-value"
-            style={{
-              margin: '6px 0 0 0',
-              fontSize: '26px',
-              fontWeight: 'bold',
-              color: 'var(--card-danger-title)',
-            }}
-          >
+          <p className="stat-card-value" style={{ margin: '6px 0 0 0', fontSize: '26px', fontWeight: 'bold', color: 'var(--card-danger-title)' }}>
             {totalInactivos}
           </p>
         </Card>
 
         <Card variant="warning" padding="sm">
-          <span
-            style={{
-              fontSize: '11px',
-              color: 'var(--card-warning-title)',
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              letterSpacing: '0.5px',
-            }}
-          >
+          <span style={{ fontSize: '11px', color: 'var(--card-warning-title)', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>
             ⏸️ Suspendidos
           </span>
-          <p
-            className="stat-card-value"
-            style={{
-              margin: '6px 0 0 0',
-              fontSize: '26px',
-              fontWeight: 'bold',
-              color: 'var(--card-warning-title)',
-            }}
-          >
+          <p className="stat-card-value" style={{ margin: '6px 0 0 0', fontSize: '26px', fontWeight: 'bold', color: 'var(--card-warning-title)' }}>
             {totalSuspendidos}
           </p>
         </Card>
@@ -353,12 +279,14 @@ export default function GestionPersonal() {
         onClose={() => setModalEditarOpen(false)}
         empleado={empleadoSeleccionado}
         onGuardar={handleGuardarEdicion}
+        cargos={cargos}
       />
 
       <CrearEmpleadoModal
         isOpen={modalCrearOpen}
         onClose={() => setModalCrearOpen(false)}
         onGuardar={handleGuardarCreacion}
+        cargos={cargos}
       />
 
       <ImportarEmpleadosExcelModal

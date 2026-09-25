@@ -12,10 +12,11 @@ import {
   validarDtoEmpleado,
 } from '../../utils/validaciones';
 
+// 🆕 Helper: extrae nombre del cargo (string u objeto)
 const obtenerNombreCargo = (cargo) => {
-  if (!cargo) return null;
+  if (!cargo) return '';
   if (typeof cargo === 'string') return cargo;
-  return cargo.nombre || null;
+  return cargo.nombre || '';
 };
 
 const fechaISOaInput = (fecha) => {
@@ -33,6 +34,7 @@ export default function EditarEmpleadoModal({
   onClose,
   empleado,
   onGuardar,
+  cargos = [],   // 🆕
 }) {
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
@@ -40,6 +42,7 @@ export default function EditarEmpleadoModal({
   const [telefono, setTelefono] = useState('');
   const [fechaIngreso, setFechaIngreso] = useState('');
   const [estado, setEstado] = useState('ACTIVO');
+  const [cargoSeleccionado, setCargoSeleccionado] = useState(''); // 🆕
 
   const [loading, setLoading] = useState(false);
   const [errores, setErrores] = useState({});
@@ -52,6 +55,7 @@ export default function EditarEmpleadoModal({
     setTelefono(empleado.telefono || '');
     setFechaIngreso(fechaISOaInput(empleado.fechaIngreso));
     setEstado(empleado.estado || 'ACTIVO');
+    setCargoSeleccionado(obtenerNombreCargo(empleado.cargo)); // 🆕
     setErrores({});
   }, [isOpen, empleado]);
 
@@ -91,6 +95,10 @@ export default function EditarEmpleadoModal({
         telefono: valores.telefono || undefined,
         fechaIngreso: valores.fechaIngreso || undefined,
         estado,
+        // 🆕 Enviar cargo SOLO si cambió
+        ...(cargoSeleccionado !== obtenerNombreCargo(empleado.cargo) && {
+          cargo: cargoSeleccionado,
+        }),
       };
       await onGuardar(dto);
     } catch (err) {
@@ -117,7 +125,13 @@ export default function EditarEmpleadoModal({
     </>
   );
 
-  const cargoNombre = obtenerNombreCargo(empleado?.cargo);
+  // 🆕 Opciones del selector de cargos
+  const opcionesCargos = cargos.map((c) => ({
+    value: c.nombre,
+    label: c.sueldo
+      ? `${c.nombre} — $${Number(c.sueldo).toFixed(2)}`
+      : c.nombre,
+  }));
 
   return (
     <Modal
@@ -212,28 +226,18 @@ export default function EditarEmpleadoModal({
           />
         </div>
 
-        {/* 📌 Cargo */}
-        <div
-          style={{
-            background: 'var(--info-soft)',
-            border: '1px solid var(--card-info-border)',
-            borderRadius: '8px',
-            padding: '10px 14px',
-            fontSize: '12px',
-            color: 'var(--card-info-title)',
-            display: 'flex',
-            gap: '8px',
-            alignItems: 'flex-start',
-          }}
-        >
-          <span style={{ fontSize: '16px' }}>💼</span>
-          <div>
-            <strong>Cargo actual:</strong> {cargoNombre || 'Sin asignar'}
-            <p style={{ margin: '2px 0 0 0', fontSize: '11px' }}>
-              Para cambiar el cargo, usa el módulo de Cargos.
-            </p>
-          </div>
-        </div>
+        {/* 🆕 SELECTOR DE CARGO */}
+        <Select
+          label="Cargo"
+          value={cargoSeleccionado}
+          onChange={(e) => setCargoSeleccionado(e.target.value)}
+          options={[
+            { value: '', label: 'Sin cargo asignado' },
+            ...opcionesCargos,
+          ]}
+          placeholder="Selecciona un cargo..."
+          hint="Cambia el cargo aquí si el empleado asciende o cambia de rol"
+        />
       </form>
     </Modal>
   );

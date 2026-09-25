@@ -10,7 +10,6 @@ import Pagination from '../../Componentes/UI/Paginacion';
 import TableSkeleton from '../../Componentes/UI/EsqueletoTable';
 import { usePagination } from '../../Hoosk/PaginacionHoosk';
 
-// 🆕 Helper: obtiene nombre del cargo (string o objeto)
 const obtenerNombreCargo = (cargo) => {
   if (!cargo) return null;
   if (typeof cargo === 'string') return cargo;
@@ -26,6 +25,7 @@ export default function EmpleadosTabla({
   onEliminar,
   onCrear,
   onImportarExcel,
+  onRefresh,
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroCargo, setFiltroCargo] = useState('');
@@ -63,9 +63,6 @@ export default function EmpleadosTabla({
     resetKeys: [busqueda, filtroCargo, filtroEstado],
   });
 
-  // =========================================================
-  // COLUMNAS
-  // =========================================================
   const columns = [
     {
       key: 'cedula',
@@ -192,8 +189,6 @@ export default function EmpleadosTabla({
               🚫
             </Button>
           )}
-
-          {/* 🔒 ELIMINAR BLOQUEADO */}
           <Button
             variant="danger"
             size="sm"
@@ -327,6 +322,17 @@ export default function EmpleadosTabla({
             alignItems: 'center',
           }}
         >
+          {/* 🆕 Refrescar */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRefresh}
+            iconLeft="🔄"
+            title="Recargar lista"
+          >
+            Refrescar
+          </Button>
+
           <Button
             variant="primary"
             size="sm"
@@ -336,6 +342,7 @@ export default function EmpleadosTabla({
           >
             Importar Excel
           </Button>
+
           <Button
             variant="success"
             size="sm"
@@ -354,6 +361,7 @@ export default function EmpleadosTabla({
         </div>
       ) : (
         <>
+          {/* 🖥️ DESKTOP */}
           <div className="gp-tabla-desktop">
             <Table
               columns={columns}
@@ -368,6 +376,7 @@ export default function EmpleadosTabla({
             />
           </div>
 
+          {/* 📱 MÓVIL */}
           <div className="gp-cards-mobile">
             {pagination.paginatedItems.length === 0 ? (
               <div

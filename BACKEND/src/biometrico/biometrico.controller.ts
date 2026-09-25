@@ -46,7 +46,7 @@ export class BiometricoController {
     @Body() body: { startDate?: string; endDate?: string; daysBack?: number },
   ) {
     return await this.biometricoService.syncLogsFromDevice(
-      '172.18.0.98',
+      '172.18.0.5',
       'admin',
       'Dtd2026*',
       {
@@ -68,7 +68,7 @@ export class BiometricoController {
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
     return await this.biometricoService.syncLogsFromDevice(
-      '172.18.0.98',
+      '172.18.0.5',
       'admin',
       'Dtd2026*',
       {
@@ -262,7 +262,7 @@ export class BiometricoController {
   async listUsers(@Query('incluirInactivos') incluirInactivos?: string) {
     const incluir = incluirInactivos === 'true';
     return await this.biometricoService.listUsers(
-      '172.18.0.98',
+      '172.18.0.5',
       'admin',
       'Dtd2026*',
       incluir,
@@ -315,7 +315,7 @@ export class BiometricoController {
   @Get('list-all-users')
   async listAllUsers() {
     return await this.biometricoService.listUsers(
-      '172.18.0.98',
+      '172.18.0.5',
       'admin',
       'Dtd2026*',
       true,

@@ -34,14 +34,16 @@ export class CreateEmpleadoDto {
   })
   apellido!: string;
 
+  // ✅ CAMBIO: ahora es el NOMBRE del cargo, no el UUID
   @ApiProperty({
-    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    description: 'ID del cargo (UUID)',
+    example: 'Gerencia',
+    description: 'Nombre del cargo (debe existir en BD)',
     required: false,
   })
   @IsOptional()
-  @IsUUID('4', { message: 'El ID del cargo debe ser un UUID válido' })
-  cargoId?: string;
+  @IsString({ message: 'El cargo debe ser una cadena de texto' })
+  @MaxLength(100, { message: 'El cargo no puede superar los 100 caracteres' })
+  cargo?: string;
 
   @ApiProperty({
     example: 'ACTIVO',

@@ -46,14 +46,8 @@ export class EvaluacionService {
     const nombre =
       employeeName || (await this.cache.obtenerNombreEmpleado(employeeId, marcajes));
 
-    // =========================================================
     // NOVEDAD
-    // =========================================================
-    const novedad = this.novedades.buscarPorEmpleadoYFecha(
-      String(employeeId),
-      fecha,
-    );
-
+    const novedad = this.novedades.buscarPorEmpleadoYFecha(String(employeeId), fecha);
     if (novedad) {
       return {
         ...this.armarVacio(
@@ -91,9 +85,7 @@ export class EvaluacionService {
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     );
 
-    // =========================================================
-    // FILTRO DOBLE LECTURA (>60 seg entre marcas)
-    // =========================================================
+    // FILTRO DOBLE LECTURA
     const SEGUNDOS_MINIMOS_ENTRE_MARCAS = 60;
     const marcajesFiltrados: any[] = [marcajesDia[0]];
 
@@ -101,25 +93,14 @@ export class EvaluacionService {
       const anterior = marcajesFiltrados[marcajesFiltrados.length - 1];
       const segundosDif =
         (new Date(marcajesDia[i].timestamp).getTime() -
-          new Date(anterior.timestamp).getTime()) /
-        1000;
+          new Date(anterior.timestamp).getTime()) / 1000;
 
       if (segundosDif > SEGUNDOS_MINIMOS_ENTRE_MARCAS) {
         marcajesFiltrados.push(marcajesDia[i]);
       }
     }
 
-    // =========================================================
-    // ✅ DETECCIÓN INTELIGENTE DE SALIDA REAL
-    //
-    // Reglas:
-    //   1 marca  → PENDIENTE / NO_MARCO_SALIDA
-    //   2 marcas → salida real SOLO si trabajó >= 60% del turno
-    //              (si no, probablemente sea break y falta salida)
-    //   3 marcas → salida real SOLO si trabajó >= 80% del turno
-    //              (si no, la [2] es regreso de break y falta salida)
-    //   4+ marcas → salida = última
-    // =========================================================
+    // DETECCIÓN DE SALIDA REAL
     const entradaReal = marcajesFiltrados[0];
     const entradaMin = obtenerMinutosDeFecha(new Date(entradaReal.timestamp));
     const salidaEsperadaMin = horaAMinutos(horario.salida);
@@ -135,51 +116,59 @@ export class EvaluacionService {
     if (marcajesFiltrados.length === 1) {
       faltaSalida = true;
     } else if (marcajesFiltrados.length === 2) {
-      // ✅ FIX: verificar si la 2da marca es realmente la salida final
-      // o si fue una salida al break (sin volver a marcar)
       const segunda = marcajesFiltrados[1];
       const segundaMin = obtenerMinutosDeFecha(new Date(segunda.timestamp));
-      const trabajadoMin = segundaMin - entradaMin;
-      const ratio = trabajadoMin / jornadaEsperadaMin;
+      const ratio = (segundaMin - entradaMin) / jornadaEsperadaMin;
 
       if (ratio < 0.6) {
-        // Trabajó menos del 60% → probablemente salió al break
         faltaSalida = true;
       } else {
         salidaReal = segunda;
       }
     } else if (marcajesFiltrados.length === 3) {
-      // La [2] puede ser regreso de break o salida final
       const tercera = marcajesFiltrados[2];
       const terceraMin = obtenerMinutosDeFecha(new Date(tercera.timestamp));
-      const trabajadoMin = terceraMin - entradaMin;
-      const ratio = trabajadoMin / jornadaEsperadaMin;
+      const ratio = (terceraMin - entradaMin) / jornadaEsperadaMin;
 
       if (ratio >= 0.8) {
-        // 80%+ → es la salida final
         salidaReal = tercera;
       } else {
-        // <80% → es regreso de break, falta salida final
         faltaSalida = true;
       }
     } else {
-      // 4+ marcas: la última es la salida final
       salidaReal = marcajesFiltrados[marcajesFiltrados.length - 1];
     }
 
     // =========================================================
-    // ✅ SI FALTA SALIDA → PENDIENTE (hoy) o NO_MARCO_SALIDA (día pasado)
-    // Se incluye el break si ya se detectó (informativo)
+    // ✅ SI FALTA SALIDA → PENDIENTE / NO_MARCO_SALIDA
+    // Aquí mostramos el break en curso si ya marcó la salida
     // =========================================================
     if (faltaSalida) {
       const estado = esMismoDia ? 'PENDIENTE' : 'NO_MARCO_SALIDA';
 
-      // Detectar break si ya salió/regresó (informativo)
-      const breakInfoTmp = this.detectarBreak(
-        marcajesFiltrados,
-        horario.breakDuracionMin,
-        horario.breakToleranciaMin,
-      );
+      let breakInfoTmp: BreakInfo;
+
+      if (marcajesFiltrados.length === 2) {
+        // ✅ Solo hay 2 marcas: entrada + salida a break (sin regreso registrado)
+        const salidaBreak = marcajesFiltrados[1];
+        breakInfoTmp = {
+          horaSalida: salidaBreak.horaLocal,
+          horaEntrada: null,
+          duracionMin: 0,
+          duracionLegible: '—',
+          excesoMin: 0,
+          diferenciaMin: 0,
+          estado: 'EN_CURSO',
+          diferenciaLegible: 'Salida a break — esperando regreso',
+        };
+      } else {
+        // 3+ marcas pero falta salida → usar el detector normal
+        breakInfoTmp = this.detectarBreak(
+          marcajesFiltrados,
+          horario.breakDuracionMin,
+          horario.breakToleranciaMin,
+        );
+      }
 
       return {
         ...this.armarVacio(employeeId, nombre, fecha, estado, horario.nombre),
@@ -188,9 +177,7 @@ export class EvaluacionService {
       };
     }
 
-    // =========================================================
-    // DÍA NO LABORABLE (descanso)
-    // =========================================================
+    // DÍA NO LABORABLE
     if (!horario.diasLaborales.includes(diaSemana)) {
       return {
         ...this.armarVacio(employeeId, nombre, fecha, 'DESCANSO', horario.nombre),
@@ -199,18 +186,14 @@ export class EvaluacionService {
       };
     }
 
-    // =========================================================
     // DETECTAR BREAK
-    // =========================================================
     const breakInfo = this.detectarBreak(
       marcajesFiltrados,
       horario.breakDuracionMin,
       horario.breakToleranciaMin,
     );
 
-    // =========================================================
     // CÁLCULO DE HORAS
-    // =========================================================
     const salidaMin = obtenerMinutosDeFecha(new Date(salidaReal.timestamp));
     const entradaEsperada = horaAMinutos(horario.entrada);
     const salidaEsperada = horaAMinutos(horario.salida);
@@ -223,10 +206,7 @@ export class EvaluacionService {
     const tiempoTrabajadoBrutoMin = salidaMin - entradaMin;
 
     const breakDescontadoMin = horario.breakDuracionMin || 0;
-    const tiempoTrabajadoNetoMin = Math.max(
-      0,
-      tiempoTrabajadoBrutoMin - breakDescontadoMin,
-    );
+    const tiempoTrabajadoNetoMin = Math.max(0, tiempoTrabajadoBrutoMin - breakDescontadoMin);
 
     let horasDiurnas = 0;
     let horasNocturnas = 0;
@@ -307,8 +287,7 @@ export class EvaluacionService {
   }
 
   // =========================================================
-  // DETECTAR BREAK
-  // ✅ FIX: -1 en lugar de -2 para incluir el par [1,2] con 3 marcas
+  // DETECTAR BREAK (3+ marcas)
   // =========================================================
   private detectarBreak(
     marcajesFiltrados: any[],
@@ -354,6 +333,22 @@ export class EvaluacionService {
         diferenciaMin: 0,
         estado: 'NO_MARCO',
         diferenciaLegible: 'No marcó break',
+      };
+    }
+
+    // ✅ DESCARTA si el "break" detectado es demasiado largo (probablemente no marcó regreso)
+    const UMBRAL_DESCARTE_MIN = breakDuracionMin * 2.5;
+
+    if (mejorPar.duracion > UMBRAL_DESCARTE_MIN) {
+      return {
+        horaSalida: null,
+        horaEntrada: null,
+        duracionMin: 0,
+        duracionLegible: '0m',
+        excesoMin: 0,
+        diferenciaMin: 0,
+        estado: 'NO_MARCO',
+        diferenciaLegible: 'No marcó regreso del break',
       };
     }
 

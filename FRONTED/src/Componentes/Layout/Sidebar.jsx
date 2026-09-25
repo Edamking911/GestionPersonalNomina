@@ -2,7 +2,7 @@
 import { useState } from 'react';
 
 // =========================================================
-// 🎯 CONFIGURACIÓN DE SUITES
+// CONFIGURACIÓN DE SUITES
 // =========================================================
 // Aquí defines los módulos y submenús. Cuando agregues más,
 // solo tocas este array.
@@ -23,9 +23,8 @@ export const SUITES = [
     icon: '👥',
     submenus: [
       { id: 'empleados', label: 'Empleados', icon: '👤' },
-      // 🆕 Cuando agregues:
-      // { id: 'cargos', label: 'Cargos', icon: '💼' },
-      // { id: 'departamentos', label: 'Departamentos', icon: '🏢' },
+      { id: 'cargos', label: 'Cargos', icon: '💼' },              
+      { id: 'departamentos', label: 'Departamentos', icon: '🏢' }, 
     ],
   },
   // 🆕 Futuras suites:

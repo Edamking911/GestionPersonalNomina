@@ -40,8 +40,12 @@ export class DepartamentosService {
   }
 
   //Traigo Todos los departamentos Registrados
-  async Traer_Departamentos(): Promise<Departamento[]> {
-    return this.departamento.find();
+  async Traer_Departamentos() {
+    const depa = await this.departamento.find({order:{nombre:'ASC'}})
+    return depa.map((departamentos) =>({
+      nombre : departamentos.nombre,
+      creacion: departamentos.createdAt
+    }));
   }
 
   // Busco Un departamento en especifico

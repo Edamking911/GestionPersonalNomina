@@ -126,8 +126,9 @@ export class EmpleadosService {
       if (updateEmpleadoDTO.apellido !== undefined) {
         empleado.apellido = updateEmpleadoDTO.apellido;
       }
-      if (updateEmpleadoDTO.cargoId !== undefined) {
-        empleado.cargoId = updateEmpleadoDTO.cargoId;
+      if (updateEmpleadoDTO.cargo !== undefined) {
+        const cargoID = await this.Validar_Cargo(updateEmpleadoDTO.cargo)
+        empleado.cargoId = cargoID.id;
       }
       if (updateEmpleadoDTO.estado !== undefined) {
         empleado.estado = updateEmpleadoDTO.estado;

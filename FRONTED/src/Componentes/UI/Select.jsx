@@ -1,4 +1,4 @@
-// src/Componentes/UI/Select.jsx
+import { useEffect, useRef, useState } from 'react';
 
 export default function Select({
   label,
@@ -13,7 +13,6 @@ export default function Select({
   fullWidth = true,
   size = 'md',
   style = {},
-  selectStyle = {},
   ...props
 }) {
   const sizes = {
@@ -25,12 +24,56 @@ export default function Select({
   const s = sizes[size] || sizes.md;
 
   const normalizedOptions = options.map((opt) =>
-    typeof opt === 'string' ? { value: opt, label: opt } : opt
+    typeof opt === 'string' ? { value: opt, label: opt } : opt,
   );
+
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef(null);
+  const listRef = useRef(null);
+
+  const selectedOption = normalizedOptions.find((o) => o.value === value);
+  const displayText = selectedOption?.label || placeholder;
+
+  // 🎯 Cerrar al hacer clic fuera
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  // 🎯 Cerrar con Escape
+  useEffect(() => {
+    if (!open) return;
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [open]);
+
+  // 🎯 Scroll al item seleccionado cuando se abre
+  useEffect(() => {
+    if (open && listRef.current && selectedOption) {
+      const el = listRef.current.querySelector(
+        `[data-value="${selectedOption.value}"]`,
+      );
+      el?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [open, selectedOption]);
 
   const inputBorder = error
     ? 'var(--input-border-error)'
     : 'var(--input-border)';
+
+  const handleSelect = (opt) => {
+    onChange({ target: { value: opt.value } });
+    setOpen(false);
+  };
 
   const wrapperStyle = {
     display: 'flex',
@@ -40,32 +83,31 @@ export default function Select({
     ...style,
   };
 
-  const selectBaseStyle = {
+  const triggerStyle = {
     width: '100%',
     height: s.height,
     padding: s.padding,
+    paddingRight: '40px',
     fontSize: s.fontSize,
     fontFamily: 'inherit',
-    color: 'var(--input-text)',
+    color: selectedOption ? 'var(--input-text)' : 'var(--input-hint)',
     background: 'var(--input-bg)',
-    border: `1px solid ${inputBorder}`,
+    border: `1px solid ${open ? 'var(--input-border-focus)' : inputBorder}`,
     borderRadius: '8px',
     outline: 'none',
     cursor: disabled ? 'not-allowed' : 'pointer',
     transition: 'all 0.2s ease',
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 12px center',
-    backgroundSize: '16px',
-    paddingRight: '40px',
     boxSizing: 'border-box',
     opacity: disabled ? 0.6 : 1,
-    ...selectStyle,
+    display: 'flex',
+    alignItems: 'center',
+    textAlign: 'left',
+    position: 'relative',
+    boxShadow: open ? '0 0 0 3px var(--input-focus-shadow)' : 'none',
   };
 
   return (
-    <div style={wrapperStyle}>
+    <div style={wrapperStyle} ref={wrapperRef}>
       {label && (
         <label
           style={{
@@ -77,67 +119,120 @@ export default function Select({
         >
           {label}
           {required && (
-            <span style={{ color: 'var(--input-error-text)', marginLeft: '4px' }}>
+            <span
+              style={{ color: 'var(--input-error-text)', marginLeft: '4px' }}
+            >
               *
             </span>
           )}
         </label>
       )}
 
-      <select
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        style={selectBaseStyle}
-        onMouseEnter={(e) => {
-          if (disabled) return;
-          if (!error) e.currentTarget.style.borderColor = 'var(--input-border-hover)';
-          e.currentTarget.style.background = 'var(--input-bg-hover)';
-        }}
-        onMouseLeave={(e) => {
-          if (disabled) return;
-          if (!error) e.currentTarget.style.borderColor = 'var(--input-border)';
-          e.currentTarget.style.background = 'var(--input-bg)';
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = error
-            ? 'var(--input-border-error)'
-            : 'var(--input-border-focus)';
-          e.currentTarget.style.boxShadow = error
-            ? '0 0 0 3px var(--input-error-shadow)'
-            : '0 0 0 3px var(--input-focus-shadow)';
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = inputBorder;
-          e.currentTarget.style.boxShadow = 'none';
-        }}
-        {...props}
-      >
-        {placeholder && (
-          <option
-            value=""
-            disabled
+      <div style={{ position: 'relative' }}>
+        {/* 🎯 Trigger */}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => !disabled && setOpen((o) => !o)}
+          style={triggerStyle}
+        >
+          <span
             style={{
-              background: 'var(--input-option-bg)',
-              color: 'var(--input-option-text)',
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
-            {placeholder}
-          </option>
+            {displayText}
+          </span>
+
+          {/* Flecha */}
+          <span
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: `translateY(-50%) rotate(${open ? '180deg' : '0deg'})`,
+              transition: 'transform 0.2s ease',
+              color: 'var(--text-muted)',
+              fontSize: '12px',
+              pointerEvents: 'none',
+            }}
+          >
+            ▼
+          </span>
+        </button>
+
+        {/* 🎯 Dropdown custom */}
+        {open && (
+          <div
+            ref={listRef}
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 4px)',
+              left: 0,
+              right: 0,
+              zIndex: 9999,
+              background: 'var(--input-option-bg, var(--bg-card))',
+              border: '1px solid var(--input-border)',
+              borderRadius: '8px',
+              boxShadow: 'var(--shadow-lg)',
+              maxHeight: '240px',
+              overflowY: 'auto',
+              padding: '4px',
+              animation: 'selectFadeIn 0.15s ease-out',
+            }}
+          >
+            {normalizedOptions.map((opt) => {
+              const isSelected = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  data-value={opt.value}
+                  onClick={() => handleSelect(opt)}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '8px 12px',
+                    textAlign: 'left',
+                    fontSize: s.fontSize,
+                    fontFamily: 'inherit',
+                    color: isSelected
+                      ? 'var(--primary)'
+                      : 'var(--input-option-text, var(--text-primary))',
+                    background: isSelected
+                      ? 'var(--primary-soft)'
+                      : 'transparent',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: isSelected ? '700' : '500',
+                    transition: 'background 0.15s ease',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = 'var(--bg-hover)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
+                >
+                  {isSelected ? '✓ ' : ''}
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         )}
-        {normalizedOptions.map((opt) => (
-          <option
-            key={opt.value}
-            value={opt.value}
-            style={{
-              background: 'var(--input-option-bg)',
-              color: 'var(--input-option-text)',
-            }}
-          >
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      </div>
 
       {(error || hint) && (
         <span
@@ -153,6 +248,13 @@ export default function Select({
           {error || hint}
         </span>
       )}
+
+      <style>{`
+        @keyframes selectFadeIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

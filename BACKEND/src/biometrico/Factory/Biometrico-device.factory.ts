@@ -42,7 +42,7 @@ export class BiometricDeviceFactory {
 
     return this.crear({
         tipo,
-        ip: process.env.BIO_IP || '172.18.0.98',
+        ip: process.env.BIO_IP || '172.18.0.5',
         user: process.env.BIO_USER || 'admin',
         pass: process.env.BIO_PASS || 'Dtd2026*',
         timezone: process.env.BIO_TZ || '+08:00',

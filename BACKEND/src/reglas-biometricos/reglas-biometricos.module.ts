@@ -54,7 +54,7 @@ import { NovedadNomina } from 'src/Entitys/Novedades/NovedadNomina.entity';
   ],
   exports: [
     ReglasBiometricosService,
-    ReglasConfigService,
+    ReglasConfigService,NovedadesService,
   ],
 })
 export class ReglasBiometricosModule {}

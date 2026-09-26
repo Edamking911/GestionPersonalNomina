@@ -3,7 +3,7 @@ import { IsUUID, IsNotEmpty, IsNumber, IsDateString, IsOptional } from 'class-va
 export class CreateTasaCambioDto {
   @IsUUID()
   @IsNotEmpty()
-  monedaId!: string;
+  monedaId!: number;
 
   @IsNumber()
   @IsNotEmpty()

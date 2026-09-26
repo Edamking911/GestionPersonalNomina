@@ -20,13 +20,11 @@ export class TasaCambioService {
 
     async  Crear_Tasa(codigo: string , createDToTasa: CreateTasaCambioDto): Promise<TasaCambio>{
         const moneda = await this.Validar_Moneda(codigo);
-        if(moneda){
-            const crear = new TasaCambio()
-            crear.monedaId = moneda.id
-            crear.tasa = createDToTasa.tasa
-            return await this.TasacambioRepository.save(crear)
-        }
-        throw new NotFoundException(`Error al Procesar al Procesar La solicitud`)
+        
+        const crear = new TasaCambio()
+        crear.monedaId = moneda.id
+        crear.tasa = createDToTasa.tasa
+        return await this.TasacambioRepository.save(crear)
     }
 
     async Traer_Tasas():Promise<TasaCambio[]>{

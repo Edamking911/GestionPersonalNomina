@@ -134,6 +134,8 @@ export class EmpleadosController {
     };
   }
 
+
+  
   @Get('Obtener-Empleados')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -154,6 +156,8 @@ export class EmpleadosController {
       empleados,
     };
   }
+
+
 
   @Get('Obtener-Empleado/:cedula')
   @HttpCode(HttpStatus.OK)
@@ -177,6 +181,8 @@ export class EmpleadosController {
     };
   }
 
+
+
   @Patch('Actualizar-Empleado')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -196,6 +202,8 @@ export class EmpleadosController {
       empleado,
     };
   }
+
+
 
   @Patch('Desactivar-Empleado/:cedula')
   @HttpCode(HttpStatus.OK)
@@ -219,26 +227,61 @@ export class EmpleadosController {
     };
   }
 
+
+
   @Delete('Eliminar-Empleado/:cedula')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Eliminar empleado (soft delete + inactivar)',
+    summary: 'Dar de baja a un empleado',
     description:
-      'Marca el empleado como INACTIVO y aplica soft delete (deleted_at). No se puede eliminar dos veces.',
+      'Registra el egreso, pone al empleado INACTIVO (vía trigger) y aplica soft delete. ' +
+      'Si no se envía body, usa motivo="RENUNCIA" y fecha=HOY.',
   })
   @ApiParam({
     name: 'cedula',
-    description: 'Cédula del empleado',
+    description: 'Cédula del empleado (solo números)',
     example: '22652518',
   })
-  @ApiResponse({ status: 200, description: 'Empleado eliminado exitosamente' })
+  @ApiBody({
+    required: false,
+    schema: {
+      type: 'object',
+      properties: {
+        motivo: {
+          type: 'string',
+          enum: [
+            'RENUNCIA',
+            'DESPIDO_JUSTIFICADO',
+            'DESPIDO_INJUSTIFICADO',
+            'RETIRO',
+            'FIN_CONTRATO',
+          ],
+          example: 'RENUNCIA',
+          description: 'Si no se envía, usa RENUNCIA por defecto',
+        },
+        fechaEgreso: {
+          type: 'string',
+          example: '2026-09-26',
+          description: 'Si no se envía, usa la fecha del sistema',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Empleado dado de baja' })
   @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
   @ApiResponse({ status: 409, description: 'Empleado ya eliminado' })
-  @ApiResponse({ status: 500, description: 'Error interno del servidor' })
-  async remove(@Param('cedula') cedula: string) {
-    const empleado = await this.empleadosService.Eliminar_empleado(cedula);
+  @ApiResponse({ status: 400, description: 'Fecha futura o motivo inválido' })
+  async remove(
+    @Param('cedula') cedula: string,
+    @Body() body?: { motivo?: any; fechaEgreso?: string },
+  ) {
+    const empleado = await this.empleadosService.Eliminar_empleado(
+      cedula,
+      body?.motivo,       //Si no viene → 'RENUNCIA' (default del service)
+      body?.fechaEgreso,  //Si no viene → fecha del sistema
+    );
     return {
-      message: 'Empleado eliminado exitosamente (soft delete)',
+      message: 'Empleado dado de baja exitosamente (egreso + soft delete)',
       empleado,
     };
   }

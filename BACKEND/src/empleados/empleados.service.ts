@@ -8,12 +8,20 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Empleado } from '../Entitys/Empleados/Empleado.entity';
 import { Cargo } from '../Entitys/Cargos/Cargos.entity';
-import { Departamento } from '../Entitys/Departamentos/Departamentos.entity';
 import { CuentaBancaria } from '../Entitys/CuentasBancarias/CuentaBancaria.entity';
 import { EgresoPersonal } from '../Entitys/EgresosPersonales/EgresoPersonal.entity';
 import { CreateEmpleadoDto } from '../DTOS/Empleados/Create-Empleado.dto';
 import { UpdateEmpleadoDto } from '../DTOS/Empleados/Update-Empleado.dto';
+import { EgresosPersonalesService } from 'src/egresos-personales/egresos-personales.service';
 
+export type MotivoEgreso =
+  | 'RENUNCIA'
+  | 'DESPIDO_JUSTIFICADO'
+  | 'DESPIDO_INJUSTIFICADO'
+  | 'RETIRO'
+  | 'FIN_CONTRATO';
+
+  
 @Injectable()
 export class EmpleadosService {
   constructor(
@@ -25,6 +33,7 @@ export class EmpleadosService {
     private readonly cuentaRepository: Repository<CuentaBancaria>,
     @InjectRepository(EgresoPersonal)
     private readonly egresoRepository: Repository<EgresoPersonal>,
+    private readonly EgresosPersonalesService : EgresosPersonalesService
   ) {}
 
   async Validar_Cargo(nombre : string):Promise<Cargo>{
@@ -99,15 +108,52 @@ export class EmpleadosService {
     return await this.empleadoRepository.save(empleado)
   }
 
-  async Eliminar_empleado(cedula: string):Promise<Empleado>{
-    const empleado = await this.Obtener_Empleado_ID(cedula)
-    if(empleado.deletedAt){
-      throw new ConflictException(`Este Empleado ya esta Eliminado para visualizar su informacion debe ir a egreso ${empleado.cedula}`); 
-    }
-    await this.Desactivar_empleado(empleado.cedula)
-    await this.empleadoRepository.softDelete(empleado.id)
-    empleado.deletedAt = new Date() 
-    return empleado
+  async Eliminar_empleado(cedula: string,motivo: MotivoEgreso = 'RENUNCIA',fechaEgreso?: string,): Promise<Empleado> {
+      const empleado = await this.empleadoRepository.findOne({
+        where: { cedula },
+        withDeleted: true,
+        relations: { cargo: true },
+      });
+
+      if (!empleado) {
+        throw new NotFoundException(`Este empleado no existe ${cedula}`);
+      }
+
+      // 2. Validar que no esté ya eliminado
+      if (empleado.deletedAt) {
+        throw new ConflictException(
+          `Este empleado ya está eliminado. Para ver su información, diríjase a Egresos: ${empleado.cedula}`,
+        );
+      }
+
+      // 3. Validar fecha (no futura)
+      const fecha = fechaEgreso || new Date().toISOString().split('T')[0];
+      const fechaDate = new Date(fecha);
+      const hoy = new Date();
+      hoy.setHours(23, 59, 59, 999);
+
+      if (fechaDate > hoy) {
+        throw new BadRequestException('La fecha de egreso no puede ser futura');
+      }
+
+      // 4. Crear el egreso → el TRIGGER de la BD pone estado = 'INACTIVO'
+      await this.EgresosPersonalesService.create({
+        empleadoId: empleado.id,
+        fechaEgreso: fecha,
+        motivo,
+      });
+
+      // 5. Aplicar soft delete (marca deleted_at = NOW())
+      await this.empleadoRepository.softDelete(empleado.id);
+
+      // 6. Retornar el empleado actualizado (con withDeleted para que aparezca)
+      const empleadoEliminado = await this.empleadoRepository.findOne({
+        where: { id: empleado.id },
+        withDeleted: true,
+        relations: { cargo: true },
+      });
+
+      return empleadoEliminado!;
   }
 
   async Actualizar_Empleado(updateEmpleadoDTO: UpdateEmpleadoDto): Promise<Empleado> {

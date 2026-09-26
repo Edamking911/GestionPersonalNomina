@@ -15,6 +15,7 @@ import { DiasLibresModule } from './dias-libres/dias-libres.module';
 import { FeriadosModule } from './feriados/feriados.module';
 import { MarcajesBiometricoModule } from './marcajes-biometrico/marcajes-biometrico.module';
 import { EmpleadosModule } from './empleados/empleados.module';
+import { ControlVacionesModule } from './control_vaciones/control_vaciones.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { EmpleadosModule } from './empleados/empleados.module';
     FeriadosModule,
     MarcajesBiometricoModule,
     EmpleadosModule,
+    ControlVacionesModule,
   ],
   
   controllers: [AppController],

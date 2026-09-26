@@ -7,12 +7,12 @@ import {
 } from 'typeorm';
 
 @Entity('feriados')
-@Index(['pais', 'fecha'])
+@Index(['pais', 'fecha'], { unique: true })
 export class Feriado {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'date', unique: true, nullable: false })
+  @Column({ type: 'date', nullable: false })
   fecha!: Date;
 
   @Column({ type: 'varchar', length: 150, nullable: false })
